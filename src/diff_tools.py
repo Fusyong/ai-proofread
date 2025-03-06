@@ -1,6 +1,7 @@
 """比较11.md和22.md的差异，并生成html文件"""
 
 import difflib
+
 import os
 import shutil
 # import webbrowser
@@ -12,7 +13,7 @@ from clear_pdf_book_txt_to_md import clean_title
 
 def split_md_text(text1, text2,  levels:List[int]=[2]):
     """
-    将md文本按标题分割成多个部分，并检查一致性
+    将校对前后的两个md文本按标题分割成多个部分，并检查一致性
 
     Args:
         text1: 第一个md文本
@@ -40,7 +41,7 @@ def split_md_text(text1, text2,  levels:List[int]=[2]):
 
 def diff_md_text(lines_list_1, lines_list_2, context=False, numlines=3):
     """
-    比较两个文件的差异并生成HTML格式的比较结果
+    使用difflib比较两个文件的差异并生成HTML格式的比较结果
 
     Args:
         text1: 第一个md文本
@@ -51,7 +52,7 @@ def diff_md_text(lines_list_1, lines_list_2, context=False, numlines=3):
 
     # 创建HTML差异对比
     # 设置 charjunk=None 以显示所有字符级别的差异
-    diff = difflib.HtmlDiff(wrapcolumn=33, charjunk=None)
+    diff = difflib.HtmlDiff(wrapcolumn=33, linejunk= None, charjunk= None)
     html_content = diff.make_file( # make_table
         lines_list_1,
         lines_list_2,
@@ -103,9 +104,9 @@ def jsdiff_md_text(path, file_name_a, file_name_b, diff_path=None):
             f.write(f'b = `{text2}`')
 
     # 复制jsdiff.js
-    shutil.copy(f'jsdiff/diff.js', f'{diff_path}/diff.js')
+    shutil.copy(f'src/jsdiff/diff.js', f'{diff_path}/diff.js')
     # 复制并修改index.html
-    with open(f'jsdiff/index.html', 'r', encoding='utf-8') as f:
+    with open(f'src/jsdiff/index.html', 'r', encoding='utf-8') as f:
         content = f.read()
         # 替换<title>Diff</title>中的名称
         content = content.replace(r'<title>Diff</title>', f'<title>{file_name_a} vs {file_name_b}</title>')
@@ -115,7 +116,7 @@ def jsdiff_md_text(path, file_name_a, file_name_b, diff_path=None):
 
 if __name__ == '__main__':
 
-    root_dir = '13本传统文化/清洗后校对'
+    root_dir = 'work/13本传统文化/清洗后校对'
 
     file_list = [
         # '1.21 汉魏晋六朝（上）',
@@ -137,21 +138,21 @@ if __name__ == '__main__':
     ###########
     # jsdiff
     ###########
-    for name in file_list:
-        file1 = f'{name}.clean.md'
-        file2 = f'{name}.clean.proofread.json.md'
-        jsdiff_md_text(root_dir, file1, file2)
+    # for name in file_list:
+    #     file1 = f'{name}.clean.md'
+    #     file2 = f'{name}.clean.proofread.json.md'
+    #     jsdiff_md_text(root_dir, file1, file2)
 
     ###########
-    # 单文件比较
+    # difflib单文件比较
     ###########
-    # for file in file_list:
-    #     text11 = open(f'{root_dir}/{file}.clean.md', 'r', encoding='utf-8').readlines()
-    #     text22 = open(f'{root_dir}/{file}.clean.proofread.json.md', 'r', encoding='utf-8').readlines()
+    for file in file_list:
+        text11 = open(f'{root_dir}/{file}.clean.md', 'r', encoding='utf-8').readlines()
+        text22 = open(f'{root_dir}/{file}.clean.proofread.json.md', 'r', encoding='utf-8').readlines()
 
-    #     html_content = diff_md_text(text11, text22, context=False, numlines=3)
-    #     with open(f'{root_dir}/{file}.diff.html', 'w', encoding='utf-8') as f:
-    #         f.write(html_content)
+        html_content = diff_md_text(text11, text22, context=False, numlines=3)
+        with open(f'{root_dir}/{file}.diff.html', 'w', encoding='utf-8') as f:
+            f.write(html_content)
 
     ###########
     # 批量分段后比较

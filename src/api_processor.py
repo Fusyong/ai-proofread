@@ -7,7 +7,7 @@ import os
 import json
 import time
 import asyncio
-from typing import List, Callable, Dict, Any, Coroutine
+from typing import List, Callable
 from concurrent.futures import ThreadPoolExecutor
 
 import google.generativeai as genai
@@ -18,11 +18,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 读取上一层文件夹中的提示文件
-parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-prompt_file_path = os.path.join(parent_dir, "prompt-校对专家.md")
+# parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# prompt_file_path = os.path.join(parent_dir, "prompt-校对专家.md")
+PROMPT_FILE_PATH = "src/prompt-校对专家.md"
 SYSTEM_PROMPT = ""
 
-with open(prompt_file_path, "r", encoding="utf-8") as file:
+with open(PROMPT_FILE_PATH, "r", encoding="utf-8") as file:
     SYSTEM_PROMPT = file.read()
 
 
@@ -362,7 +363,7 @@ def process_by_once(file_in: str, file_out: str, chat_func: Callable=chat_deepse
 if __name__ == "__main__":
 
     # 示例文件路径
-    root_dir = "13本传统文化/清洗后md/"
+    root_dir = "work/13本传统文化/清洗后md/"
     file_names = [
         '1.21 先秦诗',
         '1.21 汉魏晋六朝（上）',
