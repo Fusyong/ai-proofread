@@ -1,0 +1,60 @@
+<html>
+  <head>
+    <title>Diff</title>
+    <meta charset="utf-8">
+    <style>
+      #display {
+        white-space: pre-wrap;       /* CSS3 */
+        word-wrap: break-word;       /* IE */
+        overflow-wrap: break-word;   /* Modern browsers */
+        font-family: "SimSun", "宋体" !important;
+        font-size: 14px !important;
+        line-height: 1.5  !important;
+      }
+      #display span {
+        display: inline;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+      }
+    </style>
+  </head>
+  <body>
+    <pre id="display"></pre>
+    <script src="diff.js"></script>
+    <script src="a.js"></script>
+    <script src="b.js"></script>
+    <script>
+// Variables 'a' and 'b' are now available from the included JS files
+let span = null;
+
+const segmenter = new Intl.Segmenter(
+  'zh', { granularity: 'word' }
+);
+const diff = Diff.diffWordsWithSpace(a, b, segmenter),
+    display = document.getElementById('display'),
+    fragment = document.createDocumentFragment();
+
+diff.forEach((part) => {
+  // green for additions, red for deletions
+  // grey for common parts
+  const color = part.added ? 'green' :
+    part.removed ? 'red' : 'gray';
+  span = document.createElement('span');
+  span.style.color = color;
+
+  // Add underline for additions and strikethrough for deletions
+  if (part.added) {
+    span.style.textDecoration = 'wavy underline';
+  } else if (part.removed) {
+    span.style.textDecoration = 'overline';
+  }
+
+  span.appendChild(document
+    .createTextNode(part.value));
+  fragment.appendChild(span);
+});
+
+display.appendChild(fragment);
+</script>
+</body>
+</html>
