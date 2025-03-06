@@ -49,17 +49,41 @@ def diff_md_text(lines_list_1, lines_list_2, context=False, numlines=3):
         context: 是否显示上下文，默认False显示全文
         numlines: 显示的上下文行数，默认3行
     """
+    # 预处理文本，统一处理空行和换行
+    def preprocess_lines(lines):
+        processed = []
+        for line in lines:
+            # 去除行尾空白字符
+            line = line.rstrip()
+            # 如果行不为空，则保留
+            if line:
+                processed.append(line)
+            # 如果行为空，则添加一个空行（避免连续空行）
+            elif processed and processed[-1] != '':
+                processed.append('')
+        return processed
+
+    # 预处理两个文本
+    processed_lines1 = preprocess_lines(lines_list_1)
+    processed_lines2 = preprocess_lines(lines_list_2)
 
     # 创建HTML差异对比
-    # 设置 charjunk=None 以显示所有字符级别的差异
-    diff = difflib.HtmlDiff(wrapcolumn=33, linejunk= None, charjunk= None)
-    html_content = diff.make_file( # make_table
-        lines_list_1,
-        lines_list_2,
+    # 设置更宽松的比较参数
+    diff = difflib.HtmlDiff(
+        wrapcolumn=33,
+        linejunk=None,  # 不忽略任何行
+        charjunk=None,  # 不忽略任何字符
+        tabsize=4      # 设置制表符大小
+    )
+
+    # 使用预处理后的文本生成差异
+    html_content = diff.make_file(
+        processed_lines1,
+        processed_lines2,
         "原稿",
         "校后稿",
-        context=context, # 显示上下文，默认False显示全文
-        numlines=numlines # 显示3行上下文，默认5
+        context=context,
+        numlines=numlines
     )
 
     # 添加宋体字体样式，使用更具体的CSS选择器和!important
@@ -69,6 +93,19 @@ def diff_md_text(lines_list_1, lines_list_2, context=False, numlines=3):
         body, table, tr, td {
             font-family: "SimSun", "宋体" !important;
             font-size: 14px !important;
+        }
+        /* 添加一些样式来优化显示效果 */
+        .diff_header {
+            background-color: #f0f0f0;
+        }
+        .diff_add {
+            text-decoration: underline;
+        }
+        .diff_chg {
+            text-decoration: overline underline;
+        }
+        .diff_sub {
+            text-decoration: overline;
         }
         </style></head>'''
     )
