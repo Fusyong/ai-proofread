@@ -3,7 +3,7 @@
 import difflib
 
 import os
-import shutil
+# import shutil
 # import webbrowser
 
 from typing import List
@@ -11,7 +11,7 @@ from markdown_splitter import split_markdown_by_title
 from clear_pdf_book_txt_to_md import clean_title
 
 
-def split_md_text(text1, text2,  levels:List[int]=[2]):
+def split_md_text(text1, text2,  levels:List[int]|None=None):
     """
     将校对前后的两个md文本按标题分割成多个部分，并检查一致性
 
@@ -25,6 +25,9 @@ def split_md_text(text1, text2,  levels:List[int]=[2]):
         bool: 是否一致
 
     """
+    # 如果levels为None，则默认分割2级标题
+    if levels is None:
+        levels = [2]
 
     # 分割文本
     split_text1 = split_markdown_by_title(text1, levels=levels)
@@ -132,18 +135,22 @@ def jsdiff_md_text(path, file_name_a, file_name_b, diff_path=None):
     # 读取文件 TODO 转义
     with open(f'{path}/{file_name_a}', 'r', encoding='utf-8') as f:
         text1 = f.read()
+        # 替换`为\`
+        text1 = text1.replace('`', '\\`')
         with open(f'{diff_path}/a.js', 'w', encoding='utf-8') as f:
             f.write(f'a = `{text1}`')
 
     with open(f'{path}/{file_name_b}', 'r', encoding='utf-8') as f:
         text2 = f.read()
+        # 替换`为\`
+        text2 = text2.replace('`', '\\`')
         with open(f'{diff_path}/b.js', 'w', encoding='utf-8') as f:
             f.write(f'b = `{text2}`')
 
     # 复制jsdiff.js
-    shutil.copy(f'src/jsdiff/diff.js', f'{diff_path}/diff.js')
+    # shutil.copy(f'src/jsdiff/diff.js', f'{diff_path}/diff.js')
     # 复制并修改index.html
-    with open(f'src/jsdiff/index.html', 'r', encoding='utf-8') as f:
+    with open('src/jsdiff/index.html', 'r', encoding='utf-8') as f:
         content = f.read()
         # 替换<title>Diff</title>中的名称
         content = content.replace(r'<title>Diff</title>', f'<title>{file_name_a} vs {file_name_b}</title>')
@@ -153,22 +160,23 @@ def jsdiff_md_text(path, file_name_a, file_name_b, diff_path=None):
 
 if __name__ == '__main__':
 
-    root_dir = 'work/13本传统文化/清洗后校对'
+    ROOT_DIR = "example"
 
     file_list = [
-        '1.21 汉魏晋六朝（上）',
-        # '1.21 汉魏晋六朝（下册）',
-        # '1.21 宋词上（未转曲）',
-        # '1.21 宋词下',
-        # '1.21 宋词中',
-        # '1.21 宋诗',
-        # '1.21 唐诗上册',
-        # '1.21 唐诗下册',
-        # '1.21 唐诗中册',
-        # '1.21 题画诗',
-        # '1.21 先秦诗',
-        # '1.21 元散曲',
-        # '1.21 元杂剧',
+        'your_markdown',
+        # '1.21 汉魏晋六朝（上）.clean',
+        # '1.21 汉魏晋六朝（下册）.clean',
+        # '1.21 宋词上（未转曲）.clean',
+        # '1.21 宋词下.clean',
+        # '1.21 宋词中.clean',
+        # '1.21 宋诗.clean',
+        # '1.21 唐诗上册.clean',
+        # '1.21 唐诗下册.clean',
+        # '1.21 唐诗中册.clean',
+        # '1.21 题画诗.clean',
+        # '1.21 先秦诗.clean',
+        # '1.21 元散曲.clean',
+        # '1.21 元杂剧.clean',
     ]
 
 
@@ -176,9 +184,9 @@ if __name__ == '__main__':
     # jsdiff
     ###########
     for name in file_list:
-        file1 = f'{name}.clean.md'
-        file2 = f'{name}.clean.proofread.json.md'
-        jsdiff_md_text(root_dir, file1, file2)
+        file1 = f'{name}.md'
+        file2 = f'{name}.proofread.json.md'
+        jsdiff_md_text(ROOT_DIR, file1, file2)
 
     ###########
     # difflib单文件比较

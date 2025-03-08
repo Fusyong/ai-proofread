@@ -3,3 +3,5 @@ node_modules
 work
 *.pyc
 your_markdown*.*
+your_markdown_diff
+__pycache__
