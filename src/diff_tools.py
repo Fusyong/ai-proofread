@@ -127,34 +127,24 @@ def jsdiff_md_text(path, file_name_a, file_name_b, diff_path=None):
     """
 
     if diff_path is None:
-        diff_path = f'{path}/{".".join(file_name_a.split(".")[:-1])}_diff/'
-
-    # 确保路径存在
-    os.makedirs(diff_path, exist_ok=True)
+        diff_path = f'{path}/{".".join(file_name_b.split(".")[:-1])}_diff.html'
 
     # 读取文件 TODO 转义
     with open(f'{path}/{file_name_a}', 'r', encoding='utf-8') as f:
         text1 = f.read()
-        # 替换`为\`
-        text1 = text1.replace('`', '\\`')
-        with open(f'{diff_path}/a.js', 'w', encoding='utf-8') as f:
-            f.write(f'a = `{text1}`')
 
     with open(f'{path}/{file_name_b}', 'r', encoding='utf-8') as f:
         text2 = f.read()
-        # 替换`为\`
-        text2 = text2.replace('`', '\\`')
-        with open(f'{diff_path}/b.js', 'w', encoding='utf-8') as f:
-            f.write(f'b = `{text2}`')
 
-    # 复制jsdiff.js
-    # shutil.copy(f'src/jsdiff/diff.js', f'{diff_path}/diff.js')
-    # 复制并修改index.html
-    with open('src/jsdiff/index.html', 'r', encoding='utf-8') as f:
+    with open('src/jsdiff.html', 'r', encoding='utf-8') as f:
         content = f.read()
         # 替换<title>Diff</title>中的名称
         content = content.replace(r'<title>Diff</title>', f'<title>{file_name_a} vs {file_name_b}</title>')
-        with open(f'{diff_path}/index.html', 'w', encoding='utf-8') as f:
+        # 替换a-text
+        content = content.replace(r'<script type="text/plain" id="a-text">这里是你的长文本内容a...可以包含多行</script>', f'<script type="text/plain" id="a-text">{text1}</script>')
+        # 替换b-text
+        content = content.replace(r'<script type="text/plain" id="b-text">这里是你的长文本内容b...可以包含多行</script>', f'<script type="text/plain" id="b-text">{text2}</script>')
+        with open(diff_path, 'w', encoding='utf-8') as f:
             f.write(content)
 
 

@@ -22,8 +22,15 @@
     <pre id="display"></pre>
     <!-- <script src="diff.js"></script> -->
     <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
-    <script src="a.js"></script>
-    <script src="b.js"></script>
+    <script type="text/plain" id="a-text">这里是你的长文本内容a...可以包含多行</script>
+    <script type="text/plain" id="b-text">这里是你的长文本内容b...可以包含多行</script>
+    <script>
+    // 获取文本内容
+    const a = document.getElementById('a-text').textContent;
+    const b = document.getElementById('b-text').textContent;
+    </script>
+    <!-- <script src="a.js"></script>
+    <script src="b.js"></script> -->
     <script>
 // Variables 'a' and 'b' are now available from the included JS files
 let span = null;
