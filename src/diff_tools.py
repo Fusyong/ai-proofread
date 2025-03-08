@@ -156,7 +156,7 @@ if __name__ == '__main__':
     root_dir = 'work/13本传统文化/清洗后校对'
 
     file_list = [
-        # '1.21 汉魏晋六朝（上）',
+        '1.21 汉魏晋六朝（上）',
         # '1.21 汉魏晋六朝（下册）',
         # '1.21 宋词上（未转曲）',
         # '1.21 宋词下',
@@ -166,7 +166,7 @@ if __name__ == '__main__':
         # '1.21 唐诗下册',
         # '1.21 唐诗中册',
         # '1.21 题画诗',
-        '1.21 先秦诗',
+        # '1.21 先秦诗',
         # '1.21 元散曲',
         # '1.21 元杂剧',
     ]
@@ -175,21 +175,21 @@ if __name__ == '__main__':
     ###########
     # jsdiff
     ###########
-    # for name in file_list:
-    #     file1 = f'{name}.clean.md'
-    #     file2 = f'{name}.clean.proofread.json.md'
-    #     jsdiff_md_text(root_dir, file1, file2)
+    for name in file_list:
+        file1 = f'{name}.clean.md'
+        file2 = f'{name}.clean.proofread.json.md'
+        jsdiff_md_text(root_dir, file1, file2)
 
     ###########
     # difflib单文件比较
     ###########
-    for file in file_list:
-        text11 = open(f'{root_dir}/{file}.clean.md', 'r', encoding='utf-8').readlines()
-        text22 = open(f'{root_dir}/{file}.clean.proofread.json.md', 'r', encoding='utf-8').readlines()
+    # for file in file_list:
+    #     text11 = open(f'{root_dir}/{file}.clean.md', 'r', encoding='utf-8').readlines()
+    #     text22 = open(f'{root_dir}/{file}.clean.proofread.json.md', 'r', encoding='utf-8').readlines()
 
-        html_content = diff_md_text(text11, text22, context=False, numlines=3)
-        with open(f'{root_dir}/{file}.diff.html', 'w', encoding='utf-8') as f:
-            f.write(html_content)
+    #     html_content = diff_md_text(text11, text22, context=False, numlines=3)
+    #     with open(f'{root_dir}/{file}.diff.html', 'w', encoding='utf-8') as f:
+    #         f.write(html_content)
 
     ###########
     # 批量分段后比较

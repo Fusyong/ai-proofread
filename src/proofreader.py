@@ -10,7 +10,8 @@ import asyncio
 from typing import List, Callable
 from concurrent.futures import ThreadPoolExecutor
 
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -134,21 +135,24 @@ def chat_aliyun_deepseek(text: str) -> str|None:
 
 
 # 配置Google API
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"),)
 
-google_model=genai.GenerativeModel(
-  model_name="gemini-2.0-flash-exp",
-  system_instruction=SYSTEM_PROMPT)
-
-
-def chat_google(text: str) -> str:
+def chat_google(text: str) -> str|None:
     """
     调用google校对模型，返回校对后的文本
     """
     retry_count = 0
     result = ""
     while retry_count < 3:
-        response = google_model.generate_content(text)
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-001',
+            contents=text,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                # max_output_tokens=3,
+                temperature=1,
+            ),
+        )
         result = response.text
         if result:
             break
@@ -157,7 +161,7 @@ def chat_google(text: str) -> str:
     return result
 
 
-async def chat_google_async(text: str, rate_limiter: RateLimiter) -> str:
+async def chat_google_async(text: str, rate_limiter: RateLimiter) -> str|None:
     """
     异步调用google校对模型，返回校对后的文本
     """
@@ -362,27 +366,30 @@ def process_by_once(file_in: str, file_out: str, chat_func: Callable=chat_deepse
 
 if __name__ == "__main__":
 
-    # 示例文件路径
-    root_dir = "work/13本传统文化/清洗后md/"
+    # 文件所在路径（以项目根目录为当前目录）
+    ROOT_DIR = "example"
+    # 文件名列表（不含后缀`.md`）
     file_names = [
-        '1.21 先秦诗',
-        '1.21 汉魏晋六朝（上）',
-        '1.21 汉魏晋六朝（下册）',
-        '1.21 唐诗上册',
-        '1.21 唐诗中册',
-        '1.21 唐诗下册',
-        '1.21 宋诗',
-        '1.21 宋词上（未转曲）',
-        '1.21 宋词中',
-        '1.21 宋词下',
-        '1.21 题画诗',
-        '1.21 元散曲',
-        '1.21 元杂剧',
+        'your_markdown',
+        # '1.21 先秦诗.clean',
+        # '1.21 汉魏晋六朝（上）.clean',
+        # '1.21 汉魏晋六朝（下册）.clean',
+        # '1.21 唐诗上册.clean',
+        # '1.21 唐诗中册.clean',
+        # '1.21 唐诗下册.clean',
+        # '1.21 宋诗.clean',
+        # '1.21 宋词上（未转曲）.clean',
+        # '1.21 宋词中.clean',
+        # '1.21 宋词下.clean',
+        # '1.21 题画诗.clean',
+        # '1.21 元散曲.clean',
+        # '1.21 元杂剧.clean',
     ]
     for file_name in file_names:
 
-        FILE_JSON = f"{root_dir}/{file_name}.clean.json"
-        FILE_PROOFREAD_JSON = f"{root_dir}/{file_name}.clean.proofread.json"
+        # 将生成的两个文件
+        FILE_JSON = f"{ROOT_DIR}/{file_name}.json"
+        FILE_PROOFREAD_JSON = f"{ROOT_DIR}/{file_name}.proofread.json"
 
         # 确保输入文件存在
         if not os.path.exists(FILE_JSON):

@@ -145,43 +145,49 @@ def merge_short_paragraphs(paragraphs: List[str], min_length: int=100) -> List[s
 
 
 if __name__ == "__main__":
-    # 示例文件路径
-    root_dir = "13本传统文化/清洗后md/"
+
+    # 文件所在路径（以项目根目录为当前目录）
+    ROOT_DIR = "example"
+    # 文件名列表（不含后缀`.md`）
     file_names = [
-        '1.21 先秦诗',
-        '1.21 汉魏晋六朝（上）',
-        '1.21 汉魏晋六朝（下册）',
-        '1.21 唐诗上册',
-        '1.21 唐诗中册',
-        '1.21 唐诗下册',
-        '1.21 宋诗',
-        '1.21 宋词上（未转曲）',
-        '1.21 宋词中',
-        '1.21 宋词下',
-        '1.21 题画诗',
-        '1.21 元散曲',
-        '1.21 元杂剧',
+        'your_markdown',
+        # '1.21 先秦诗.clean',
+        # '1.21 汉魏晋六朝（上）.clean',
+        # '1.21 汉魏晋六朝（下册）.clean',
+        # '1.21 唐诗上册.clean',
+        # '1.21 唐诗中册.clean',
+        # '1.21 唐诗下册.clean',
+        # '1.21 宋诗.clean',
+        # '1.21 宋词上（未转曲）.clean',
+        # '1.21 宋词中.clean',
+        # '1.21 宋词下.clean',
+        # '1.21 题画诗.clean',
+        # '1.21 元散曲.clean',
+        # '1.21 元杂剧.clean',
     ]
     for file_name in file_names:
-        FILE_INPUT = f"{root_dir}/{file_name}.clean.md"
-        FILE_JSON = f"{root_dir}/{file_name}.clean.json"
-        FILE_JSON_MD = f"{root_dir}/{file_name}.clean.json.md"
+
+        FILE_INPUT = f"{ROOT_DIR}/{file_name}.md"
+        FILE_JSON = f"{ROOT_DIR}/{file_name}.json"
+        FILE_JSON_MD = f"{ROOT_DIR}/{file_name}.json.md"
 
         # 先将markdown切分为json
         # 并手动加标题以控制长度
         with open(FILE_INPUT, "r", encoding="utf-8") as f:
             text = f.read()  # 读取整个文件内容
 
-            text_list = split_markdown_by_title(text, levels=[1,2,3,4,5])
+            # 1. 按指定的标题级别拆分
+            text_list = split_markdown_by_title(text, levels=[1,2,3,4,5,6])
 
-            # 1. 将超长段落切分为多个短段落
+            # 2. 进一步将超threshold字符的长段落按cut_by字符尝试切分
             text_list = cut_text_in_list_by_length(text_list, threshold=1000, cut_by=800)
 
-            # 2. 合并短段落
+            # 3. 合并不足min_length字符的零碎段落
             text_list = merge_short_paragraphs(text_list, min_length=120)
             # 如果仍有超长段落，可在原文上手动设置伪标题和空行
 
             # 打印长度供检查
+            print(f"片段号\t字符数\t起始文字\n{'-'*40}")
             for i, j in enumerate(text_list):
                 length = len(j)
                 print(f"No.{i+1}\t{length}\t{j.strip()[:15].splitlines()[0]}")
