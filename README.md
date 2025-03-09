@@ -5,7 +5,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
 !!!
     鉴于身边编辑同仁的一般情况, 以下说明均假设: 你使用Windows x64操作系统, 完全不懂编程, 但有一定的学习意愿. 我尽可能详尽而简洁地说明, 以便你自学上手. 尽管如此, 我还是建议你从身边找一位稍懂程序的人, 比如公司的网管, 请他对照这篇说明，帮助你把一个真实的校对例子跑起来, 这个小小的门槛有可能吓退很多人.
 
-## 简明教程
+## 安装
 
 1. [下载Python安装程序](https://www.python.org/downloads/windows/)(其中有运行Python脚本的解释器), 较新的电脑可先尝试Stable Releases中的Windows installer (64-bit)版本; 安装下载的安装程序, 务必勾选"Add python.exe to PATH"(让你的操作系统记住它的安装位置), 然后点击Install Now安装
 2. [下载VS Code编辑器安装程序](https://code.visualstudio.com/Download)(用来处理和比较文件的编辑器), 通常选择User Installer x64; 使用默认选项安装下载的安装程序; 运行时会提醒你安装中文语言包"Chinese (Simplified) (简体中文) Language Pack for Visual Studio Code", 以及其他插件, 可以根据需要确定是否安装
@@ -26,8 +26,17 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
     pip install google-genai
     pip install dotenv
     ```
-7. 准备要校对的文件: 我建议使用markdown格式整理你需要校对的文件，在此假设你的文件是example中的your_markdown.md（包含对格式的必要说明）
-8. 切分要校对的文件：打开文件切分脚本splitting1.py或splitting2.py(二者的差异，文档中有说明)，其中有详细说明，可以根据需要调整；使用编辑器右上角的三角形图标（Run Python File）运行这个脚本（或在终端输入`py splitting1.py`，下同）；这时会生成两个文件，your_markdown.json（供下一步处理），your_markdown.json.md(由前者生成，用来观察处理是否导致错误)，同时你将看到终端输出了切分信息（如由过长的问题，可以通过加空行来处理）：
+
+## 校对一段文字
+
+如果仅仅是体验，或者是一边AI校对一边核实、誊改，请使用proofreading2.py和example2中的例子。
+
+校对后，参考后文提到的比较校对前后变动的方法，即看到清晰的结果。
+
+##  校对一本书或多本书的通用流程
+
+1. 准备要校对的文件: 我建议使用markdown格式整理你需要校对的文件，在此假设你的文件是example中的your_markdown.md（包含对格式的必要说明）
+2. 切分要校对的文件：打开文件切分脚本splitting1.py或splitting2.py(二者的差异，文档中有说明)，其中有详细说明，可以根据需要调整；使用编辑器右上角的三角形图标（Run Python File）运行这个脚本（或在终端输入`py splitting1.py`，下同）；这时会生成两个文件，your_markdown.json（供下一步处理），your_markdown.json.md(由前者生成，用来观察处理是否导致错误)，同时你将看到终端输出了切分信息（如由过长的问题，可以通过加空行来处理）：
     >```text
     >片段号  字符数  起始文字
     >----------------------------------------
@@ -37,11 +46,11 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
     >No.4    360     # 一级标题2
     >No.5    301     ## 二级标题2
     >```
-9.  校对准备好的文件：打开校对脚本proofreading.py, 其中有详细说明，可以根据需要调整；同上运行脚本，你会在终端看到正在调用API校对文本的进度信息。最后，如果有未成功的片段，可以重复运行（已经完成的部分会自动忽略）。最终得到三个文件：
+3.  校对准备好的文件：打开校对脚本proofreading.py, 其中有详细说明，可以根据需要调整；同上运行脚本，你会在终端看到正在调用API校对文本的进度信息。最后，如果有未成功的片段，可以重复运行（已经完成的部分会自动忽略）。最终得到三个文件：
     1. your_markdown.proofread.json.md 校对后的markdown文件
     2. your_markdown.proofread.json 供脚本使用的结果文件，你通常不用在意
     3. your_markdown.proofread.json.log 日志，保留了统计信息、错误信息等
-10. 最后，在vscode终，选择最初的your_markdown.md，打开右键菜单选择“选择以校对”；然后选择最终的your_markdown.proofread.json.md，打开右键菜单选择“与已选文件比较”。这样你就能清楚地看到改动细节了。
+4.  比较校对前后的变动：在vscode终，选择最初的your_markdown.md，打开右键菜单选择“选择以校对”；然后选择最终的your_markdown.proofread.json.md，打开右键菜单选择“与已选文件比较”。这样你就能清楚地看到改动细节了。
 
 以上省略了很多细节，你可能碰到各种小问题，需要慢慢摸索。这是我建议你从身边找一位稍懂程序的人帮忙的原因。
 
@@ -60,6 +69,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
 * [ ] 介绍其他工具和文档
     * [x] diff_tools.py
     * [ ] prompt-校对专家-system.xml
+    * [ ] jsdiff.html
 * [ ] 专项校对
     1. [ ] 地名、行政区划
     2. [ ] 引文
@@ -75,8 +85,9 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
 
 [文档](https://api-docs.deepseek.com/zh-cn/)
 
-temperature 参数默认为 1.0。
-我们建议您根据如下表格，按使用场景设置 temperature。
+temperature 参数默认为 1.0（此时极少错误改动 TODO 需要尝试不同的值）。
+
+官方建议您根据如下表格，按使用场景设置 temperature。
 
 | 场景                | 温度 |
 | ------------------- | ---- |
@@ -89,9 +100,39 @@ temperature 参数默认为 1.0。
 1 个英文字符 ≈ 0.3 个 token。
 1 个中文字符 ≈ 0.6 个 token。
 
-## pandoc转docx为markdown_strict
+## 处理文件
+
+模型只适合处理文本文件，如纯文本、markdown等。
+
+Markdown是一种简单的标记文本格式，用来了整理书稿，可以保留标题级别、图表、公式、脚注等绝大多数Word书稿的格式。建议书稿从一开始就用markdown格式处理。进一步学习可以参考[markdownguide.org](https://www.markdownguide.org/)。
+
+目前你只需要了解，本库的文本分切工具需要依赖两种标记：
+（1）标题级别（若干`#`后加一个空格）；
+（2）空行。
+在markdown格式中，一个或连续多个空行（效果不变）表示分段，而连续的非空行被看作一段。
+
+为了尽可能使大模型看到意义连贯的文本，又避免一次生成太长的文本（有可能失去注意力，忽略细节），建议标出标题级别和段间空行。没有标题时程序将随机选择切分位置；段间没有空行可能导致切分结果过长，效果变差。
+
+
+### 处理PDF文件
+
+PDF文件，建议用Acrobat转换成HTML或docx后整理，再转换成markdown。
+
+建议转换后与简单复制黏贴的纯文本（通常能保留所有字符）进行比较。
+
+### pandoc转docx为markdown_strict
+
+```bash
+set myfilename="myfilename"
+
+pandoc -f docx -t markdown-smart+pipe_tables+footnotes --wrap=none --toc --extract-media="./attachments/%myfilename%" %myfilename%.docx -o %myfilename%.md
+```
+
+或：
 
 ```shell
 set myfilename="myfilename"
 pandoc -t markdown_strict --extract-media="./attachments/%myfilename%" %myfilename%.docx -o %myfilename%.md
 ```
+
+建议转换后与简单复制黏贴的纯文本（通常能保留所有字符）进行比较。

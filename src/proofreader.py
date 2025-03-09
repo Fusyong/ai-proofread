@@ -78,8 +78,9 @@ def deepseek(content: str, reference: str="", model:str="deepseek-chat") -> str|
     if reference:
         message.extend([{"role": "assistant", "content": ""},
                         {"role": "user", "content": reference}])
-    message.extend([{"role": "assistant", "content": ""},# 回答示例。避免系统提示带来应答
+    message.extend([{"role": "assistant", "content": ""},# 回答示例，避免模型应答
                     {"role": "user", "content": content},])
+    # print(message)
 
     while retry_count < 3:
         try:
@@ -107,7 +108,7 @@ def deepseek(content: str, reference: str="", model:str="deepseek-chat") -> str|
     return result
 
 
-async def deepseek_async(content_with_target: str, reference: str, model:str, rate_limiter: RateLimiter) -> str|None:
+async def deepseek_async(content: str, reference: str, model:str, rate_limiter: RateLimiter) -> str|None:
     """
     异步调用deepseek校对模型，返回校对后的文本
     """
@@ -118,7 +119,7 @@ async def deepseek_async(content_with_target: str, reference: str, model:str, ra
     with ThreadPoolExecutor() as executor:
         result = await loop.run_in_executor(
             executor,
-            lambda: deepseek(content_with_target, reference, model)
+            lambda: deepseek(content, reference, model)
         )
     return result
 
@@ -180,7 +181,7 @@ async def chat_google_async(text: str, rate_limiter: RateLimiter) -> str|None:
     return result
 
 
-async def process_paragraphs_async(json_in: str, json_out: str, start_count: int|list[int]=1, stop_count: int|None=None, model: str="deepseek-chat", rpm: int=15, max_concurrent: int=3, reference_json: str=""):
+async def process_paragraphs_async(json_in: str, json_out: str, start_count: int|list[int]=1, stop_count: int|None=None, model: str="deepseek-chat", rpm: int=15, max_concurrent: int=3, context_json: str="", reference_json: str=""):
     """
     异步处理文本段落，直接将结果存储到 JSON 文件中
 
@@ -192,6 +193,8 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
         model (str): 使用的模型，默认为"deepseek-chat"
         rpm (int): 每分钟请求数，默认为30
         max_concurrent (int): 最大并发数，默认为3
+        context (str): 上下文文件路径
+        reference_json (str): 参考文件路径
     """
     # 读取输入 JSON 文件
     with open(json_in, "r", encoding="utf-8") as f:
@@ -199,11 +202,19 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
     # 检查上下文和参考文件是否存在
     reference: List[str] = []
     if not os.path.exists(reference_json):
-        print(f"找不到参考文件：{reference_json}")
+        print(f"没有参考文件：{reference_json}")
     else:
         # 读取上下文和参考文件
         with open(reference_json, "r", encoding="utf-8") as f:
             reference = json.load(f)
+
+    # 如果上下文文件存在，读取它；否则创建空字符串
+    context_json = ""
+    if os.path.exists(context_json):
+        with open(context_json, "r", encoding="utf-8") as f:
+            context_json = f.read()
+    else:
+        print(f"没有上下文文件：{context_json}")
 
     # 如果输出 JSON 文件已存在，读取它；否则创建空列表
     output_paragraphs: List[str|None] = []
@@ -273,8 +284,22 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
                 reference_i = reference[i]
             else:
                 reference_i = ""
+            if context_json and len(context_json) > i:
+                context_i = context_json[i]
+            else:
+                context_i = ""
 
-            print(f"处理 {i+1}/{len(input_paragraphs)} 长度 {len(paragraph)}:\n{paragraph[:30]} ...\n")
+            print(f"处理 {i+1}/{len(input_paragraphs)} RCT长度 {len(reference_i)}+{len(context_i)}+{len(paragraph)}:\n{paragraph[:30]} ...\n")
+
+            if context_i:
+                # 以下两种合并位置的优劣有待测试  TODO
+                if 1:
+                    # 将上下文添加到参考文献后提交
+                    reference_i = f"{reference_i}\n\n{context_i}"
+                else:
+                    # 将上下文添加到校对文本前提交
+                    paragraph = f"{context_i}\n\n{paragraph}"
+
             start_time = time.time()
 
             # 等待限速器
@@ -369,7 +394,7 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
 
 def process_by_once(file_in: str, file_out: str, chat_func: Callable=chat_deepseek):
     """
-    一次性处理整段文本
+    一次性处理整个文件
     """
     with open(file_in, encoding="utf8",mode="r") as f:
         with open(file_out,encoding="utf8", mode="w") as f_out:

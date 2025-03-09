@@ -1,4 +1,7 @@
-"""校对用例1
+"""一般校对用例
+
+输入切分好的JSON文件、上下文文件【可选】、参考文件【可选】；
+输出校对后的JSON文件
 """
 import os
 import json
@@ -27,16 +30,18 @@ file_names = [
 
 
 for file_name in file_names:
-
-    # 将生成的两个文件
-    FILE_JSON = f"{ROOT_DIR}/{file_name}.json"
-    FILE_PROOFREAD_JSON = f"{ROOT_DIR}/{file_name}.proofread.json"
-    # 参考文件
+    # 切分好的JSON文件
+    FILE_IN_JSON = f"{ROOT_DIR}/{file_name}.json"
+    # 参考文件【可选】
     REFERENCE_JSON = f"{ROOT_DIR}/{file_name}.reference.json"
+    # 上下文文件【可选】
+    CONTEXT_JSON = f"{ROOT_DIR}/{file_name}.context.json"
+    # 将生成的文件
+    FILE_PROOFREAD_JSON = f"{ROOT_DIR}/{file_name}.proofread.json"
 
     # 确保输入文件存在
-    if not os.path.exists(FILE_JSON):
-        print(f"错误：输入文件 {FILE_JSON} 不存在")
+    if not os.path.exists(FILE_IN_JSON):
+        print(f"错误：输入文件 {FILE_IN_JSON} 不存在")
         exit(1)
 
     # 确保输出目录存在
@@ -44,14 +49,14 @@ for file_name in file_names:
 
     # 处理文本
     try:
-        asyncio.run(process_paragraphs_async(FILE_JSON, FILE_PROOFREAD_JSON, start_count=1, model="deepseek-chat", rpm=15, max_concurrent=3, reference_json=REFERENCE_JSON))
+        asyncio.run(process_paragraphs_async(FILE_IN_JSON, FILE_PROOFREAD_JSON, start_count=1, model="deepseek-chat", rpm=15, max_concurrent=3, context_json=CONTEXT_JSON, reference_json=REFERENCE_JSON))
     except Exception as e:
         print(f"处理文本时出错: {str(e)}")
         exit(1)
 
     # 输出处理进度统计
     try:
-        with open(FILE_JSON, "r", encoding="utf-8") as f:
+        with open(FILE_IN_JSON, "r", encoding="utf-8") as f:
             input_paragraphs = json.load(f)
 
         with open(FILE_PROOFREAD_JSON, "r", encoding="utf-8") as f:

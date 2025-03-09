@@ -1,0 +1,9 @@
+[
+  "Markdown是一种简单的标记文本格式，用来整理书稿，可以保留绝大多数Word书稿的格式。进一步学习可以参考[markdownguide.org](https://www.markdownguide.org/)。\n\n目前你只需要了解，本库的文本分切工具需要依赖两种标记：\n（1）标题级别（若干`#`后加一个空格）；\n（2）空行。\n在markdown格式中，一个或连续多个空行（效果不变）表示分段，而连续的非空行被看作一段。",
+  null,
+  null,
+  null,
+  null,
+  null,
+  null
+]

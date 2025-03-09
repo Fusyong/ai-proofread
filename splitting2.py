@@ -2,9 +2,9 @@
 1. 将markdown按标题切分；
 2. 进一步切分为指定长度的小段；
 3. 合并太短的段落到后一段；
-4. 添加target标签
+4. 添加校对标签（target）
 
-这有利于大模型生成时避免生成过长的文本，又不至于过于零碎；
+这有利于避免一次生成过长的文本，降低校对质量和请求错误，又不至于过于零碎；
 本方法消耗token少，但无法保持上下文连贯性。
 """
 import json
@@ -45,7 +45,7 @@ for file_name in file_names:
 
         ############################################
         # # 按标题切分，并添加text_for_proofreading标签，并合并短段落到后一段
-        text_list = split_markdown_by_title_and_length_and_merge(text, levels=[1], threshold=1000, cut_by=200, min_length=120)
+        text_list = split_markdown_by_title_and_length_and_merge(text, levels=[1], threshold=1000, cut_by=600, min_length=120)
         ############################################
 
         # 写出json
