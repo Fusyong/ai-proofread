@@ -105,6 +105,27 @@ def split_markdown_by_title(text: str, levels: list[int]=[2]) -> List[str]:
 
     return raw_paragraphs
 
+def split_markdown_by_title_and_length_with_context(text: str, levels: list[int]=[2], cut_by: int=600) -> List[str]:
+    """
+    1. 将markdown文本按标题级别切分;
+    2. 再按cut_by字符切分，添加target标签；
+    3. 并在头部添加完整上下文，添加context标签；
+    """
+    # 按标题切分文本
+    raw_paragraphs = split_markdown_by_title(text, levels=levels)
+
+    # 长文本按cut_by字符切分，并添加target标签并保留上下文
+    label_paragraphs = []
+    for paragraph in raw_paragraphs:
+        pieces = cut_text_by_length(paragraph, cut_by=cut_by)
+        new_pieces = []
+        # 为每个片段添加target标签并保留上下文
+        for piece in pieces:
+            piece = f'<context>\n{paragraph}\n</context>\n\n<target>\n{piece}\n</target>'
+            new_pieces.append(piece)
+        label_paragraphs.extend(new_pieces)
+
+    return label_paragraphs
 
 def merge_short_paragraphs(paragraphs: List[str], min_length: int=100) -> List[str]:
     """
@@ -143,60 +164,28 @@ def merge_short_paragraphs(paragraphs: List[str], min_length: int=100) -> List[s
 
     return result
 
+def split_markdown_by_title_and_length_and_merge(text: str, levels: list[int]=[2], threshold: int=1000, cut_by: int=800, min_length: int=120) -> List[str]:
+    """
+    1. 将markdown文本按标题级别切分，
+    2. 然后按cut_by字符进一步切分，
+    3. 合并不足min_length字符的零碎段落
+    4. 添加target标签
+    """
+    # 1. 按指定的标题级别拆分
+    text_list = split_markdown_by_title(text, levels=levels)
+
+    # 2. 进一步将超threshold字符的长段落按cut_by字符尝试切分
+    text_list = cut_text_in_list_by_length(text_list, threshold=threshold, cut_by=cut_by)
+
+    # 3. 合并不足min_length字符的零碎段落
+    text_list = merge_short_paragraphs(text_list, min_length=min_length)
+    # 如果仍有超长段落，可在原文上手动设置伪标题和空行
+
+    # 添加target标签
+    text_list = [f'<target>\n{x}\n</target>' for x in text_list if x.strip()]
+
+    return text_list
 
 if __name__ == "__main__":
 
-    # 文件所在路径（以项目根目录为当前目录）
-    ROOT_DIR = "example"
-    # 文件名列表（不含后缀`.md`）
-    file_names = [
-        'your_markdown',
-        # '1.21 先秦诗.clean',
-        # '1.21 汉魏晋六朝（上）.clean',
-        # '1.21 汉魏晋六朝（下册）.clean',
-        # '1.21 唐诗上册.clean',
-        # '1.21 唐诗中册.clean',
-        # '1.21 唐诗下册.clean',
-        # '1.21 宋诗.clean',
-        # '1.21 宋词上（未转曲）.clean',
-        # '1.21 宋词中.clean',
-        # '1.21 宋词下.clean',
-        # '1.21 题画诗.clean',
-        # '1.21 元散曲.clean',
-        # '1.21 元杂剧.clean',
-    ]
-    for file_name in file_names:
-
-        FILE_INPUT = f"{ROOT_DIR}/{file_name}.md"
-        FILE_JSON = f"{ROOT_DIR}/{file_name}.json"
-        FILE_JSON_MD = f"{ROOT_DIR}/{file_name}.json.md"
-
-        # 先将markdown切分为json
-        # 并手动加标题以控制长度
-        with open(FILE_INPUT, "r", encoding="utf-8") as f:
-            text = f.read()  # 读取整个文件内容
-
-            # 1. 按指定的标题级别拆分
-            text_list = split_markdown_by_title(text, levels=[1,2,3,4,5,6])
-
-            # 2. 进一步将超threshold字符的长段落按cut_by字符尝试切分
-            text_list = cut_text_in_list_by_length(text_list, threshold=1000, cut_by=800)
-
-            # 3. 合并不足min_length字符的零碎段落
-            text_list = merge_short_paragraphs(text_list, min_length=120)
-            # 如果仍有超长段落，可在原文上手动设置伪标题和空行
-
-            # 打印长度供检查
-            print(f"片段号\t字符数\t起始文字\n{'-'*40}")
-            for i, j in enumerate(text_list):
-                length = len(j)
-                print(f"No.{i+1}\t{length}\t{j.strip()[:15].splitlines()[0]}")
-
-            # 写出json
-            with open(FILE_JSON, "w", encoding="utf-8") as f:
-                json.dump(text_list, f, ensure_ascii=False, indent=2)
-
-            # 写出md供核对
-            with open(FILE_JSON_MD, "w", encoding="utf-8") as f:
-                text = "\n".join(text_list)
-                f.write(text)
+    pass

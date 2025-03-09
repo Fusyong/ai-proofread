@@ -27,7 +27,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
     pip install dotenv
     ```
 7. 准备要校对的文件: 我建议使用markdown格式整理你需要校对的文件，在此假设你的文件是example中的your_markdown.md（包含对格式的必要说明）
-8. 切分要校对的文件：打开src中的文件切分脚本markdown_splitter.py，拉到最后的`if __name__ == "__main__":`部分，这一部分有详细说明，可以根据需要调整；使用编辑器右上角的三角形图标（Run Python File）运行这个脚本（或在终端输入`py src\markdown_splitter.py`，下同）；这时会生成两个文件，your_markdown.json（供下一步处理），your_markdown.json.md(由前者生成，用来观察处理是否导致错误)，同时你将看到终端输出了切分信息（如由过长的问题，可以通过加空行来处理）：
+8. 切分要校对的文件：打开文件切分脚本splitting1.py或splitting2.py(二者的差异，文档中有说明)，其中有详细说明，可以根据需要调整；使用编辑器右上角的三角形图标（Run Python File）运行这个脚本（或在终端输入`py splitting1.py`，下同）；这时会生成两个文件，your_markdown.json（供下一步处理），your_markdown.json.md(由前者生成，用来观察处理是否导致错误)，同时你将看到终端输出了切分信息（如由过长的问题，可以通过加空行来处理）：
     >```text
     >片段号  字符数  起始文字
     >----------------------------------------
@@ -37,7 +37,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
     >No.4    360     # 一级标题2
     >No.5    301     ## 二级标题2
     >```
-9.  校对准备好的文件：打开src中的校对脚本proofreader.py, 同样拉到最后的`if __name__ == "__main__":`部分，这一部分有详细说明，可以根据需要调整；同上运行脚本，你会在终端看到正在调用API校对文本的进度信息。最后，如果有未成功的片段，可以重复运行（已经完成的部分会自动忽略）。最终得到三个文件：
+9.  校对准备好的文件：打开校对脚本proofreading.py, 其中有详细说明，可以根据需要调整；同上运行脚本，你会在终端看到正在调用API校对文本的进度信息。最后，如果有未成功的片段，可以重复运行（已经完成的部分会自动忽略）。最终得到三个文件：
     1. your_markdown.proofread.json.md 校对后的markdown文件
     2. your_markdown.proofread.json 供脚本使用的结果文件，你通常不用在意
     3. your_markdown.proofread.json.log 日志，保留了统计信息、错误信息等
@@ -55,19 +55,21 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
 
 ## TODO
 
-* 介绍其他工具
-* 支持参考资料
-* 支持语境(上下文)
-* 专项校对
-    1. 地名、行政区划
-    2. 引文
-    3. 术语，专名
-    4. 人名
-    5. 低频度词汇
-    6. 年代
-    7. 注释
-    8. 通用规范汉字表查询
-* 智能体(对本地环境的感知和操控, 如查字典和参考文档)
+* [x] 支持参考资料
+* [x] 支持语境(上下文)
+* [ ] 介绍其他工具和文档
+    * [x] diff_tools.py
+    * [ ] prompt-校对专家-system.xml
+* [ ] 专项校对
+    1. [ ] 地名、行政区划
+    2. [ ] 引文
+    3. [ ] 术语，专名
+    4. [ ] 人名
+    5. [ ] 低频度词汇
+    6. [ ] 年代
+    7. [ ] 注释
+    8. [ ] 通用规范汉字表查询
+* [ ] 智能体(远景，对本地环境的感知和操控, 如查字典和参考文档)
 
 ## deepseek参考资料
 

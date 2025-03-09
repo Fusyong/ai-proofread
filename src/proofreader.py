@@ -21,12 +21,10 @@ load_dotenv()
 # 读取上一层文件夹中的提示文件
 # parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # prompt_file_path = os.path.join(parent_dir, "prompt-校对专家.md")
-PROMPT_FILE_PATH = "src/prompt-校对专家.md"
+PROMPT_FILE_PATH = "src/prompt-校对专家-system.xml"
 SYSTEM_PROMPT = ""
-
 with open(PROMPT_FILE_PATH, "r", encoding="utf-8") as file:
     SYSTEM_PROMPT = file.read()
-
 
 class RateLimiter:
     """
@@ -47,14 +45,13 @@ class RateLimiter:
             self.last_call_time = time.time()
 
 
-def deepseek(text: str, model:str, context:str="", reference_material:str="") -> str|None:
+def deepseek(content: str, reference: str="", model:str="deepseek-chat") -> str|None:
     """
     调用各家deepseek校对模型，返回校对后的文本
 
     model: deepseek-chat
            deepseek-v3
     context: 上下文(其中可能包含需要校对的文本)
-    reference_material: 参考材料
     """
 
     client: OpenAI|None = None
@@ -76,16 +73,20 @@ def deepseek(text: str, model:str, context:str="", reference_material:str="") ->
     retry_count = 0
     result = ""
 
+    message= [{"role": "system", "content": SYSTEM_PROMPT}]
+    # 单独提交一轮reference可节省token但效果有待验证 TODO
+    if reference:
+        message.extend([{"role": "assistant", "content": ""},
+                        {"role": "user", "content": reference}])
+    message.extend([{"role": "assistant", "content": ""},# 回答示例。避免系统提示带来应答
+                    {"role": "user", "content": content},])
+
     while retry_count < 3:
         try:
             print(f"正在调用 {model} API (尝试 {retry_count+1}/3)...")
             response = client.chat.completions.create(
                 model=model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "assistant", "content": ""}, # 回答示例。避免系统提示带来应答
-                    {"role": "user", "content": text},
-                ],
+                messages=message, # type: ignore
                 temperature=1,
                 stream=False,
             )
@@ -101,10 +102,12 @@ def deepseek(text: str, model:str, context:str="", reference_material:str="") ->
             retry_count += 1
             continue
 
+    result = result.replace("\n</target>", "").replace("<target>\n", "")
+
     return result
 
 
-async def deepseek_async(text: str, model:str, rate_limiter: RateLimiter) -> str|None:
+async def deepseek_async(content_with_target: str, reference: str, model:str, rate_limiter: RateLimiter) -> str|None:
     """
     异步调用deepseek校对模型，返回校对后的文本
     """
@@ -115,7 +118,7 @@ async def deepseek_async(text: str, model:str, rate_limiter: RateLimiter) -> str
     with ThreadPoolExecutor() as executor:
         result = await loop.run_in_executor(
             executor,
-            lambda: deepseek(text, model)
+            lambda: deepseek(content_with_target, reference, model)
         )
     return result
 
@@ -177,7 +180,7 @@ async def chat_google_async(text: str, rate_limiter: RateLimiter) -> str|None:
     return result
 
 
-async def process_paragraphs_async(json_in: str, json_out: str, start_count: int|list[int]=1, stop_count: int|None=None, model: str="deepseek-chat", rpm: int=15, max_concurrent: int=3):
+async def process_paragraphs_async(json_in: str, json_out: str, start_count: int|list[int]=1, stop_count: int|None=None, model: str="deepseek-chat", rpm: int=15, max_concurrent: int=3, reference_json: str=""):
     """
     异步处理文本段落，直接将结果存储到 JSON 文件中
 
@@ -193,6 +196,14 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
     # 读取输入 JSON 文件
     with open(json_in, "r", encoding="utf-8") as f:
         input_paragraphs: List[str] = json.load(f)
+    # 检查上下文和参考文件是否存在
+    reference: List[str] = []
+    if not os.path.exists(reference_json):
+        print(f"找不到参考文件：{reference_json}")
+    else:
+        # 读取上下文和参考文件
+        with open(reference_json, "r", encoding="utf-8") as f:
+            reference = json.load(f)
 
     # 如果输出 JSON 文件已存在，读取它；否则创建空列表
     output_paragraphs: List[str|None] = []
@@ -258,6 +269,10 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
     async def process_one(i):
         async with semaphore:
             paragraph = input_paragraphs[i]
+            if reference and len(reference) > i:
+                reference_i = reference[i]
+            else:
+                reference_i = ""
 
             print(f"处理 {i+1}/{len(input_paragraphs)} 长度 {len(paragraph)}:\n{paragraph[:30]} ...\n")
             start_time = time.time()
@@ -268,7 +283,7 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
             # 调用相应的 API
             processed_text = None
             if model.startswith("deepseek"):
-                processed_text = await deepseek_async(paragraph, model, rate_limiter)
+                processed_text = await deepseek_async(paragraph, reference_i, model, rate_limiter)
             elif model == "google":
                 processed_text = await chat_google_async(paragraph, rate_limiter)
             else:
@@ -366,66 +381,4 @@ def process_by_once(file_in: str, file_out: str, chat_func: Callable=chat_deepse
 
 if __name__ == "__main__":
 
-    # 文件所在路径（以项目根目录为当前目录）
-    ROOT_DIR = "example"
-    # 文件名列表（不含后缀`.md`）
-    file_names = [
-        'your_markdown',
-        # '1.21 先秦诗.clean',
-        # '1.21 汉魏晋六朝（上）.clean',
-        # '1.21 汉魏晋六朝（下册）.clean',
-        # '1.21 唐诗上册.clean',
-        # '1.21 唐诗中册.clean',
-        # '1.21 唐诗下册.clean',
-        # '1.21 宋诗.clean',
-        # '1.21 宋词上（未转曲）.clean',
-        # '1.21 宋词中.clean',
-        # '1.21 宋词下.clean',
-        # '1.21 题画诗.clean',
-        # '1.21 元散曲.clean',
-        # '1.21 元杂剧.clean',
-    ]
-    for file_name in file_names:
-
-        # 将生成的两个文件
-        FILE_JSON = f"{ROOT_DIR}/{file_name}.json"
-        FILE_PROOFREAD_JSON = f"{ROOT_DIR}/{file_name}.proofread.json"
-
-        # 确保输入文件存在
-        if not os.path.exists(FILE_JSON):
-            print(f"错误：输入文件 {FILE_JSON} 不存在")
-            exit(1)
-
-        # 确保输出目录存在
-        os.makedirs(os.path.dirname(FILE_PROOFREAD_JSON), exist_ok=True)
-
-        # 处理文本
-        try:
-            asyncio.run(process_paragraphs_async(FILE_JSON, FILE_PROOFREAD_JSON, start_count=1, model="deepseek-chat", rpm=15, max_concurrent=3))
-        except Exception as e:
-            print(f"处理文本时出错: {str(e)}")
-            exit(1)
-
-        # 输出处理进度统计
-        try:
-            with open(FILE_JSON, "r", encoding="utf-8") as f:
-                input_paragraphs = json.load(f)
-
-            with open(FILE_PROOFREAD_JSON, "r", encoding="utf-8") as f:
-                output_paragraphs = json.load(f)
-
-            processed_count = sum(1 for p in output_paragraphs if p is not None)
-            total_count = len(input_paragraphs)
-            processed_length = sum(len(p) for p in output_paragraphs if p is not None)
-            total_length = sum(len(p) for p in input_paragraphs)
-
-            print(f"\n【{file_name}】处理进度统计:")
-            print(f"总段落数: {total_count}")
-            print(f"已处理段落数、字数: {processed_count} ({processed_count/total_count*100:.2f}%), {processed_length} ({processed_length/total_length*100:.2f}%)")
-            print(f"未处理段落数: {total_count - processed_count} ({(total_count-processed_count)/total_count*100:.2f}%)")
-            for i, paragraph in enumerate(input_paragraphs):
-                if output_paragraphs[i] is None:
-                    print(f"No.{i+1} \n {paragraph.strip().splitlines()[0][:20]}...\n")
-        except Exception as e:
-            print(f"统计处理进度时出错: {str(e)}")
-
+    pass
