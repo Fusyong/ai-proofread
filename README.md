@@ -1,3 +1,71 @@
+# AI Proofreader VS Code Extension
+
+这是一个基于AI的文档校对VS Code插件，支持文档切分和智能校对功能。
+
+## 功能特点
+
+1. 文档切分
+   - 支持按标题级别切分文档
+   - 提供两种切分方式：
+     - 保持上下文：切分时保留完整上下文，适合需要连贯性的场景
+     - 合并短段落：合并过短的段落，适合需要控制段落长度的场景
+
+2. 智能校对
+   - 支持单文件校对
+   - 支持带参考文档校对
+   - 自动处理文档格式和标点符号
+
+## 使用方法
+
+### 文档切分
+
+1. 打开要切分的Markdown文档
+2. 右键点击编辑器，选择"AI Proofreader: 切分文档"
+3. 选择切分方式：
+   - 方式1：保持上下文
+   - 方式2：合并短段落
+4. 输入要使用的标题级别（1-6）
+5. 切分结果将在新标签页中显示
+
+### 文档校对
+
+1. 打开要校对的Markdown文档
+2. 右键点击编辑器，选择"AI Proofreader: 校对文档"
+3. 选择参考文档（可选）
+4. 选择校对方式：
+   - 方式1：单文件校对
+   - 方式2：带参考校对
+5. 校对结果将在新标签页中显示
+
+## 系统要求
+
+- VS Code 1.85.0 或更高版本
+- Python 3.6 或更高版本
+- 网络连接（用于AI校对）
+
+## 安装
+
+1. 在VS Code中打开扩展面板（Ctrl+Shift+X）
+2. 搜索"AI Proofreader"
+3. 点击安装
+
+## 开发
+
+1. 克隆仓库
+2. 安装依赖：
+   ```bash
+   npm install
+   ```
+3. 编译：
+   ```bash
+   npm run compile
+   ```
+4. 按F5启动调试
+
+## 许可证
+
+MIT
+
 [一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek和Gemini
 
 A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and Gemini
@@ -50,7 +118,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
     1. your_markdown.proofread.json.md 校对后的markdown文件
     2. your_markdown.proofread.json 供脚本使用的结果文件，你通常不用在意
     3. your_markdown.proofread.json.log 日志，保留了统计信息、错误信息等
-4.  比较校对前后的变动：在vscode终，选择最初的your_markdown.md，打开右键菜单选择“选择以校对”；然后选择最终的your_markdown.proofread.json.md，打开右键菜单选择“与已选文件比较”。这样你就能清楚地看到改动细节了。
+4.  比较校对前后的变动：在vscode终，选择最初的your_markdown.md，打开右键菜单选择"选择以校对"；然后选择最终的your_markdown.proofread.json.md，打开右键菜单选择"与已选文件比较"。这样你就能清楚地看到改动细节了。
 
 以上省略了很多细节，你可能碰到各种小问题，需要慢慢摸索。这是我建议你从身边找一位稍懂程序的人帮忙的原因。
 
