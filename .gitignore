@@ -3,3 +3,6 @@ node_modules
 work
 *.pyc
 __pycache__
+*.pdf
+1.md
+2.md

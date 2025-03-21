@@ -1,4 +1,4 @@
-校对中文书稿的工具集，主要使用Deepseek和Gemini
+[一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek和Gemini
 
 A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and Gemini
 
