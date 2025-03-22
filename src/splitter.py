@@ -3,7 +3,6 @@
 """
 
 from typing import List
-import json
 
 def cut_text_by_length(text: str, cut_by: int=600) -> List[str]:
     """
@@ -105,11 +104,11 @@ def split_markdown_by_title(text: str, levels: list[int]=[2]) -> List[str]:
 
     return raw_paragraphs
 
-def split_markdown_by_title_and_length_with_context(text: str, levels: list[int]=[2], cut_by: int=600) -> List[str]:
+def split_markdown_by_title_and_length_with_context(text: str, levels: list[int]=[2], cut_by: int=600) -> List[dict]:
     """
     1. 将markdown文本按标题级别切分;
-    2. 再按cut_by字符切分，添加target标签；
-    3. 并在头部添加完整上下文，添加context标签；
+    2. 再按cut_by字符切分，作为target；
+    3. 保留完整上下文，作为context；
     """
     # 按标题切分文本
     raw_paragraphs = split_markdown_by_title(text, levels=levels)
@@ -121,8 +120,11 @@ def split_markdown_by_title_and_length_with_context(text: str, levels: list[int]
         new_pieces = []
         # 为每个片段添加target标签并保留上下文
         for piece in pieces:
-            piece = f'<context>\n{paragraph}\n</context>\n\n<target>\n{piece}\n</target>'
-            new_pieces.append(piece)
+            dict_piece = {
+                'context': paragraph,
+                'target': piece,
+            }
+            new_pieces.append(dict_piece)
         label_paragraphs.extend(new_pieces)
 
     return label_paragraphs
@@ -164,12 +166,11 @@ def merge_short_paragraphs(paragraphs: List[str], min_length: int=100) -> List[s
 
     return result
 
-def split_markdown_by_title_and_length_and_merge(text: str, levels: list[int]=[2], threshold: int=1000, cut_by: int=800, min_length: int=120) -> List[str]:
+def split_markdown_by_title_and_length_and_merge(text: str, levels: list[int]=[2], threshold: int=1000, cut_by: int=800, min_length: int=120) -> List[dict]:
     """
     1. 将markdown文本按标题级别切分，
     2. 然后按cut_by字符进一步切分，
     3. 合并不足min_length字符的零碎段落
-    4. 添加target标签
     """
     # 1. 按指定的标题级别拆分
     text_list = split_markdown_by_title(text, levels=levels)
@@ -182,7 +183,7 @@ def split_markdown_by_title_and_length_and_merge(text: str, levels: list[int]=[2
     # 如果仍有超长段落，可在原文上手动设置伪标题和空行
 
     # 添加target标签
-    text_list = [f'<target>\n{x}\n</target>' for x in text_list if x.strip()]
+    text_list = [{'target':x} for x in text_list if x.strip()]
 
     return text_list
 

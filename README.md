@@ -1,70 +1,5 @@
-# AI Proofreader VS Code Extension
 
-这是一个基于AI的文档校对VS Code插件，支持文档切分和智能校对功能。
-
-## 功能特点
-
-1. 文档切分
-   - 支持按标题级别切分文档
-   - 提供两种切分方式：
-     - 保持上下文：切分时保留完整上下文，适合需要连贯性的场景
-     - 合并短段落：合并过短的段落，适合需要控制段落长度的场景
-
-2. 智能校对
-   - 支持单文件校对
-   - 支持带参考文档校对
-   - 自动处理文档格式和标点符号
-
-## 使用方法
-
-### 文档切分
-
-1. 打开要切分的Markdown文档
-2. 右键点击编辑器，选择"AI Proofreader: 切分文档"
-3. 选择切分方式：
-   - 方式1：保持上下文
-   - 方式2：合并短段落
-4. 输入要使用的标题级别（1-6）
-5. 切分结果将在新标签页中显示
-
-### 文档校对
-
-1. 打开要校对的Markdown文档
-2. 右键点击编辑器，选择"AI Proofreader: 校对文档"
-3. 选择参考文档（可选）
-4. 选择校对方式：
-   - 方式1：单文件校对
-   - 方式2：带参考校对
-5. 校对结果将在新标签页中显示
-
-## 系统要求
-
-- VS Code 1.85.0 或更高版本
-- Python 3.6 或更高版本
-- 网络连接（用于AI校对）
-
-## 安装
-
-1. 在VS Code中打开扩展面板（Ctrl+Shift+X）
-2. 搜索"AI Proofreader"
-3. 点击安装
-
-## 开发
-
-1. 克隆仓库
-2. 安装依赖：
-   ```bash
-   npm install
-   ```
-3. 编译：
-   ```bash
-   npm run compile
-   ```
-4. 按F5启动调试
-
-## 许可证
-
-MIT
+# 校对中文书稿的Python工具集（相应的vscode插件见后）
 
 [一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek和Gemini
 
@@ -97,14 +32,21 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
 
 ## 校对一段文字
 
-如果仅仅是体验，或者是一边AI校对一边核实、誊改，请使用proofreading2.py和example2中的例子。
+如果仅仅是体验，或者是一边AI校对一边核实、誊改，请使用example2中的例子：
 
-校对后，参考后文提到的比较校对前后变动的方法，即看到清晰的结果。
+1. your_markdown.md 要校对的文档（比如一段文字）
+2. your_markdown_context.md 要校对文档所在的上下文，可选
+3. your_markdown_reference.md 参考文档，可选
+4. your_markdown_proofread.md 校对后的结果
+
+准备好必要的文档，打开校对脚本proofreading2.py，使用编辑器右上角的三角形图标（Run Python File）运行这个脚本（或在终端输入`py splitting1.py`，下同），等待校对结束。
+
+校对后，参考后文提到的比较校对前后变动的diff方法，即看到清晰的结果。
 
 ##  校对一本书或多本书的通用流程
 
 1. 准备要校对的文件: 我建议使用markdown格式整理你需要校对的文件，在此假设你的文件是example中的your_markdown.md（包含对格式的必要说明）
-2. 切分要校对的文件：打开文件切分脚本splitting1.py或splitting2.py(二者的差异，文档中有说明)，其中有详细说明，可以根据需要调整；使用编辑器右上角的三角形图标（Run Python File）运行这个脚本（或在终端输入`py splitting1.py`，下同）；这时会生成两个文件，your_markdown.json（供下一步处理），your_markdown.json.md(由前者生成，用来观察处理是否导致错误)，同时你将看到终端输出了切分信息（如由过长的问题，可以通过加空行来处理）：
+2. 切分要校对的文件：打开文件切分脚本splitting1.py（或其他splitting*.py，脚本自身的文档有说明），运行；这时会生成两个文件，your_markdown.json（供下一步处理），your_markdown.json.md(由前者生成，用来观察处理是否导致错误)，同时你将看到终端输出了切分信息（如由过长的问题，可以通过加空行来处理）：
     >```text
     >片段号  字符数  起始文字
     >----------------------------------------
@@ -132,7 +74,9 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
 
 ## TODO
 
+* [x] 四种常见的文本切分方法
 * [x] 支持参考资料
+    * [ ] 切分并添加语境
 * [x] 支持语境(上下文)
 * [ ] 介绍其他工具和文档
     * [x] diff_tools.py
@@ -204,3 +148,30 @@ pandoc -t markdown_strict --extract-media="./attachments/%myfilename%" %myfilena
 ```
 
 建议转换后与简单复制黏贴的纯文本（通常能保留所有字符）进行比较。
+
+# AI Proofreader VS Code Extension
+
+这是一个基于AI的文档/图书校对VS Code插件，支持文档切分和AI校对功能；与Python脚本的功能大致相同。
+
+以example/1.md为测试用例。
+
+## 功能特点
+
+1. 切分当前文档的多种方式（markdown和JSON结果在新文档中打开，缓存JSON结果）
+    1. 将标题下的文字切分为带上下文的片段，对应于splitting1.py
+    2. 按标题切分后，进一步处理过长和过短的片段，对应于splitting2.py
+    3. 按标题切分，对应于splitting3.py
+    4. 按长度切分，对应于splitting4.py
+2. AI校对当前文档的多种方式（结果在新文档中打开）
+    1. 切分当前文档然后校对
+        1. 选择4种文档切分方式中的一种，或刚才缓存的切分结果
+        2. 自动完成校对，对应proofreading1.py
+    2. 一次性校对当前文档，对应于proofreading2.py
+        1. 可选择上下文
+        2. 可选择参考文档
+    3. 校对当前文档中的选中文本
+        1. 可设置选中文本所在的上下文级别
+3. 设置
+    1. DEEPSEEK API KEY
+    2. 4种各切分方式的默认值
+    3. 3种校对方式的默认值

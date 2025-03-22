@@ -1,6 +1,6 @@
 """每次处理一个文件
 
-可添加上下文和参考资料，以提高校对质量。
+可添加上下文和参考资料，以提高校对质量
 """
 from src.proofreader import deepseek
 
@@ -33,12 +33,7 @@ with open(REFERENCE_FILE_NAME, "r", encoding="utf-8") as f:
         REFERENCE = f'<reference>\n{REFERENCE}\n</reference>'
 
 # 以下两种方式的优劣有待测试  TODO
-if 1:
-    # 将上下文添加到参考文献后提交
-    REFERENCE = f"{REFERENCE}\n\n{CONTEXT}"
-else:
-    # 将上下文添加到校对文本前提交
-    TARGET = f"{CONTEXT}\n\n{TARGET}"
+REFERENCE = f"{REFERENCE}\n\n{CONTEXT}"
 
 result = deepseek(TARGET, REFERENCE)
 if result:

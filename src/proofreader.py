@@ -181,7 +181,7 @@ async def chat_google_async(text: str, rate_limiter: RateLimiter) -> str|None:
     return result
 
 
-async def process_paragraphs_async(json_in: str, json_out: str, start_count: int|list[int]=1, stop_count: int|None=None, model: str="deepseek-chat", rpm: int=15, max_concurrent: int=3, context_json: str="", reference_json: str=""):
+async def process_paragraphs_async(json_in: str, json_out: str, start_count: int|list[int]=1, stop_count: int|None=None, model: str="deepseek-chat", rpm: int=15, max_concurrent: int=3):
     """
     异步处理文本段落，直接将结果存储到 JSON 文件中
 
@@ -193,30 +193,14 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
         model (str): 使用的模型，默认为"deepseek-chat"
         rpm (int): 每分钟请求数，默认为30
         max_concurrent (int): 最大并发数，默认为3
-        context (str): 上下文文件路径
-        reference_json (str): 参考文件路径
     """
     # 读取输入 JSON 文件
     with open(json_in, "r", encoding="utf-8") as f:
-        input_paragraphs: List[str] = json.load(f)
-    # 检查上下文和参考文件是否存在
-    reference: List[str] = []
-    if not os.path.exists(reference_json):
-        print(f"没有参考文件：{reference_json}")
-    else:
-        # 读取上下文和参考文件
-        with open(reference_json, "r", encoding="utf-8") as f:
-            reference = json.load(f)
+        input_paragraphs: List[dict] = json.load(f)
 
-    # 如果上下文文件存在，读取它；否则创建空字符串
-    context_json = ""
-    if os.path.exists(context_json):
-        with open(context_json, "r", encoding="utf-8") as f:
-            context_json = f.read()
-    else:
-        print(f"没有上下文文件：{context_json}")
+    input_paragraphs_length = len(input_paragraphs)
 
-    # 如果输出 JSON 文件已存在，读取它；否则创建空列表
+    # 如果输出 JSON 文件已存在，读取它，继续处理；否则创建空列表
     output_paragraphs: List[str|None] = []
     if os.path.exists(json_out):
         try:
@@ -224,15 +208,15 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
                 output_paragraphs = json.load(f)
 
             # 确保输出 JSON 的长度与输入 JSON 相同
-            if len(output_paragraphs) != len(input_paragraphs):
+            if len(output_paragraphs) != input_paragraphs_length:
                 # 如果长度不同，中断处理
-                raise ValueError(f"输出 JSON 的长度与输入 JSON 的长度不同: {len(output_paragraphs)} != {len(input_paragraphs)}")
+                raise ValueError(f"输出 JSON 的长度与输入 JSON 的长度不同: {len(output_paragraphs)} != {input_paragraphs_length}")
         except (json.JSONDecodeError, FileNotFoundError):
             # 如果文件不存在或格式错误，创建新的输出列表
-            output_paragraphs = [None] * len(input_paragraphs)
+            output_paragraphs = [None] * input_paragraphs_length
     else:
         # 创建与输入 JSON 长度相同的空列表
-        output_paragraphs = [None] * len(input_paragraphs)
+        output_paragraphs = [None] * input_paragraphs_length
 
         # 确保输出目录存在
         os.makedirs(os.path.dirname(json_out), exist_ok=True)
@@ -247,16 +231,16 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
     if isinstance(start_count, int):
         # 处理从 start_count 到 stop_count 的段落
         start_index = start_count - 1
-        stop_index = len(input_paragraphs) - 1 if stop_count is None else stop_count - 1
+        stop_index = input_paragraphs_length - 1 if stop_count is None else stop_count - 1
 
         for i in range(start_index, stop_index + 1):
-            if i < len(input_paragraphs) and output_paragraphs[i] is None:
+            if i < input_paragraphs_length and output_paragraphs[i] is None:
                 indices_to_process.append(i)
     elif isinstance(start_count, list):
         # 处理指定索引的段落
         for idx in start_count:
             i = idx - 1  # 转换为 0-indexed
-            if 0 <= i < len(input_paragraphs) and output_paragraphs[i] is None:
+            if 0 <= i < input_paragraphs_length and output_paragraphs[i] is None:
                 indices_to_process.append(i)
 
     # 创建日志文件
@@ -265,7 +249,7 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
     with open(log_file_path, "a", encoding="utf-8") as log_file:
         log_file.write(f"\n{'='*50}\n")
         log_file.write(f"异步处理开始时间: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-        log_file.write(f"待处理段落数: {len(indices_to_process)}/{len(input_paragraphs)}\n")
+        log_file.write(f"待处理段落数: {len(indices_to_process)}/{input_paragraphs_length}\n")
         log_file.write(f"最大并发数: {max_concurrent}\n")
         log_file.write(f"{'='*50}\n\n")
 
@@ -279,26 +263,20 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
     # 定义异步处理任务
     async def process_one(i):
         async with semaphore:
-            paragraph = input_paragraphs[i]
-            if reference and len(reference) > i:
-                reference_i = reference[i]
-            else:
-                reference_i = ""
-            if context_json and len(context_json) > i:
-                context_i = context_json[i]
-            else:
-                context_i = ""
+            target_text = input_paragraphs[i]["target"]
+            reference_text = input_paragraphs[i]["reference"] if "reference" in input_paragraphs[i] else ""
+            context_text = input_paragraphs[i]["context"] if "context" in input_paragraphs[i] else ""
 
-            print(f"处理 {i+1}/{len(input_paragraphs)} RCT长度 {len(reference_i)}+{len(context_i)}+{len(paragraph)}:\n{paragraph[:30]} ...\n")
+            # 判断是否需要添加上下文
+            is_with_context = context_text and context_text.strip() != target_text.strip()
+            print(f"处理 {i+1}/{input_paragraphs_length}{' with context' if is_with_context else ''}{' with reference' if reference_text else ''}:\n{target_text[:30]} ...\n")
 
-            if context_i:
-                # 以下两种合并位置的优劣有待测试  TODO
-                if 1:
-                    # 将上下文添加到参考文献后提交
-                    reference_i = f"{reference_i}\n\n{context_i}"
-                else:
-                    # 将上下文添加到校对文本前提交
-                    paragraph = f"{context_i}\n\n{paragraph}"
+            # 加标签，合并
+            pre_text = f"<reference>\n{reference_text}\n</reference>" if reference_text else ""
+            # 合并位置的优劣有待测试  TODO
+            if is_with_context:
+                pre_text += f"\n<context>\n{context_text}\n</context>"
+            post_text = f"<target>\n{target_text}\n</target>"
 
             start_time = time.time()
 
@@ -308,9 +286,9 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
             # 调用相应的 API
             processed_text = None
             if model.startswith("deepseek"):
-                processed_text = await deepseek_async(paragraph, reference_i, model, rate_limiter)
+                processed_text = await deepseek_async(post_text, pre_text, model, rate_limiter)
             elif model == "google":
-                processed_text = await chat_google_async(paragraph, rate_limiter)
+                processed_text = await chat_google_async(pre_text+'\n'+post_text, rate_limiter)
             else:
                 print(f"不支持的模型: {model}")
                 return
@@ -335,25 +313,25 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
                     except (FileNotFoundError, json.JSONDecodeError) as e:
                         print(f"更新 JSON 文件时出错: {str(e)}")
                         # 如果文件不存在或格式错误，重新创建
-                        current_output: List[str|None] = [None] * len(input_paragraphs)
+                        current_output: List[str|None] = [None] * input_paragraphs_length
                         current_output[i] = processed_text
                         with open(json_out, "w", encoding="utf-8") as f:
                             json.dump(current_output, f, ensure_ascii=False, indent=2)
 
-                print(f"完成 {i+1}/{len(input_paragraphs)} 长度 {len(paragraph)} 用时 {elapsed:.2f}s\n{'-'*40}\n")
+                print(f"完成 {i+1}/{input_paragraphs_length} 长度 {len(target_text)} 用时 {elapsed:.2f}s\n{'-'*40}\n")
 
                 # 记录日志
                 async with file_lock:
                     with open(log_file_path, "a", encoding="utf-8") as log_file:
-                        log_file.write(f"完成 {i+1}/{len(input_paragraphs)} 长度 {len(paragraph)} 用时 {elapsed:.2f}s\n")
+                        log_file.write(f"完成 {i+1}/{input_paragraphs_length} 长度 {len(target_text)} 用时 {elapsed:.2f}s\n")
             else:
-                print(f"段落 {i+1}/{len(input_paragraphs)}: 处理失败，跳过\n{'-'*40}\n")
+                print(f"段落 {i+1}/{input_paragraphs_length}: 处理失败，跳过\n{'-'*40}\n")
 
                 # 记录日志
                 async with file_lock:
                     with open(log_file_path, "a", encoding="utf-8") as log_file:
-                        log_file.write(f"段落 {i+1}/{len(input_paragraphs)}: 处理失败，跳过\n")
-                        log_file.write(f"原文: {paragraph.strip().splitlines()[0][:20]}...\n{'-'*40}\n")
+                        log_file.write(f"段落 {i+1}/{input_paragraphs_length}: 处理失败，跳过\n")
+                        log_file.write(f"原文: {target_text.strip().splitlines()[0][:20]}...\n{'-'*40}\n")
 
     # 如果没有需要处理的段落，直接返回
     if not indices_to_process:
@@ -378,8 +356,8 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
         # 统计已处理和未处理的段落数
         processed_count = sum(1 for p in final_output if p is not None)
         processed_length = sum(len(p) for p in final_output if p is not None)
-        log_file.write(f"已处理段落数、字数: {processed_count}/{len(input_paragraphs)}, {processed_length}/{sum(len(p) for p in input_paragraphs)}\n")
-        log_file.write(f"未处理段落数: {len(input_paragraphs) - processed_count}/{len(input_paragraphs)}\n")
+        log_file.write(f"已处理段落数、字数: {processed_count}/{input_paragraphs_length}, {processed_length}/{sum(len(p) for p in input_paragraphs)}\n")
+        log_file.write(f"未处理段落数: {input_paragraphs_length - processed_count}/{input_paragraphs_length}\n")
         log_file.write(f"{'='*50}\n\n")
 
     # 生成 Markdown 文件
@@ -402,8 +380,3 @@ def process_by_once(file_in: str, file_out: str, chat_func: Callable=chat_deepse
             text = chat_func(text)
             if text:
                 f_out.write(text)
-
-
-if __name__ == "__main__":
-
-    pass

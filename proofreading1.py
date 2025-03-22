@@ -1,18 +1,18 @@
 """一般校对用例
 
-输入切分好的JSON文件、上下文文件【可选】、参考文件【可选】；
-输出校对后的JSON文件
+输入切分好的JSON文件（可以含上下文和参考文献），输出校对后的JSON文件
 """
 import os
 import json
 import asyncio
 from src.proofreader import process_paragraphs_async
 
-# 文件所在路径（以项目根目录为当前目录）
-ROOT_DIR = "example"
+# 文件所在路径（从项目根目录开始算，根目录用`.`表示）
+ROOT_DIR = "./example"
 # 文件名列表（不含后缀`.md`）
 file_names = [
-    'your_markdown',
+    '1',
+    # 'your_markdown',
     # '1.21 先秦诗.clean',
     # '1.21 汉魏晋六朝（上）.clean',
     # '1.21 汉魏晋六朝（下册）.clean',
@@ -32,10 +32,6 @@ file_names = [
 for file_name in file_names:
     # 切分好的JSON文件
     FILE_IN_JSON = f"{ROOT_DIR}/{file_name}.json"
-    # 参考文件【可选】
-    REFERENCE_JSON = f"{ROOT_DIR}/{file_name}.reference.json"
-    # 上下文文件【可选】
-    CONTEXT_JSON = f"{ROOT_DIR}/{file_name}.context.json"
     # 将生成的文件
     FILE_PROOFREAD_JSON = f"{ROOT_DIR}/{file_name}.proofread.json"
 
@@ -49,7 +45,7 @@ for file_name in file_names:
 
     # 处理文本
     try:
-        asyncio.run(process_paragraphs_async(FILE_IN_JSON, FILE_PROOFREAD_JSON, start_count=1, model="deepseek-chat", rpm=15, max_concurrent=3, context_json=CONTEXT_JSON, reference_json=REFERENCE_JSON))
+        asyncio.run(process_paragraphs_async(FILE_IN_JSON, FILE_PROOFREAD_JSON, start_count=1, model="deepseek-chat", rpm=15, max_concurrent=3))
     except Exception as e:
         print(f"处理文本时出错: {str(e)}")
         exit(1)
@@ -76,4 +72,3 @@ for file_name in file_names:
                 print(f"No.{i+1} \n {paragraph.strip().splitlines()[0][:20]}...\n")
     except Exception as e:
         print(f"统计处理进度时出错: {str(e)}")
-

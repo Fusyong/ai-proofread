@@ -2,12 +2,8 @@
 
 import difflib
 
-import os
-# import shutil
-# import webbrowser
-
 from typing import List
-from markdown_splitter import split_markdown_by_title
+from splitter import split_markdown_by_title
 from clear_pdf_book_txt_to_md import clean_title
 
 
