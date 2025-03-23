@@ -320,8 +320,12 @@ export async function processJsonFileAsync(
         const referenceText = paragraph.reference || '';
         const contextText = paragraph.context || '';
 
-        const isWithContext = contextText && contextText.trim() !== targetText.trim();
-        const progressInfo = `处理 ${index + 1}/${totalCount}${isWithContext ? ' with context' : ''}${referenceText ? ' with reference' : ''}:\n${targetText.slice(0, 30)} ...\n`;
+        const haseContext = contextText && contextText.trim() !== targetText.trim();
+        const progressInfo = `处理 No. ${index + 1}/${totalCount}, Len ${targetText.length}` +
+            `${haseContext ? ` with context ${contextText.length}` : ''}`+
+            `${referenceText ? ` with reference ${referenceText.length}` : ''}:`+
+            `\n${targetText.slice(0, 30)} ...\n`+
+            `${'-'.repeat(40)}\n`;
         console.log(progressInfo);
         if (onProgress) {
             onProgress(progressInfo);
@@ -329,7 +333,7 @@ export async function processJsonFileAsync(
 
         // 构建提示文本
         let preText = referenceText ? `<reference>\n${referenceText}\n</reference>` : '';
-        if (isWithContext) {
+        if (haseContext) {
             preText += `\n<context>\n${contextText}\n</context>`;
         }
         const postText = `<target>\n${targetText}\n</target>`;

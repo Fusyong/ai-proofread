@@ -122,20 +122,24 @@
     "menus": {
       "editor/context": [
         {
-          "command": "ai-proofread.splitFileByLength",
-          "group": "ai-proofread@1"
-        },
-        {
           "command": "ai-proofread.splitFileByTitle",
-          "group": "ai-proofread@2"
+          "group": "ai-proofread@1",
+          "when": "resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex"
         },
         {
-          "command": "ai-proofread.splitFileWithContext",
-          "group": "ai-proofread@3"
+          "command": "ai-proofread.splitFileByLength",
+          "group": "ai-proofread@2",
+          "when": "resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex"
         },
         {
           "command": "ai-proofread.splitFileByTitleAndLength",
-          "group": "ai-proofread@4"
+          "group": "ai-proofread@3",
+          "when": "resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex"
+        },
+        {
+          "command": "ai-proofread.splitFileWithContext",
+          "group": "ai-proofread@4",
+          "when": "resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex"
         },
         {
           "command": "ai-proofread.proofreadFile",
@@ -145,7 +149,7 @@
         {
           "command": "ai-proofread.proofreadSelection",
           "group": "ai-proofread@6",
-          "when": "editorHasSelection"
+          "when": "editorHasSelection && (resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex)"
         }
       ]
     }

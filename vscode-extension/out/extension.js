@@ -270,6 +270,18 @@ function activate(context) {
                 logMessage += `使用模型: ${selectedModel}\n`;
                 logMessage += `每分钟请求数: ${rpm}\n`;
                 logMessage += `最大并发数: ${maxConcurrent}\n`;
+                // 统计字符数
+                const totalStats = jsonContent.reduce((acc, item) => {
+                    acc.target += (item.target || '').length;
+                    acc.context += (item.context || '').length;
+                    acc.reference += (item.reference || '').length;
+                    return acc;
+                }, { target: 0, context: 0, reference: 0 });
+                logMessage += `\n字符数统计:\n`;
+                logMessage += `- 目标文本: ${totalStats.target} 字符\n`;
+                logMessage += `- 上下文: ${totalStats.context} 字符\n`;
+                logMessage += `- 参考文献: ${totalStats.reference} 字符\n`;
+                logMessage += `- 总计: ${totalStats.target + totalStats.context + totalStats.reference} 字符\n`;
                 logMessage += `${'='.repeat(50)}\n\n`;
                 fs.appendFileSync(logFilePath, logMessage, 'utf8');
                 // 检查API密钥是否已配置
@@ -411,12 +423,12 @@ function activate(context) {
                     return;
                 }
                 // 让用户选择是否使用上下文和参考文件
-                const contextLevel = await vscode.window.showQuickPick(['不使用上下文', '一级标题', '二级标题', '三级标题', '四级标题', '五级标题', '六级标题'], {
+                const contextLevel = await vscode.window.showQuickPick(['不使用上下文', '1 级标题', '2 级标题', '3 级标题', '4 级标题', '5 级标题', '6 级标题'], {
                     placeHolder: '选择上下文范围（可选）',
                     ignoreFocusOut: true
                 });
                 let referenceFile;
-                const useReference = await vscode.window.showQuickPick(['是', '否'], {
+                const useReference = await vscode.window.showQuickPick(['否', '是'], {
                     placeHolder: '是否使用参考文件？',
                     ignoreFocusOut: true
                 });
@@ -432,7 +444,7 @@ function activate(context) {
                     });
                 }
                 // 准备校对文本
-                let targetText = `<target>\n${selectedText}\n</target>`;
+                let targetText = selectedText;
                 let contextText = '';
                 let referenceText = '';
                 // 如果选择了上下文级别，获取上下文
@@ -446,7 +458,7 @@ function activate(context) {
                     let startLine = selectionStartLine;
                     while (startLine > 0) {
                         const line = lines[startLine - 1];
-                        if (line.startsWith('#'.repeat(parseInt(level)))) {
+                        if (line.startsWith(`${'#'.repeat(parseInt(level))} `)) {
                             break;
                         }
                         startLine--;
@@ -455,24 +467,32 @@ function activate(context) {
                     let endLine = selectionEndLine;
                     while (endLine < lines.length - 1) {
                         const line = lines[endLine + 1];
-                        if (line.startsWith('#'.repeat(parseInt(level)))) {
+                        if (line.startsWith(`${'#'.repeat(parseInt(level))} `)) {
                             break;
                         }
                         endLine++;
                     }
                     // 提取上下文
                     contextText = lines.slice(startLine, endLine + 1).join('\n');
-                    if (contextText) {
-                        contextText = `<context>\n${contextText}\n</context>`;
-                    }
                 }
                 // 如果选择了参考文件，读取参考文件内容
                 if (referenceFile && referenceFile[0]) {
                     referenceText = fs.readFileSync(referenceFile[0].fsPath, 'utf8');
-                    if (referenceText) {
-                        referenceText = `<reference>\n${referenceText}\n</reference>`;
-                    }
                 }
+                // 显示文本信息
+                const haseContext = contextText && contextText.trim() !== targetText.trim();
+                const progressInfo = `处理 Len ${targetText.length}` +
+                    `${haseContext ? ` with context ${contextText.length}` : ''}` +
+                    `${referenceText ? ` with reference ${referenceText.length}` : ''}`;
+                vscode.window.showInformationMessage(progressInfo);
+                // 构建提示文本
+                if (referenceText) {
+                    referenceText = `<reference>\n${referenceText}\n</reference>`;
+                }
+                if (contextText) {
+                    contextText = `<context>\n${contextText}\n</context>`;
+                }
+                targetText = `<target>\n${targetText}\n</target>`;
                 // 显示进度
                 await vscode.window.withProgress({
                     location: vscode.ProgressLocation.Notification,
