@@ -11,7 +11,11 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [
-    "*"
+    "onLanguage:markdown",
+    "onLanguage:text",
+    "onLanguage:context",
+    "onLanguage:tex",
+    "onLanguage:json"
   ],
   "contributes": {
     "commands": [
@@ -173,5 +177,9 @@
   "dependencies": {
     "axios": "^1.6.8",
     "dotenv": "^16.4.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Fusyong/ai-proofread.git"
   }
 }

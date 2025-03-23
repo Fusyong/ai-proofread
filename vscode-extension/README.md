@@ -116,4 +116,7 @@ cd vscode-extension && npm run dev
 
 # 编译
 npm run compile
+
+# 打包
+vsce package
 ```
