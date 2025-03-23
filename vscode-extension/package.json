@@ -1,0 +1,148 @@
+{
+  "name": "ai-proofread",
+  "displayName": "AI Proofread",
+  "description": "AI-powered proofreading and file splitting extension",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:ai-proofread.splitFileByLength",
+    "onCommand:ai-proofread.splitFileByTitle",
+    "onCommand:ai-proofread.splitFileWithContext",
+    "onCommand:ai-proofread.splitFileAdvanced",
+    "onCommand:ai-proofread.proofreadFile"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ai-proofread.splitFileByLength",
+        "title": "ai-proofread: Split File by Length"
+      },
+      {
+        "command": "ai-proofread.splitFileByTitle",
+        "title": "ai-proofread: Split File by Title"
+      },
+      {
+        "command": "ai-proofread.splitFileWithContext",
+        "title": "ai-proofread: Split File with Context"
+      },
+      {
+        "command": "ai-proofread.splitFileAdvanced",
+        "title": "ai-proofread: Split File (Advanced)"
+      },
+      {
+        "command": "ai-proofread.proofreadFile",
+        "title": "ai-proofread: Proofread File"
+      }
+    ],
+    "configuration": {
+      "title": "AI Proofread",
+      "properties": {
+        "ai-proofread.defaultSplitLength": {
+          "type": "number",
+          "default": 600,
+          "minimum": 50,
+          "description": "默认的文本切分长度（字符数）"
+        },
+        "ai-proofread.defaultTitleLevels": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 6
+          },
+          "default": [
+            2
+          ],
+          "description": "默认的标题切分级别（例如：[1,2] 表示按一级和二级标题切分）"
+        },
+        "ai-proofread.contextSplit.cutBy": {
+          "type": "number",
+          "default": 600,
+          "description": "带上下文切分模式：切分长度"
+        },
+        "ai-proofread.advancedSplit.threshold": {
+          "type": "number",
+          "default": 1500,
+          "description": "高级切分模式：段落长度阈值，超过此长度的段落将被切分"
+        },
+        "ai-proofread.advancedSplit.cutBy": {
+          "type": "number",
+          "default": 800,
+          "description": "高级切分模式：切分长段落时的目标长度"
+        },
+        "ai-proofread.advancedSplit.minLength": {
+          "type": "number",
+          "default": 120,
+          "description": "高级切分模式：段落最小长度，小于此长度的段落将被合并到后一段"
+        },
+        "ai-proofread.proofread.defaultModel": {
+          "type": "string",
+          "enum": ["deepseek-chat", "deepseek-v3", "google"],
+          "default": "deepseek-chat",
+          "description": "默认的校对模型"
+        },
+        "ai-proofread.proofread.rpm": {
+          "type": "number",
+          "default": 15,
+          "description": "每分钟最大请求数"
+        },
+        "ai-proofread.proofread.maxConcurrent": {
+          "type": "number",
+          "default": 3,
+          "description": "最大并发请求数"
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "ai-proofread.splitFileByLength",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ai-proofread.splitFileByTitle",
+          "group": "navigation@2"
+        },
+        {
+          "command": "ai-proofread.splitFileWithContext",
+          "group": "navigation@3"
+        },
+        {
+          "command": "ai-proofread.splitFileAdvanced",
+          "group": "navigation@4"
+        },
+        {
+          "command": "ai-proofread.proofreadFile",
+          "group": "navigation@5",
+          "when": "resourceLangId == json"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "dev": "concurrently \"npm run watch\" \"nodemon --watch ./out --exec 'code --extensionDevelopmentPath=${PWD}'\"",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.7",
+    "@types/vscode": "^1.80.0",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.0",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "dotenv": "^16.4.5"
+  }
+}
