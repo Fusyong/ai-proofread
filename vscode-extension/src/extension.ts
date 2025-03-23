@@ -259,7 +259,7 @@ export function activate(context: vscode.ExtensionContext) {
             await handleFileSplit('context', editor, editor.document);
         }),
 
-        vscode.commands.registerCommand('ai-proofread.splitFileAdvanced', async () => {
+        vscode.commands.registerCommand('ai-proofread.splitFileByTitleAndLength', async () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
                 vscode.window.showInformationMessage('No active editor!');
