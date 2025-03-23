@@ -299,21 +299,47 @@ export function activate(context: vscode.ExtensionContext) {
                 // 获取当前文件路径
                 const currentFilePath = document.uri.fsPath;
                 const outputFilePath = currentFilePath.replace('.json', '.proofread.json');
+                const logFilePath = currentFilePath.replace('.json', '.proofread.log');
 
                 // 获取配置
                 const config = vscode.workspace.getConfiguration('ai-proofread');
-                const defaultModel = config.get<string>('proofread.defaultModel', 'deepseek-chat');
-                const defaultRpm = config.get<number>('proofread.rpm', 15);
-                const defaultMaxConcurrent = config.get<number>('proofread.maxConcurrent', 3);
+                const selectedModel = config.get<string>('proofread.model', 'deepseek-chat');
+                const rpm = config.get<number>('proofread.rpm', 15);
+                const maxConcurrent = config.get<number>('proofread.maxConcurrent', 3);
 
-                // 让用户选择模型
-                const modelOptions = ['deepseek-chat', 'deepseek-v3', 'google'];
-                const selectedModel = await vscode.window.showQuickPick(modelOptions, {
-                    placeHolder: '请选择校对模型',
-                    canPickMany: false
-                });
+                // 写入开始日志
+                const startTime = new Date().toLocaleString();
+                let logMessage = `\n${'='.repeat(50)}\n`;
+                logMessage += `校对开始时间: ${startTime}\n`;
+                logMessage += `使用模型: ${selectedModel}\n`;
+                logMessage += `每分钟请求数: ${rpm}\n`;
+                logMessage += `最大并发数: ${maxConcurrent}\n`;
+                logMessage += `${'='.repeat(50)}\n\n`;
+                fs.appendFileSync(logFilePath, logMessage, 'utf8');
 
-                if (!selectedModel) {
+                // 检查API密钥是否已配置
+                let apiKey = '';
+                switch (selectedModel) {
+                    case 'deepseek-chat':
+                        apiKey = config.get<string>('apiKeys.deepseekChat', '');
+                        break;
+                    case 'deepseek-v3':
+                        apiKey = config.get<string>('apiKeys.deepseekV3', '');
+                        break;
+                    case 'google':
+                        apiKey = config.get<string>('apiKeys.google', '');
+                        break;
+                }
+
+                if (!apiKey) {
+                    const result = await vscode.window.showErrorMessage(
+                        `未配置${selectedModel}的API密钥，是否现在配置？`,
+                        '是',
+                        '否'
+                    );
+                    if (result === '是') {
+                        await vscode.commands.executeCommand('workbench.action.openSettings', 'ai-proofread.apiKeys');
+                    }
                     return;
                 }
 
@@ -326,9 +352,34 @@ export function activate(context: vscode.ExtensionContext) {
                     try {
                         const stats = await processJsonFileAsync(currentFilePath, outputFilePath, {
                             model: selectedModel as 'deepseek-chat' | 'deepseek-v3' | 'google',
-                            rpm: defaultRpm,
-                            maxConcurrent: defaultMaxConcurrent
+                            rpm,
+                            maxConcurrent,
+                            onProgress: (info: string) => {
+                                // 将进度信息写入日志
+                                fs.appendFileSync(logFilePath, info + '\n', 'utf8');
+                                progress.report({ message: info });
+                            }
                         });
+
+                        // 写入完成日志
+                        const endTime = new Date().toLocaleString();
+                        logMessage = `\n${'='.repeat(50)}\n`;
+                        logMessage += `校对结束时间: ${endTime}\n`;
+                        logMessage += `总段落数: ${stats.totalCount}\n`;
+                        logMessage += `已处理段落数、字数: ${stats.processedCount}/${stats.totalCount} (${(stats.processedCount/stats.totalCount*100).toFixed(2)}%), `;
+                        logMessage += `${stats.processedLength}/${stats.totalLength} (${(stats.processedLength/stats.totalLength*100).toFixed(2)}%)\n`;
+                        logMessage += `未处理段落数: ${stats.totalCount - stats.processedCount}/${stats.totalCount}\n`;
+
+                        // 记录未处理的段落
+                        if (stats.unprocessedParagraphs.length > 0) {
+                            logMessage += '\n未处理的段落:\n';
+                            stats.unprocessedParagraphs.forEach(p => {
+                                logMessage += `No.${p.index} \n ${p.preview}...\n\n`;
+                            });
+                        }
+
+                        logMessage += `${'='.repeat(50)}\n\n`;
+                        fs.appendFileSync(logFilePath, logMessage, 'utf8');
 
                         // 显示处理结果
                         const message =
@@ -364,7 +415,18 @@ export function activate(context: vscode.ExtensionContext) {
                             }
                         }
                     } catch (error) {
-                        vscode.window.showErrorMessage(`校对过程中出错：${error instanceof Error ? error.message : String(error)}`);
+                        if (error instanceof Error && error.message.includes('未配置')) {
+                            const result = await vscode.window.showErrorMessage(
+                                error.message + '，是否现在配置？',
+                                '是',
+                                '否'
+                            );
+                            if (result === '是') {
+                                await vscode.commands.executeCommand('workbench.action.openSettings', 'ai-proofread.apiKeys');
+                            }
+                        } else {
+                            vscode.window.showErrorMessage(`校对过程中出错：${error instanceof Error ? error.message : String(error)}`);
+                        }
                     }
                 });
             } catch (error) {

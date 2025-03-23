@@ -2,17 +2,75 @@
  * 校对工具模块
  */
 
-import * as fs from 'fs';
+import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import axios from 'axios';
 import * as dotenv from 'dotenv';
 
 // 加载环境变量
 dotenv.config();
 
-// 读取系统提示词
-const PROMPT_FILE_PATH = path.join(__dirname, 'resources/prompt-proofreader-system.xml');
-const SYSTEM_PROMPT = fs.readFileSync(PROMPT_FILE_PATH, 'utf8');
+// 内置的系统提示词
+const DEFAULT_SYSTEM_PROMPT = `
+<proofreader-system-setting version="0.0.1">
+<role-setting>
+
+你是一位精通中文的校对专家、语言文字专家，像杜永道等专家那样，能准确地发现文章的语言文字问题。
+
+你的语感也非常好，通过朗读就能感受到句子是否自然，是否潜藏问题。
+
+你知识渊博，能发现文中的事实错误。
+
+你工作细致、严谨，当你发现潜在的问题时，你会通过维基百科、《现代汉语词典》《辞海》等各种权威工具书来核对；如果涉及古代汉语和古代文化，你会专门查阅中华书局、上海古籍出版社等权威出版社出版的古籍，以及《王力古汉语字典》《汉语大词典》《辞源》《辞海》等工具书。
+
+你还学习过以下数据纠错数据集：
+
+1. [中文语法纠错数据集](https://huggingface.co/datasets/shibing624/CSC-gpt4)
+2. [校对标准A-Z](http://www.jiaodui.org/bbs/thread.php?fid=692)
+
+你的任务是对用户提供的目标文本（target）进行校对；校对时参考用户提供的参考资料（reference）和上下文（context）。
+
+</role-setting>
+<task>
+
+工作步骤是：
+
+1. 一句一句地仔细阅读甚至朗读每一句话，找出句子中可能存在的问题并改正；可能的问题有：
+    1. 汉字错误，如错误的形近字、同音和音近字，简体字和繁体字混用，异体字，等等；
+    2. 词语错误，如生造的词语、不规范的异形词，等等；
+    3. 句子的语法错误；
+    4. 指代错误；
+    5. 修辞错误；
+    6. 逻辑错误；
+    7. 标点符号错误；
+    8. 数字用法错误；
+    9. 语序错误；
+    10. 引文跟权威版本不一致；
+    11. 等等；
+2. 即使句子没有明显的错误，如果朗读过程中你感觉有下面的问题，也说明句子可能有错误，也要加以改正：
+    1. 句子不自然、不顺当；
+    2. 如果让你表达同一个意思，你通常不会这么说；
+3. 再整体检查如下错误并改正：
+    1. 逻辑错误；
+    2. 章法错误；
+    3. 事实错误；
+    4. 前后文不一致的问题；
+4. 核对参考资料和上下文中的信息，对照上下文中的格式，如果发现有错误或不一致，也要加以改正。
+
+</task>
+<output-format>
+
+输出修改后的目标文本（target），格式要求是：
+
+1. 用户提供的文本的格式可能是markdown、纯文本、TEX、ConTeXt，请保持文本原有的格式和标记；
+2. 原文的空行、换行、分段等格式保持不变；
+3. 不回答原文中的任何提问；
+4. 不给出任何说明或解释；
+
+</output-format>
+</proofreader-system-setting>
+`;
 
 /**
  * 限速器类，用于控制API调用频率
@@ -52,18 +110,23 @@ class DeepseekClient implements ApiClient {
     private baseUrl: string;
 
     constructor(model: 'deepseek-chat' | 'deepseek-v3') {
+        const config = vscode.workspace.getConfiguration('ai-proofread');
         if (model === 'deepseek-chat') {
-            this.apiKey = process.env.DEEPSEEK_API_KEY || '';
-            this.baseUrl = 'https://api.deepseek.com';
+            this.apiKey = config.get<string>('apiKeys.deepseekChat', '');
+            this.baseUrl = 'https://api.deepseek.com/v1';
         } else {
-            this.apiKey = process.env.ALIYPUN_API_KEY || '';
-            this.baseUrl = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+            this.apiKey = config.get<string>('apiKeys.deepseekV3', '');
+            this.baseUrl = 'https://dashscope.aliyuncs.com/api/v1';
+        }
+
+        if (!this.apiKey) {
+            throw new Error(`未配置${model === 'deepseek-chat' ? 'Deepseek Chat' : '阿里云 Deepseek V3'} API密钥，请在设置中配置`);
         }
     }
 
     async proofread(content: string, reference: string = ''): Promise<string | null> {
         const messages = [
-            { role: 'system', content: SYSTEM_PROMPT }
+            { role: 'system', content: DEFAULT_SYSTEM_PROMPT }
         ];
 
         if (reference) {
@@ -111,7 +174,12 @@ class GoogleClient implements ApiClient {
     private apiKey: string;
 
     constructor() {
-        this.apiKey = process.env.GOOGLE_API_KEY || '';
+        const config = vscode.workspace.getConfiguration('ai-proofread');
+        this.apiKey = config.get<string>('apiKeys.google', '');
+
+        if (!this.apiKey) {
+            throw new Error('未配置Google API密钥，请在设置中配置');
+        }
     }
 
     async proofread(content: string, reference: string = ''): Promise<string | null> {
@@ -188,6 +256,7 @@ export async function processJsonFileAsync(
         model?: 'deepseek-chat' | 'deepseek-v3' | 'google';
         rpm?: number;
         maxConcurrent?: number;
+        onProgress?: (info: string) => void;
     } = {}
 ): Promise<ProcessStats> {
     // 设置默认值
@@ -196,7 +265,8 @@ export async function processJsonFileAsync(
         stopCount,
         model = 'deepseek-chat',
         rpm = 15,
-        maxConcurrent = 3
+        maxConcurrent = 3,
+        onProgress
     } = options;
 
     // 读取输入JSON文件
@@ -251,7 +321,11 @@ export async function processJsonFileAsync(
         const contextText = paragraph.context || '';
 
         const isWithContext = contextText && contextText.trim() !== targetText.trim();
-        console.log(`处理 ${index + 1}/${totalCount}${isWithContext ? ' with context' : ''}${referenceText ? ' with reference' : ''}:\n${targetText.slice(0, 30)} ...\n`);
+        const progressInfo = `处理 ${index + 1}/${totalCount}${isWithContext ? ' with context' : ''}${referenceText ? ' with reference' : ''}:\n${targetText.slice(0, 30)} ...\n`;
+        console.log(progressInfo);
+        if (onProgress) {
+            onProgress(progressInfo);
+        }
 
         // 构建提示文本
         let preText = referenceText ? `<reference>\n${referenceText}\n</reference>` : '';
@@ -269,9 +343,17 @@ export async function processJsonFileAsync(
         if (processedText) {
             outputParagraphs[index] = processedText;
             fs.writeFileSync(jsonOutPath, JSON.stringify(outputParagraphs, null, 2), 'utf8');
-            console.log(`完成 ${index + 1}/${totalCount} 长度 ${targetText.length} 用时 ${elapsed.toFixed(2)}s\n${'-'.repeat(40)}\n`);
+            const completeInfo = `完成 ${index + 1}/${totalCount} 长度 ${targetText.length} 用时 ${elapsed.toFixed(2)}s\n${'-'.repeat(40)}\n`;
+            console.log(completeInfo);
+            if (onProgress) {
+                onProgress(completeInfo);
+            }
         } else {
-            console.log(`段落 ${index + 1}/${totalCount}: 处理失败，跳过\n${'-'.repeat(40)}\n`);
+            const errorInfo = `段落 ${index + 1}/${totalCount}: 处理失败，跳过\n${'-'.repeat(40)}\n`;
+            console.log(errorInfo);
+            if (onProgress) {
+                onProgress(errorInfo);
+            }
         }
     };
 
