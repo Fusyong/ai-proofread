@@ -13,7 +13,7 @@
     "onCommand:ai-proofread.splitFileByLength",
     "onCommand:ai-proofread.splitFileByTitle",
     "onCommand:ai-proofread.splitFileWithContext",
-    "onCommand:ai-proofread.splitFileAdvanced",
+    "onCommand:ai-proofread.splitFileByTitleAndLength",
     "onCommand:ai-proofread.proofreadFile"
   ],
   "main": "./out/extension.js",
@@ -32,8 +32,8 @@
         "title": "ai-proofread: Split File with Context"
       },
       {
-        "command": "ai-proofread.splitFileAdvanced",
-        "title": "ai-proofread: Split File (Advanced)"
+        "command": "ai-proofread.splitFileByTitleAndLength",
+        "title": "ai-proofread: Split File (Title and Length)"
       },
       {
         "command": "ai-proofread.proofreadFile",
@@ -66,20 +66,20 @@
           "default": 600,
           "description": "带上下文切分模式：切分长度"
         },
-        "ai-proofread.advancedSplit.threshold": {
+        "ai-proofread.titleAndLengthSplit.threshold": {
           "type": "number",
           "default": 1500,
-          "description": "高级切分模式：段落长度阈值，超过此长度的段落将被切分"
+          "description": "标题加长度切分：段落长度阈值，超过此长度的段落将被切分"
         },
-        "ai-proofread.advancedSplit.cutBy": {
+        "ai-proofread.titleAndLengthSplit.cutBy": {
           "type": "number",
           "default": 800,
-          "description": "高级切分模式：切分长段落时的目标长度"
+          "description": "标题加长度切分：切分长段落时的目标长度"
         },
-        "ai-proofread.advancedSplit.minLength": {
+        "ai-proofread.titleAndLengthSplit.minLength": {
           "type": "number",
           "default": 120,
-          "description": "高级切分模式：段落最小长度，小于此长度的段落将被合并到后一段"
+          "description": "标题加长度切分：最小长度，小于此长度的段落将被合并"
         },
         "ai-proofread.apiKeys.deepseekChat": {
           "type": "string",
@@ -118,19 +118,19 @@
       "editor/context": [
         {
           "command": "ai-proofread.splitFileByLength",
-          "group": "navigation@1"
+          "group": "ai-proofread@1"
         },
         {
           "command": "ai-proofread.splitFileByTitle",
-          "group": "navigation@2"
+          "group": "ai-proofread@2"
         },
         {
           "command": "ai-proofread.splitFileWithContext",
-          "group": "navigation@3"
+          "group": "ai-proofread@3"
         },
         {
-          "command": "ai-proofread.splitFileAdvanced",
-          "group": "navigation@4"
+          "command": "ai-proofread.splitFileByTitleAndLength",
+          "group": "ai-proofread@4"
         },
         {
           "command": "ai-proofread.proofreadFile",

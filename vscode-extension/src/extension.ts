@@ -9,7 +9,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // 通用的文件切分处理函数
     async function handleFileSplit(
-        mode: 'length' | 'title' | 'advanced' | 'context',
+        mode: 'length' | 'title' | 'title-length' | 'context',
         editor: vscode.TextEditor,
         document: vscode.TextDocument
     ) {
@@ -18,7 +18,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         try {
             let options: {
-                mode: 'length' | 'title' | 'advanced' | 'context';
+                mode: 'length' | 'title' | 'title-length' | 'context';
                 cutBy?: number;
                 levels?: number[];
                 threshold?: number;
@@ -49,7 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
                     return;
                 }
                 options.cutBy = parseInt(inputLength);
-            } else if (mode === 'title' || mode === 'advanced' || mode === 'context') {
+            } else if (mode === 'title' || mode === 'title-length' || mode === 'context') {
                 // 获取配置中的默认标题级别
                 const defaultLevels = config.get<number[]>('defaultTitleLevels', [2]);
 
@@ -99,11 +99,11 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                     options.cutBy = parseInt(inputCutBy);
 
-                } else if (mode === 'advanced') {
+                } else if (mode === 'title-length') {
                     // 获取标题加长度切分的配置
-                    options.threshold = config.get<number>('advancedSplit.threshold', 1500);
-                    options.cutBy = config.get<number>('advancedSplit.cutBy', 800);
-                    options.minLength = config.get<number>('advancedSplit.minLength', 120);
+                    options.threshold = config.get<number>('titleAndLengthSplit.threshold', 1500);
+                    options.cutBy = config.get<number>('titleAndLengthSplit.cutBy', 800);
+                    options.minLength = config.get<number>('titleAndLengthSplit.minLength', 120);
 
                     // 让用户确认或修改参数
                     const message = `将使用以下参数进行标题加长度切分：\n\n` +
@@ -265,7 +265,7 @@ export function activate(context: vscode.ExtensionContext) {
                 vscode.window.showInformationMessage('No active editor!');
                 return;
             }
-            await handleFileSplit('advanced', editor, editor.document);
+            await handleFileSplit('title-length', editor, editor.document);
         }),
 
         vscode.commands.registerCommand('ai-proofread.proofreadFile', async () => {

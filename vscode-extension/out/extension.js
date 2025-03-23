@@ -37,7 +37,7 @@ function activate(context) {
                 }
                 options.cutBy = parseInt(inputLength);
             }
-            else if (mode === 'title' || mode === 'advanced' || mode === 'context') {
+            else if (mode === 'title' || mode === 'title-length' || mode === 'context') {
                 // 获取配置中的默认标题级别
                 const defaultLevels = config.get('defaultTitleLevels', [2]);
                 // 让用户选择标题级别
@@ -82,11 +82,11 @@ function activate(context) {
                     }
                     options.cutBy = parseInt(inputCutBy);
                 }
-                else if (mode === 'advanced') {
+                else if (mode === 'title-length') {
                     // 获取标题加长度切分的配置
-                    options.threshold = config.get('advancedSplit.threshold', 1500);
-                    options.cutBy = config.get('advancedSplit.cutBy', 800);
-                    options.minLength = config.get('advancedSplit.minLength', 120);
+                    options.threshold = config.get('titleAndLengthSplit.threshold', 1500);
+                    options.cutBy = config.get('titleAndLengthSplit.cutBy', 800);
+                    options.minLength = config.get('titleAndLengthSplit.minLength', 120);
                     // 让用户确认或修改参数
                     const message = `将使用以下参数进行标题加长度切分：\n\n` +
                         `- 标题级别: ${options.levels.join(',')}\n` +
@@ -231,7 +231,7 @@ function activate(context) {
                 vscode.window.showInformationMessage('No active editor!');
                 return;
             }
-            await handleFileSplit('advanced', editor, editor.document);
+            await handleFileSplit('title-length', editor, editor.document);
         }),
         vscode.commands.registerCommand('ai-proofread.proofreadFile', async () => {
             const editor = vscode.window.activeTextEditor;

@@ -178,6 +178,14 @@ export function mergeShortParagraphs(paragraphs: string[], minLength: number = 1
     return result;
 }
 
+export interface SplitOptions {
+    mode: 'length' | 'title' | 'title-length' | 'context';
+    cutBy?: number;
+    levels?: number[];
+    threshold?: number;
+    minLength?: number;
+}
+
 /**
  * 将文本切分并生成JSON和Markdown格式的输出
  * @param text 要切分的文本
@@ -187,7 +195,7 @@ export function mergeShortParagraphs(paragraphs: string[], minLength: number = 1
 export function splitText(
     text: string,
     options: {
-        mode: 'length' | 'title' | 'advanced' | 'context';
+        mode: 'length' | 'title' | 'title-length' | 'context';
         cutBy?: number;
         levels?: number[];
         threshold?: number;
