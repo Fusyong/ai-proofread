@@ -36,4 +36,6 @@
 
 ##
 
-d vscode-extension && npm run dev
+cd vscode-extension && npm run dev
+
+npm run compile

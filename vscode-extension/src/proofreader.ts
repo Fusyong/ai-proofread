@@ -105,7 +105,7 @@ interface ApiClient {
 /**
  * Deepseek API客户端
  */
-class DeepseekClient implements ApiClient {
+export class DeepseekClient implements ApiClient {
     private apiKey: string;
     private baseUrl: string;
 
@@ -170,7 +170,7 @@ class DeepseekClient implements ApiClient {
 /**
  * Google API客户端
  */
-class GoogleClient implements ApiClient {
+export class GoogleClient implements ApiClient {
     private apiKey: string;
 
     constructor() {

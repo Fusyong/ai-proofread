@@ -200,7 +200,7 @@ function activate(context) {
         }
     }
     // 注册所有命令
-    const commands = [
+    let disposables = [
         vscode.commands.registerCommand('ai-proofread.splitFileByLength', async () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
@@ -371,10 +371,143 @@ function activate(context) {
             catch (error) {
                 vscode.window.showErrorMessage(`解析JSON文件时出错：${error instanceof Error ? error.message : String(error)}`);
             }
+        }),
+        vscode.commands.registerCommand('ai-proofread.proofreadSelection', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (!editor) {
+                vscode.window.showInformationMessage('No active editor!');
+                return;
+            }
+            // 获取选中的文本
+            const selection = editor.selection;
+            const selectedText = editor.document.getText(selection);
+            if (!selectedText) {
+                vscode.window.showInformationMessage('请先选择要校对的文本！');
+                return;
+            }
+            try {
+                // 获取配置
+                const config = vscode.workspace.getConfiguration('ai-proofread');
+                const selectedModel = config.get('proofread.model', 'deepseek-chat');
+                const defaultContextLevel = config.get('proofread.defaultContextLevel', 0);
+                // 检查API密钥是否已配置
+                let apiKey = '';
+                switch (selectedModel) {
+                    case 'deepseek-chat':
+                        apiKey = config.get('apiKeys.deepseekChat', '');
+                        break;
+                    case 'deepseek-v3':
+                        apiKey = config.get('apiKeys.deepseekV3', '');
+                        break;
+                    case 'google':
+                        apiKey = config.get('apiKeys.google', '');
+                        break;
+                }
+                if (!apiKey) {
+                    const result = await vscode.window.showErrorMessage(`未配置${selectedModel}的API密钥，是否现在配置？`, '是', '否');
+                    if (result === '是') {
+                        await vscode.commands.executeCommand('workbench.action.openSettings', 'ai-proofread.apiKeys');
+                    }
+                    return;
+                }
+                // 让用户选择是否使用上下文和参考文件
+                const contextLevel = await vscode.window.showQuickPick(['不使用上下文', '一级标题', '二级标题', '三级标题', '四级标题', '五级标题', '六级标题'], {
+                    placeHolder: '选择上下文范围（可选）',
+                    ignoreFocusOut: true
+                });
+                let referenceFile;
+                const useReference = await vscode.window.showQuickPick(['是', '否'], {
+                    placeHolder: '是否使用参考文件？',
+                    ignoreFocusOut: true
+                });
+                if (useReference === '是') {
+                    referenceFile = await vscode.window.showOpenDialog({
+                        canSelectFiles: true,
+                        canSelectFolders: false,
+                        canSelectMany: false,
+                        filters: {
+                            'Text files': ['txt', 'md']
+                        },
+                        title: '选择参考文件'
+                    });
+                }
+                // 准备校对文本
+                let targetText = `<target>\n${selectedText}\n</target>`;
+                let contextText = '';
+                let referenceText = '';
+                // 如果选择了上下文级别，获取上下文
+                if (contextLevel && contextLevel !== '不使用上下文') {
+                    const level = contextLevel.charAt(0);
+                    const fullText = editor.document.getText();
+                    const lines = fullText.split('\n');
+                    const selectionStartLine = selection.start.line;
+                    const selectionEndLine = selection.end.line;
+                    // 向上查找最近的指定级别标题
+                    let startLine = selectionStartLine;
+                    while (startLine > 0) {
+                        const line = lines[startLine - 1];
+                        if (line.startsWith('#'.repeat(parseInt(level)))) {
+                            break;
+                        }
+                        startLine--;
+                    }
+                    // 向下查找下一个同级别标题
+                    let endLine = selectionEndLine;
+                    while (endLine < lines.length - 1) {
+                        const line = lines[endLine + 1];
+                        if (line.startsWith('#'.repeat(parseInt(level)))) {
+                            break;
+                        }
+                        endLine++;
+                    }
+                    // 提取上下文
+                    contextText = lines.slice(startLine, endLine + 1).join('\n');
+                    if (contextText) {
+                        contextText = `<context>\n${contextText}\n</context>`;
+                    }
+                }
+                // 如果选择了参考文件，读取参考文件内容
+                if (referenceFile && referenceFile[0]) {
+                    referenceText = fs.readFileSync(referenceFile[0].fsPath, 'utf8');
+                    if (referenceText) {
+                        referenceText = `<reference>\n${referenceText}\n</reference>`;
+                    }
+                }
+                // 显示进度
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: "正在校对文本...",
+                    cancellable: false
+                }, async (progress) => {
+                    try {
+                        // 调用API进行校对
+                        const client = selectedModel === 'google'
+                            ? new proofreader_1.GoogleClient()
+                            : new proofreader_1.DeepseekClient(selectedModel);
+                        const result = await client.proofread(targetText, referenceText + '\n\n' + contextText);
+                        if (result) {
+                            // 在新的编辑器中显示结果
+                            const document = await vscode.workspace.openTextDocument({
+                                content: result,
+                                language: editor.document.languageId
+                            });
+                            await vscode.window.showTextDocument(document, vscode.ViewColumn.Beside);
+                        }
+                        else {
+                            vscode.window.showErrorMessage('校对失败，请重试。');
+                        }
+                    }
+                    catch (error) {
+                        vscode.window.showErrorMessage(`校对过程中出错：${error instanceof Error ? error.message : String(error)}`);
+                    }
+                });
+            }
+            catch (error) {
+                vscode.window.showErrorMessage(`校对过程中出错：${error instanceof Error ? error.message : String(error)}`);
+            }
         })
     ];
-    // 将所有命令添加到订阅列表
-    context.subscriptions.push(...commands);
+    context.subscriptions.push(...disposables);
 }
 exports.activate = activate;
 function deactivate() { }

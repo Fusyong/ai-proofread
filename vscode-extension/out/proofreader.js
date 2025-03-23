@@ -3,7 +3,7 @@
  * 校对工具模块
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.processJsonFileAsync = void 0;
+exports.processJsonFileAsync = exports.GoogleClient = exports.DeepseekClient = void 0;
 const vscode = require("vscode");
 const fs = require("fs");
 const axios_1 = require("axios");
@@ -135,6 +135,7 @@ class DeepseekClient {
         }
     }
 }
+exports.DeepseekClient = DeepseekClient;
 /**
  * Google API客户端
  */
@@ -189,6 +190,7 @@ class GoogleClient {
         }
     }
 }
+exports.GoogleClient = GoogleClient;
 /**
  * 异步处理段落
  */

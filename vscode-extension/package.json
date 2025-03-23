@@ -10,6 +10,9 @@
     "Other"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "*"
+  ],
   "contributes": {
     "commands": [
       {
@@ -26,11 +29,15 @@
       },
       {
         "command": "ai-proofread.splitFileByTitleAndLength",
-        "title": "ai-proofread: Split File by title and Length"
+        "title": "ai-proofread: Split File by Title and Length"
       },
       {
         "command": "ai-proofread.proofreadFile",
         "title": "ai-proofread: Proofread File"
+      },
+      {
+        "command": "ai-proofread.proofreadSelection",
+        "title": "ai-proofread: Proofread Selection"
       }
     ],
     "configuration": {
@@ -104,6 +111,11 @@
           "type": "number",
           "default": 3,
           "description": "最大并发请求数"
+        },
+        "ai-proofread.proofread.defaultContextLevel": {
+          "type": "number",
+          "default": 0,
+          "description": "校对选中文本时，默认使用的标题级别作为上下文范围（0表示不使用）"
         }
       }
     },
@@ -127,8 +139,13 @@
         },
         {
           "command": "ai-proofread.proofreadFile",
-          "group": "navigation@5",
+          "group": "ai-proofread@5",
           "when": "resourceLangId == json"
+        },
+        {
+          "command": "ai-proofread.proofreadSelection",
+          "group": "ai-proofread@6",
+          "when": "editorHasSelection"
         }
       ]
     }
