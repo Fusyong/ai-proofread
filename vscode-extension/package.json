@@ -9,13 +9,6 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:ai-proofread.splitFileByLength",
-    "onCommand:ai-proofread.splitFileByTitle",
-    "onCommand:ai-proofread.splitFileWithContext",
-    "onCommand:ai-proofread.splitFileByTitleAndLength",
-    "onCommand:ai-proofread.proofreadFile"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -33,7 +26,7 @@
       },
       {
         "command": "ai-proofread.splitFileByTitleAndLength",
-        "title": "ai-proofread: Split File (Title and Length)"
+        "title": "ai-proofread: Split File by title and Length"
       },
       {
         "command": "ai-proofread.proofreadFile",
