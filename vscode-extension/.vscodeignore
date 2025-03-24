@@ -9,7 +9,6 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
-**/node_modules/**
 **/out/test/**
 **/coverage/**
 **/.nyc_output/**
@@ -36,3 +35,6 @@ vsc-extension-quickstart.md
 **/.env.development.local
 **/.env.test.local
 **/.env.production.local
+
+!node_modules/axios/**
+!node_modules/dotenv/**
