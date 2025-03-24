@@ -539,8 +539,8 @@ export function activate(context: vscode.ExtensionContext) {
                     const selectionStartLine = selection.start.line;
                     const selectionEndLine = selection.end.line;
 
-                    // 向上查找最近的指定级别标题
-                    let startLine = selectionStartLine;
+                    // 从本行开始向上查找最近的指定级别标题
+                    let startLine = selectionStartLine - 1;
                     while (startLine > 0) {
                         const line = lines[startLine - 1];
                         if (line.startsWith(`${'#'.repeat(parseInt(level))} `)) {

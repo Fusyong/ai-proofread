@@ -1,159 +1,35 @@
 {
   "name": "ai-proofread",
-  "displayName": "AI Proofread",
-  "description": "AI-powered proofreading and file splitting extension",
+  "displayName": "AI Proofreader",
+  "description": "AI辅助校对工具，支持文档切分和智能校对",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
   ],
   "main": "./out/extension.js",
-  "activationEvents": [
-    "onLanguage:markdown",
-    "onLanguage:text",
-    "onLanguage:context",
-    "onLanguage:tex",
-    "onLanguage:json"
-  ],
   "contributes": {
     "commands": [
       {
-        "command": "ai-proofread.splitFileByLength",
-        "title": "ai-proofread: Split File by Length"
+        "command": "ai-proofread.splitDocument",
+        "title": "AI Proofreader: 切分文档"
       },
       {
-        "command": "ai-proofread.splitFileByTitle",
-        "title": "ai-proofread: Split File by Title"
-      },
-      {
-        "command": "ai-proofread.splitFileWithContext",
-        "title": "ai-proofread: Split File with Context"
-      },
-      {
-        "command": "ai-proofread.splitFileByTitleAndLength",
-        "title": "ai-proofread: Split File by Title and Length"
-      },
-      {
-        "command": "ai-proofread.proofreadFile",
-        "title": "ai-proofread: Proofread File"
-      },
-      {
-        "command": "ai-proofread.proofreadSelection",
-        "title": "ai-proofread: Proofread Selection"
+        "command": "ai-proofread.proofreadDocument",
+        "title": "AI Proofreader: 校对文档"
       }
     ],
-    "configuration": {
-      "title": "AI Proofread",
-      "properties": {
-        "ai-proofread.defaultSplitLength": {
-          "type": "number",
-          "default": 600,
-          "minimum": 50,
-          "description": "默认的文本切分长度（字符数）"
-        },
-        "ai-proofread.defaultTitleLevels": {
-          "type": "array",
-          "items": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 6
-          },
-          "default": [
-            2
-          ],
-          "description": "默认的标题切分级别（例如：[1,2] 表示按一级和二级标题切分）"
-        },
-        "ai-proofread.contextSplit.cutBy": {
-          "type": "number",
-          "default": 600,
-          "description": "带上下文切分模式：切分长度"
-        },
-        "ai-proofread.titleAndLengthSplit.threshold": {
-          "type": "number",
-          "default": 1500,
-          "description": "标题加长度切分：段落长度阈值，超过此长度的段落将被切分"
-        },
-        "ai-proofread.titleAndLengthSplit.cutBy": {
-          "type": "number",
-          "default": 800,
-          "description": "标题加长度切分：切分长段落时的目标长度"
-        },
-        "ai-proofread.titleAndLengthSplit.minLength": {
-          "type": "number",
-          "default": 120,
-          "description": "标题加长度切分：最小长度，小于此长度的段落将被合并"
-        },
-        "ai-proofread.apiKeys.deepseekChat": {
-          "type": "string",
-          "default": "",
-          "description": "Deepseek Chat API密钥"
-        },
-        "ai-proofread.apiKeys.deepseekV3": {
-          "type": "string",
-          "default": "",
-          "description": "阿里云 Deepseek V3 API密钥"
-        },
-        "ai-proofread.apiKeys.google": {
-          "type": "string",
-          "default": "",
-          "description": "Google API密钥"
-        },
-        "ai-proofread.proofread.model": {
-          "type": "string",
-          "enum": ["deepseek-chat", "deepseek-v3", "google"],
-          "default": "deepseek-chat",
-          "description": "校对使用的模型"
-        },
-        "ai-proofread.proofread.rpm": {
-          "type": "number",
-          "default": 15,
-          "description": "每分钟最大请求数"
-        },
-        "ai-proofread.proofread.maxConcurrent": {
-          "type": "number",
-          "default": 3,
-          "description": "最大并发请求数"
-        },
-        "ai-proofread.proofread.defaultContextLevel": {
-          "type": "number",
-          "default": 0,
-          "description": "校对选中文本时，默认使用的标题级别作为上下文范围（0表示不使用）"
-        }
-      }
-    },
     "menus": {
       "editor/context": [
         {
-          "command": "ai-proofread.splitFileByTitle",
-          "group": "ai-proofread@1",
-          "when": "resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex"
+          "command": "ai-proofread.splitDocument",
+          "group": "ai-proofread"
         },
         {
-          "command": "ai-proofread.splitFileByLength",
-          "group": "ai-proofread@2",
-          "when": "resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex"
-        },
-        {
-          "command": "ai-proofread.splitFileByTitleAndLength",
-          "group": "ai-proofread@3",
-          "when": "resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex"
-        },
-        {
-          "command": "ai-proofread.splitFileWithContext",
-          "group": "ai-proofread@4",
-          "when": "resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex"
-        },
-        {
-          "command": "ai-proofread.proofreadFile",
-          "group": "ai-proofread@5",
-          "when": "resourceLangId == json"
-        },
-        {
-          "command": "ai-proofread.proofreadSelection",
-          "group": "ai-proofread@6",
-          "when": "editorHasSelection && (resourceLangId == markdown || resourceLangId == text || resourceLangId == context || resourceLangId == tex)"
+          "command": "ai-proofread.proofreadDocument",
+          "group": "ai-proofread"
         }
       ]
     }
@@ -162,16 +38,16 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "dev": "concurrently \"npm run watch\" \"nodemon --watch ./out --exec 'code --extensionDevelopmentPath=${PWD}'\"",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/node": "^16.11.7",
-    "@types/vscode": "^1.80.0",
-    "concurrently": "^8.2.2",
-    "nodemon": "^3.1.0",
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^18.19.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
     "typescript": "^4.9.5"
   },
   "dependencies": {

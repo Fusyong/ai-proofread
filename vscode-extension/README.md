@@ -111,8 +111,11 @@
 ## 开发
 
 ```bash
+# 切换到插件路径
+cd vscode-extension
+
 # 开发模式
-cd vscode-extension && npm run dev
+npm run dev
 
 # 编译
 npm run compile
