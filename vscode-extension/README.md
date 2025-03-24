@@ -115,11 +115,11 @@
 cd vscode-extension
 
 # 开发模式
-npm run dev
+cd vscode-extension && npm run dev
 
 # 编译
-npm run compile
+cd vscode-extension && npm run compile
 
 # 打包
-vsce package
+cd vscode-extension && vsce package
 ```
