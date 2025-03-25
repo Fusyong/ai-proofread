@@ -14,8 +14,7 @@ from src.splitter import split_markdown_by_title_and_length_with_context
 ROOT_DIR = "./example"
 # 文件名列表（不含后缀`.md`）
 file_names = [
-    '1',
-    # 'your_markdown',
+    'your_markdown',
     # '1.21 先秦诗.clean',
     # '1.21 汉魏晋六朝（上）.clean',
     # '1.21 汉魏晋六朝（下册）.clean',
