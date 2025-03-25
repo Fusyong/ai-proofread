@@ -6,3 +6,5 @@ __pycache__
 *.pdf
 1.md
 2.md
+*.7z
+*.log
