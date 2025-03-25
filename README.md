@@ -1,9 +1,9 @@
 
 # 校对中文书稿的Python工具集（相应的vscode插件见后）
 
-[一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek和Gemini
+[一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek和Gemini。主要功能已经做成vscode插件, [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension)。
 
-A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and Gemini
+A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and Gemini. The main functions have been made into a vscode extension, [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension).
 
 !!!
     鉴于身边编辑同仁的一般情况, 以下说明均假设: 你使用Windows x64操作系统, 完全不懂编程, 但有一定的学习意愿. 我尽可能详尽而简洁地说明, 以便你自学上手. 尽管如此, 我还是建议你从身边找一位稍懂程序的人, 比如公司的网管, 请他对照这篇说明，帮助你把一个真实的校对例子跑起来, 这个小小的门槛有可能吓退很多人.
@@ -149,29 +149,3 @@ pandoc -t markdown_strict --extract-media="./attachments/%myfilename%" %myfilena
 
 建议转换后与简单复制黏贴的纯文本（通常能保留所有字符）进行比较。
 
-# AI Proofreader VS Code Extension
-
-这是一个基于AI的文档/图书校对VS Code插件，支持文档切分和AI校对功能；与Python脚本的功能大致相同。
-
-以example/1.md为测试用例。
-
-## 功能特点
-
-1. 切分当前文档的多种方式（markdown和JSON结果在新文档中打开，缓存JSON结果）
-    1. 将标题下的文字切分为带上下文的片段，对应于splitting1.py
-    2. 按标题切分后，进一步处理过长和过短的片段，对应于splitting2.py
-    3. 按标题切分，对应于splitting3.py
-    4. 按长度切分，对应于splitting4.py
-2. AI校对当前文档的多种方式（结果在新文档中打开）
-    1. 切分当前文档然后校对
-        1. 选择4种文档切分方式中的一种，或刚才缓存的切分结果
-        2. 自动完成校对，对应proofreading1.py
-    2. 一次性校对当前文档，对应于proofreading2.py
-        1. 可选择上下文
-        2. 可选择参考文档
-    3. 校对当前文档中的选中文本
-        1. 可设置选中文本所在的上下文级别
-3. 设置
-    1. DEEPSEEK API KEY
-    2. 4种各切分方式的默认值
-    3. 3种校对方式的默认值
