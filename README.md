@@ -1,9 +1,9 @@
 
 # 校对中文书稿的Python工具集（相应的vscode插件见后）
 
-[一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek和Gemini。主要功能已经做成vscode插件, [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension)。
+[一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek和Gemini（后者测试不充分）。主要功能已经做成vscode插件： [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension)。
 
-A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and Gemini. The main functions have been made into a vscode extension, [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension).
+A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and Gemini, the latter is not adequately tested. The main functions have been made into a vscode extension, [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension).
 
 !!!
     鉴于身边编辑同仁的一般情况, 以下说明均假设: 你使用Windows x64操作系统, 完全不懂编程, 但有一定的学习意愿. 我尽可能详尽而简洁地说明, 以便你自学上手. 尽管如此, 我还是建议你从身边找一位稍懂程序的人, 比如公司的网管, 请他对照这篇说明，帮助你把一个真实的校对例子跑起来, 这个小小的门槛有可能吓退很多人.
