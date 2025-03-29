@@ -4,6 +4,8 @@
 """
 from src.proofreader import deepseek
 
+# 校对模型
+MODEL = "deepseek-chat" # deepseek-chat, deepseek-reasoner; 阿里云： deepseek-v3
 # 文件所在路径（以项目根目录为当前目录）
 ROOT_DIR = "example2"
 # 要校对的文件
@@ -35,7 +37,7 @@ with open(REFERENCE_FILE_NAME, "r", encoding="utf-8") as f:
 # 以下两种方式的优劣有待测试  TODO
 REFERENCE = f"{REFERENCE}\n\n{CONTEXT}"
 
-result = deepseek(TARGET, REFERENCE)
+result = deepseek(TARGET, REFERENCE, model=MODEL)
 if result:
     with open(RESULT_FILE_NAME, "w", encoding="utf-8") as f:
         f.write(result)

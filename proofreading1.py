@@ -7,6 +7,8 @@ import json
 import asyncio
 from src.proofreader import process_paragraphs_async
 
+# 校对模型
+MODEL = "deepseek-chat" # deepseek-chat, deepseek-reasoner; 阿里云： deepseek-v3
 # 文件所在路径（从项目根目录开始算，根目录用`.`表示）
 ROOT_DIR = "./example"
 # 文件名列表（不含后缀`.md`）
@@ -44,7 +46,7 @@ for file_name in file_names:
 
     # 处理文本
     try:
-        asyncio.run(process_paragraphs_async(FILE_IN_JSON, FILE_PROOFREAD_JSON, start_count=1, model="deepseek-chat", rpm=15, max_concurrent=3))
+        asyncio.run(process_paragraphs_async(FILE_IN_JSON, FILE_PROOFREAD_JSON, start_count=1, model=MODEL, rpm=15, max_concurrent=3))
     except Exception as e:
         print(f"处理文本时出错: {str(e)}")
         exit(1)

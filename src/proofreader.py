@@ -55,7 +55,7 @@ def deepseek(content: str, reference: str="", model:str="deepseek-chat") -> str|
     """
 
     client: OpenAI|None = None
-    if model == "deepseek-chat":
+    if model == "deepseek-chat" or model == "deepseek-reasoner":
         # 初始化deepseek客户端
         client = OpenAI(api_key=os.getenv("DEEPSEEK_API_KEY"), base_url="https://api.deepseek.com")
     elif model == "deepseek-v3":
@@ -122,21 +122,6 @@ async def deepseek_async(content: str, reference: str, model:str, rate_limiter: 
             lambda: deepseek(content, reference, model)
         )
     return result
-
-
-def chat_deepseek(text: str) -> str|None:
-    """
-    调用deepseek校对模型，返回校对后的文本
-    """
-    return deepseek(text, "deepseek-chat")
-
-
-def chat_aliyun_deepseek(text: str) -> str|None:
-    """
-    调用阿里云deepseek校对模型，返回校对后的文本
-    """
-    return deepseek(text, "deepseek-v3")
-
 
 # 配置Google API
 client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"),)
@@ -370,13 +355,13 @@ async def process_paragraphs_async(json_in: str, json_out: str, start_count: int
     return final_output
 
 
-def process_by_once(file_in: str, file_out: str, chat_func: Callable=chat_deepseek):
+def process_by_once(file_in: str, file_out: str, chat_func: Callable=deepseek, model: str="deepseek-chat"):
     """
     一次性处理整个文件
     """
     with open(file_in, encoding="utf8",mode="r") as f:
         with open(file_out,encoding="utf8", mode="w") as f_out:
             text = f.read()
-            text = chat_func(text)
+            text = chat_func(text, model=model)
             if text:
                 f_out.write(text)
