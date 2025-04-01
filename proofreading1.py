@@ -8,7 +8,9 @@ import asyncio
 from src.proofreader import process_paragraphs_async
 
 # 校对模型
-MODEL = "deepseek-chat" # deepseek-chat, deepseek-reasoner; 阿里云： deepseek-v3
+# Deepseek: deepseek-chat, deepseek-reasoner;
+# 阿里云百炼： deepseek-v3, deepseek-r1
+MODEL = "deepseek-chat"
 # 文件所在路径（从项目根目录开始算，根目录用`.`表示）
 ROOT_DIR = "./example"
 # 文件名列表（不含后缀`.md`）

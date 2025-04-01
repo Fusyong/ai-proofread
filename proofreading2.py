@@ -5,7 +5,8 @@
 from src.proofreader import deepseek
 
 # 校对模型
-MODEL = "deepseek-chat" # deepseek-chat, deepseek-reasoner; 阿里云： deepseek-v3
+# Deepseek: deepseek-chat, deepseek-reasoner;
+# 阿里云百炼： deepseek-v3, deepseek-r1
 # 文件所在路径（以项目根目录为当前目录）
 ROOT_DIR = "example2"
 # 要校对的文件
