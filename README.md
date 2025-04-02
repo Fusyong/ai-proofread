@@ -80,7 +80,6 @@ A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and G
 * [x] 支持语境(上下文)
 * [ ] 介绍其他工具和文档
     * [x] diff_tools.py
-    * [ ] prompt-校对专家-system.xml
     * [ ] jsdiff.html
 * [ ] 专项校对
     1. [ ] 地名、行政区划
