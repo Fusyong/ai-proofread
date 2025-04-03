@@ -1,9 +1,6 @@
+[一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek、阿里云百炼和Google Gemini（后者测试不充分）平台的大语言模型服务。**主要功能已经做成vscode插件： [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension)**
 
-# 校对中文书稿的Python工具集（相应的vscode插件见后）
-
-[一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek和Gemini（后者测试不充分）。主要功能已经做成vscode插件： [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension)。
-
-A toolkit for proofreading Chinese book manuscripts, mainly using Deepseek and Gemini, the latter is not adequately tested. The main functions have been made into a vscode extension, [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension).
+A toolkit for proofreading Chinese book manuscripts, mainly using the LLM services of Deepseek, Aliyun, and Google Gemini, the latter is not adequately tested. The main functions have been made into a vscode extension, [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension).
 
 !!!
     鉴于身边编辑同仁的一般情况, 以下说明均假设: 你使用Windows x64操作系统, 完全不懂编程, 但有一定的学习意愿. 我尽可能详尽而简洁地说明, 以便你自学上手. 尽管如此, 我还是建议你从身边找一位稍懂程序的人, 比如公司的网管, 请他对照这篇说明，帮助你把一个真实的校对例子跑起来, 这个小小的门槛有可能吓退很多人.
@@ -148,3 +145,9 @@ pandoc -t markdown_strict --extract-media="./attachments/%myfilename%" %myfilena
 
 建议转换后与简单复制黏贴的纯文本（通常能保留所有字符）进行比较。
 
+## 许可 license
+
+两个部分分别许可：
+
+1. 提示词（the prompts）：Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)
+2. 其余部分(the others)：MIT License
