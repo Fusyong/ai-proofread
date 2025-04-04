@@ -93,7 +93,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
 
 [文档](https://api-docs.deepseek.com/zh-cn/)
 
-temperature 参数默认为 1.0（此时极少错误改动 TODO 需要尝试不同的值）。
+temperature 参数默认为 1.3（1.0时极少错误改动，但召回率较低 TODO 需要尝试不同的值）。
 
 官方建议您根据如下表格，按使用场景设置 temperature。
 

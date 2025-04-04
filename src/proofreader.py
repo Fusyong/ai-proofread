@@ -88,7 +88,7 @@ def deepseek(content: str, reference: str="", model:str="deepseek-chat") -> str|
             response = client.chat.completions.create(
                 model=model,
                 messages=message, # type: ignore
-                temperature=1,
+                temperature=1.3,
                 stream=False,
             )
             result = response.choices[0].message.content
@@ -139,7 +139,7 @@ def chat_google(text: str) -> str|None:
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 # max_output_tokens=3,
-                temperature=1,
+                temperature=1.3,
             ),
         )
         result = response.text
