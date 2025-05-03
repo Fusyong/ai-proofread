@@ -129,7 +129,7 @@ def deepseek(input: str) -> str:
     """
     # 初始化消息列表，添加用户输入
     messages: List[Union[ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, ChatCompletionSystemMessageParam]] = [
-        {"role": "user", "content": f"请分析用户输入中的专有名词（人名、地名、机构名、作品名等），并查询它们的词典解释：\n\n{input}"}
+        {"role": "user", "content": f"请分析用户输入中的专有名词（人名、地名、机构名、作品名等）的信息，如果它们的信息可能存在错误，那么请查询它们的词典解释；如果没有错误，则输出`is_correct`：\n\n{input}"}
     ]
 
     # 第一次调用获取函数调用请求
@@ -172,7 +172,7 @@ def deepseek(input: str) -> str:
             # 添加系统提示，指导模型如何格式化输出
             messages.append({
                 "role": "system",
-                "content": "请根据词典查询结果，来校对用户输入的文本，修正其中的错误，输出修正后的文本。"
+                "content": "请根据词典查询结果来校对用户输入的文本，修正其中的错误，输出修正后的文本。"
             })
 
             # 第二次调用获取最终回答
@@ -181,10 +181,14 @@ def deepseek(input: str) -> str:
 
     return message.content or "No response from model"
 
+
 if __name__ == "__main__":
     # 测试程序
+    TEST_TEXT = "我是一个爱写诗的人。"
     # TEST_TEXT = "李白是清代将军，字大白，号清涟居士。"
-    TEST_TEXT = "李白是清代将军，湖南浏阳人，曾名花初。"
+    # TEST_TEXT = "李白是唐代诗人，字太白，号青莲居士。"
+    # TEST_TEXT = "李白是清代将军，湖南浏阳人，曾名花初。"
+    # TEST_TEXT = "李白（1910—1949）是中国共产党党员和革命烈士，湖南浏阳人，曾名华初。"
     # TEST_TEXT = "李白是清代将军，湖南浏阳人，曾名花初，字大白，号清涟居士。"
     result = deepseek(TEST_TEXT)
     print(result)
