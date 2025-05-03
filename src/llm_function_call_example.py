@@ -1,16 +1,19 @@
 """
-使用OpenAI的API调用函数
-这个示例展示了如何使用大语言模型进行函数调用，实现更复杂的功能
+使用Deepseek的API调用函数
+这个示例展示了如何使用大语言模型进行函数调用，实现专有名词查词典功能
 """
 
 import os
-from typing import Dict, Any, List
+import re
+from typing import Dict, Any, List, Union
+from mdict_utils import query
 from openai import OpenAI
 from openai.types.chat import (
     ChatCompletionMessage,
     ChatCompletionUserMessageParam,
     ChatCompletionAssistantMessageParam,
     ChatCompletionToolMessageParam,
+    ChatCompletionSystemMessageParam,
     ChatCompletionToolParam
 )
 from dotenv import load_dotenv
@@ -19,55 +22,77 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 定义函数规范，使用JSON Schema格式描述函数的参数和返回值
-# 这里定义了一个获取天气信息的函数规范
+# 这里定义了一个查词典的函数规范
 tools: List[ChatCompletionToolParam] = [
     {
-        "type": "function",  # 指定这是一个函数调用
+        "type": "function",
         "function": {
-            "name": "get_weather",  # 函数名称
-            "description": "获取指定城市的天气信息",  # 函数描述
-            "parameters": {  # 参数定义
+            "name": "lookup_dictionary",
+            "description": "查询专有名词（人名、地名、机构名、作品名等）的词典解释",
+            "parameters": {
                 "type": "object",
                 "properties": {
-                    "city": {  # 城市参数
+                    "term": {
                         "type": "string",
-                        "description": "城市名称"
+                        "description": "要查询的专有名词"
                     },
-                    "unit": {  # 温度单位参数
+                    "term_type": {
                         "type": "string",
-                        "enum": ["celsius", "fahrenheit"],  # 可选值
-                        "description": "温度单位"
+                        "enum": ["person", "location", "organization", "work", "other"],
+                        "description": "专有名词的类型"
                     }
                 },
-                "required": ["city"]  # 必需参数
+                "required": ["term", "term_type"]
             }
         }
     }
 ]
 
-# 模拟天气API函数
-# 实际应用中应该替换为真实的天气API调用
-def get_weather(city: str, unit: str = "celsius") -> Dict[str, Any]:
+def extract_text_from_html(html_content: str) -> str:
     """
-    模拟获取天气信息的函数
+    从HTML内容中提取纯文本
 
     Args:
-        city (str): 城市名称
-        unit (str, optional): 温度单位，默认为摄氏度
+        html_content (str): 包含HTML标签的内容
 
     Returns:
-        Dict[str, Any]: 包含天气信息的字典
+        str: 提取出的纯文本
     """
-    # 这里应该是实际的API调用
+    # 移除HTML标签
+    text = re.sub(r'<[^>]+>', '', html_content)
+    # 移除XML标签
+    text = re.sub(r'<\?xml[^>]+\?>', '', text)
+    # 移除多余的空格和换行
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+# 模拟词典查询函数
+# 实际应用中应该替换为真实的词典API调用
+def lookup_dictionary(term: str, term_type: str) -> Dict[str, Any]:
+    """
+    模拟查询专有名词词典的函数
+
+    Args:
+        term (str): 要查询的专有名词
+        term_type (str): 专有名词的类型
+
+    Returns:
+        Dict[str, Any]: 包含词典解释的字典
+    """
+    mdx_path = 'D:/通用资料/工具书/通用电子词典/1古汉语/辞海第七版/离线版/辞海第七版.mdx'
+    content = query(mdx_path, term)
+
+    # 提取纯文本内容
+    clean_content = extract_text_from_html(content)
+
     return {
-        "city": city,
-        "temperature": 25,
-        "unit": unit,
-        "condition": "sunny"
+        "term": term,
+        "term_type": term_type,
+        "explanation": clean_content
     }
 
 def send_messages(
-    messages: List[ChatCompletionUserMessageParam | ChatCompletionAssistantMessageParam | ChatCompletionToolMessageParam],
+    messages: List[Union[ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, ChatCompletionSystemMessageParam]],
     tools: List[ChatCompletionToolParam]
 ) -> ChatCompletionMessage:
     """
@@ -85,26 +110,26 @@ def send_messages(
 
     # 调用API
     response = client.chat.completions.create(
-        model="deepseek-chat",  # 使用的模型
-        messages=messages,  # 消息历史
-        tools=tools,  # 可用的函数
-        tool_choice="auto"  # 让模型自动决定是否需要调用函数
+        model="deepseek-chat",
+        messages=messages,
+        tools=tools,
+        tool_choice="auto"
     )
     return response.choices[0].message
 
 def deepseek(input: str) -> str:
     """
-    调用deepseek校对模型，返回校对后的文本
+    调用deepseek模型，识别文本中的专有名词并查询词典
 
     Args:
         input (str): 用户输入的文本
 
     Returns:
-        str: 模型处理后的文本
+        str: 模型处理后的文本，包含专有名词的解释
     """
     # 初始化消息列表，添加用户输入
-    messages: List[ChatCompletionUserMessageParam | ChatCompletionAssistantMessageParam | ChatCompletionToolMessageParam] = [
-        {"role": "user", "content": input}
+    messages: List[Union[ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, ChatCompletionSystemMessageParam]] = [
+        {"role": "user", "content": f"请分析用户输入中的专有名词（人名、地名、机构名、作品名等），并查询它们的词典解释：\n\n{input}"}
     ]
 
     # 第一次调用获取函数调用请求
@@ -118,11 +143,12 @@ def deepseek(input: str) -> str:
         function_args = eval(tool_call.function.arguments)
 
         # 执行函数调用
-        if function_name == "get_weather":
-            function_response = get_weather(**function_args)
+        if function_name == "lookup_dictionary":
+            print(function_args)
+            function_response = lookup_dictionary(**function_args)
+            print(function_response)
 
             # 添加助手消息到消息历史
-            # 包含函数调用的信息
             messages.append({
                 "role": "assistant",
                 "content": None,
@@ -143,10 +169,13 @@ def deepseek(input: str) -> str:
                 "content": str(function_response)
             })
 
+            # 添加系统提示，指导模型如何格式化输出
+            messages.append({
+                "role": "system",
+                "content": "请根据词典查询结果，来校对用户输入的文本，修正其中的错误，输出修正后的文本。"
+            })
+
             # 第二次调用获取最终回答
-            # 将JSON数据转换为自然语言
-            # 添加适当的语气和补充信息
-            # 根据上下文提供更完整的回答
             message = send_messages(messages, tools)
             return message.content or "No response from model"
 
@@ -154,5 +183,8 @@ def deepseek(input: str) -> str:
 
 if __name__ == "__main__":
     # 测试程序
-    result = deepseek("北京今天天气怎么样？")
+    # TEST_TEXT = "李白是清代将军，字大白，号清涟居士。"
+    TEST_TEXT = "李白是清代将军，湖南浏阳人，曾名花初。"
+    # TEST_TEXT = "李白是清代将军，湖南浏阳人，曾名花初，字大白，号清涟居士。"
+    result = deepseek(TEST_TEXT)
     print(result)

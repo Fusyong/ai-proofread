@@ -26,6 +26,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
     pip install google-genai
     pip install dotenv
     ```
+    <!--词典解析 https://github.com/liuyug/mdict-utils -->
 
 ## 校对一段文字
 
