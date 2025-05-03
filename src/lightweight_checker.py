@@ -1,5 +1,9 @@
+"""
+基于词表、模式、N-gram模型和机器学习的轻量级文本检查器
+"""
+import os
 import re
-from typing import List, Dict, Set, Tuple
+from typing import List, Dict, Tuple
 from dataclasses import dataclass
 from collections import defaultdict
 import jieba
@@ -10,6 +14,9 @@ from sklearn.pipeline import Pipeline
 
 @dataclass
 class CheckResult:
+    """
+    检查结果类
+    """
     error_type: str
     location: tuple[int, int]
     original_text: str
@@ -17,10 +24,30 @@ class CheckResult:
     confidence: float
 
 class NGramModel:
+    """
+    N-gram 模型类
+    """
     def __init__(self, n: int = 2):
         self.n = n
         self.ngram_counts = defaultdict(int)
         self.total_ngrams = 0
+        self.bigram_data = self._load_bigram_data()
+
+    def _load_bigram_data(self) -> Dict[str, float]:
+        """从 bigram_full.txt 加载数据"""
+        bigram_data = defaultdict(float)
+        try:
+            with open('data/bigram_full.txt', 'r', encoding='utf-8') as f:
+                for line in f:
+                    parts = line.strip().split('\t')
+                    if len(parts) >= 2:
+                        bigram, freq = parts[0], float(parts[1])
+                        # 将 D 和 L 转换为正则表达式模式
+                        pattern = bigram.replace('D', r'\d').replace('L', r'[a-zA-Z]')
+                        bigram_data[pattern] = freq
+        except FileNotFoundError:
+            print("Warning: bigram_full.txt not found, using default data")
+        return bigram_data
 
     def train(self, corpus: List[str]):
         """训练 N-gram 模型"""
@@ -33,6 +60,25 @@ class NGramModel:
 
     def get_probability(self, ngram: Tuple[str, ...]) -> float:
         """获取 N-gram 的概率"""
+        # 首先检查预加载的 bigram 数据
+        if self.n == 2 and len(ngram) == 2:
+            # 将词语转换为对应的模式
+            pattern = []
+            for word in ngram:
+                if word.isdigit():
+                    pattern.append(r'\d')
+                elif word.isalpha() and not ('\u4e00' <= word <= '\u9fff'):
+                    pattern.append(r'[a-zA-Z]')
+                else:
+                    pattern.append(re.escape(word))
+            pattern = ' '.join(pattern)
+
+            # 检查是否匹配任何预定义的模式
+            for bigram_pattern, freq in self.bigram_data.items():
+                if re.match(bigram_pattern, pattern):
+                    return freq
+
+        # 如果预加载数据中没有，使用训练数据
         count = self.ngram_counts[ngram]
         return count / self.total_ngrams if self.total_ngrams > 0 else 0.0
 
@@ -48,6 +94,9 @@ class NGramModel:
         return suggestions
 
 class FeatureExtractor(BaseEstimator, TransformerMixin):
+    """
+    特征提取器类
+    """
     def __init__(self):
         self.feature_functions = [
             self._get_char_type_features,
@@ -100,6 +149,7 @@ class FeatureExtractor(BaseEstimator, TransformerMixin):
         return features
 
     def fit(self, X, y=None):
+        """训练特征提取器"""
         return self
 
     def transform(self, X):
@@ -109,6 +159,9 @@ class FeatureExtractor(BaseEstimator, TransformerMixin):
         return np.array([[f[name] for name in feature_names] for f in features])
 
 class LightweightMLModel:
+    """
+    轻量级机器学习模型类
+    """
     def __init__(self):
         # 初始化特征提取器和分类器
         self.model = Pipeline([
@@ -129,19 +182,29 @@ class LightweightMLModel:
         return float(prob[1]), float(prob[1])  # 返回错误概率和置信度
 
 class LightweightTextChecker:
+    """
+    轻量级文本检查器类
+    """
     def __init__(self):
-        # 常见错误模式
+        # 常见错误模式 TODO 及误正映射
         self.patterns = {
             'punctuation': r'[，。！？]',  # 检查中文标点
             'number_unit': r'\d+\s*[a-zA-Z]+',  # 检查数字和单位之间是否有空格
             'mixed_language': r'[a-zA-Z]+[，。！？]',  # 检查英文后是否错误使用中文标点
         }
 
-        # 常见错误词语映射
+        # 常见错误词语映射 TODO 与例外语境('出奇',['去齐了','没有出齐'])
         self.common_errors = {
             '護彤': '胡同',
             '龙晴鱼': '龙睛鱼',
             '出齐': '出奇',
+        }
+
+        # 正确词表
+        self.correct_words = {
+            '胡同',
+            '龙睛鱼',
+            '出齐',
         }
 
         # 初始化 N-gram 模型
@@ -236,14 +299,31 @@ class LightweightTextChecker:
         # 从后向前替换，避免位置变化影响后续替换
         for correction in sorted(corrections, key=lambda x: x.location[0], reverse=True):
             start, end = correction.location
-            result = result[:start] + correction.suggestion + result[end:]
+
+            # 根据错误类型选择不同的处理方式
+            if correction.error_type == 'word_error':
+                # 对于词语错误，直接替换为建议的词语
+                result = result[:start] + correction.suggestion + result[end:]
+            elif correction.error_type == 'ngram_error':
+                # 对于 N-gram 错误，保留原文，添加注释
+                result = result[:start] + f"[{result[start:end]}]" + result[end:]
+            elif correction.error_type == 'punctuation':
+                # 对于标点错误，使用建议的标点
+                result = result[:start] + correction.suggestion + result[end:]
+            elif correction.error_type == 'number_unit':
+                # 对于数字单位错误，使用建议的格式
+                result = result[:start] + correction.suggestion + result[end:]
+            elif correction.error_type == 'ml_error':
+                # 对于机器学习检测到的错误，保留原文，添加注释
+                result = f"[{result}]"
+
         return result
 
 def main():
     checker = LightweightTextChecker()
     # 可以添加更多训练数据
     # checker.ml_model.train(["更多训练文本..."], [0, 1, ...])  # 0表示正确，1表示错误
-    test_text = "我的爷爷那时候住在北京，一条很宽大的小護彤裡。她很喜欢种花养鱼。至今我还记得，他养过一种叫龙晴鱼的金鱼，眼睛大得出齐，好看极了。"
+    test_text = "床笫置换爱。"
 
     # 检查文本
     results = checker.check_text(test_text)
