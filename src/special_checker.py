@@ -6,6 +6,7 @@ import zlib
 import re
 import sqlite3
 import time
+import json
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 from collections import defaultdict
@@ -17,18 +18,6 @@ from sklearn.pipeline import Pipeline
 from mdict_utils.reader import MDX
 from mdict_utils import unpack_to_db
 
-def check_to_general_standard_kanji_list(text: str) -> bool:
-    """通用规范汉字表检查"""
-
-    # 检查表内繁体字、异体字
-    with open('data/general_standard_kanji_list.txt', 'r', encoding='utf-8') as f:
-        general_standard_kanji_list = set(line.strip() for line in f)
-
-
-    # 检查表内规范字
-
-    return True
-
 @dataclass
 class CheckResult:
     """
@@ -39,6 +28,170 @@ class CheckResult:
     original_text: str
     suggestion: str
     confidence: float
+
+def is_chinese_character(char: str) -> bool:
+    """判断是否是中文字符 TODO 有待于扩展字符集
+
+    """
+    return '\u4e00' <= char <= '\u9fff'
+
+def check_to_general_standard_kanji_list(text: str) -> List[CheckResult]:
+    """通用规范汉字(GSK)表检查
+
+    Args:
+        text: 要检查的文本
+
+    Returns:
+        List[CheckResult]: 检查结果列表，包含发现的非规范字及其建议
+    """
+    gsk_list_path = "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表（维基百科）.csv"
+    gsk_to_traditional_kanji_list_path = "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表繁简对照表-增强（2025-03-04）.csv"
+    gsk_to_traditional_kanji_list_notes_path = "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表规范字与繁体字、异体字对照表注释.md"
+
+    # 存储检查结果
+    results = []
+
+    # 规范字表
+    gsk_list = []
+
+    # 创建映射字典
+    simplified_to_traditional = {}  # 简繁映射
+    simplified_to_variants = {}    # 简异映射
+    traditional_to_simplified = {} # 繁简映射
+    variant_to_simplified = {}     # 异简映射
+    notes = {}         # 注释号码
+    last_simplified = None
+
+    # 注释表正文
+    notes_content = []
+
+    # 读取规范字表
+    with open(gsk_list_path, 'r', encoding='utf-8') as f:
+        # 跳过标题行
+        next(f)
+        for line in f:
+            parts = line.strip().split(',')
+            gsk_list.append(parts[1])
+
+    # 读取注释表
+    with open(gsk_to_traditional_kanji_list_notes_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            notes_content.append(line)
+
+    # 读取并解析繁简异对照表
+    with open(gsk_to_traditional_kanji_list_path, 'r', encoding='utf-8') as f:
+        # 跳过标题行
+        next(f)
+        for line in f:
+            parts = line.strip().split(',')
+            # 获取规范字（简体字）
+            simplified = parts[2].strip()
+            if not simplified:  # 没有规范字的行表示跟上一行的规范字相同从而省略
+                simplified = last_simplified
+            last_simplified = simplified
+
+            # 获取繁体字（去掉括号）和注释号码
+            traditional = parts[3].strip()
+            if not traditional or traditional == '~': # 空白和'~'表示繁体字与简体字相同
+                traditional = simplified
+            else:
+                traditional = traditional.strip('()')
+            # 抽取注释号码
+            note_match = re.search(r'(\d+)$', str(traditional))
+            note = note_match.group(1) if note_match else None
+            traditional = str(traditional).rstrip('0123456789')
+
+            # 建立映射，可能一对多
+            simplified_to_traditional.setdefault(simplified, []).append(traditional)
+            traditional_to_simplified.setdefault(traditional, []).append(simplified)
+            if note:
+                notes[traditional] = note
+
+            # 获取异体字，去掉括号，保留注释号码，把拼字作为一个异体字，如`[靭11靱〖⿰韋刄〗12]`
+            variants = parts[4].strip()
+            if variants:
+                # 移除括号
+                variants = variants.strip('[]')
+                # 查找拼字及其注释号码
+                pattern = r'〖([^〗]+)〗(\d*)'
+                pinzi_matches = re.findall(pattern, variants)
+                for pinzi, note in pinzi_matches:
+                    # 将拼字作为异体字处理
+                    simplified_to_variants.setdefault(simplified, []).append(pinzi)
+                    variant_to_simplified.setdefault(pinzi, []).append(simplified)
+                    if note:
+                        notes[pinzi] = note
+
+                # 移除拼字部分，处理剩余异体字
+                variants = re.sub(pattern, '', variants)
+
+                # 处理多个异体字及其注释号码
+                matches = re.findall(r'(\D)(\d*)', variants)
+                for variant, note in matches:
+                    if variant:
+                        simplified_to_variants.setdefault(simplified, []).append(variant)
+                        variant_to_simplified.setdefault(variant, []).append(simplified)
+                        if note:
+                            notes[variant] = note
+    # # 保存映射字典以便检查
+    # with open('gsk_mapping.json', 'w', encoding='utf-8',newline='') as f:
+    #     json.dump([simplified_to_traditional,traditional_to_simplified,variant_to_simplified,notes],f,ensure_ascii=False,indent=2)
+
+    # 检查文本中的每个字符
+    # 忽略指定的字符集（数字、字母、标点符号、空白字符等）
+    ignore_pattern = re.compile(r'[0-9a-zA-Z，。！？；：""''（）《》,.!?;:"\'~\s\(\)\[\]]+')
+    for i, char in enumerate(text):
+        if ignore_pattern.match(char):
+            continue
+
+        # 是通用规范汉字表附录提及的繁字体或异体字
+        is_in_gsk_appendix = False
+
+        # 检查是否是繁体字
+        if char in traditional_to_simplified and traditional_to_simplified[char] != [char]:
+            is_in_gsk_appendix = True
+            note = notes.get(char, '')
+            suggestion = ''.join(traditional_to_simplified[char])  # 取对应的规范字
+            if note and int(note) <= len(notes_content):
+                note_text = notes_content[int(note)-1].strip()
+            else:
+                note_text = ''
+            results.append(CheckResult(
+                error_type='traditional_character',
+                location=(i, i + 1),
+                original_text=char,
+                suggestion=f"{suggestion}{f'({note_text})' if note_text else ''}",
+                confidence=1
+            ))
+
+        # 检查是否是异体字
+        if char in variant_to_simplified and variant_to_simplified[char] != [char]:
+            is_in_gsk_appendix = True
+            note = notes.get(char, '')
+            suggestion = ''.join(variant_to_simplified[char])  # 取对应的规范字
+            if note and int(note) <= len(notes_content):
+                note_text = notes_content[int(note)-1].strip()
+            else:
+                note_text = ''
+            results.append(CheckResult(
+                error_type='variant_character',
+                location=(i, i + 1),
+                original_text=char,
+                suggestion=f"{suggestion}{f'({note_text})' if note_text else ''}",
+                confidence=1
+            ))
+
+        # 检查是否是规范字
+        if not is_in_gsk_appendix and char not in gsk_list:
+            results.append(CheckResult(
+                error_type='not_general_standard_kanji',
+                location=(i, i + 1),
+                original_text=char,
+                suggestion="不在通用规范汉字表及其附录中",
+                confidence=1
+            ))
+
+    return results
 
 class NGramModel:
     """
@@ -378,8 +531,30 @@ class LightweightTextChecker:
         return result
 
 if __name__ == "__main__":
+    # 测试通用规范汉字表检查
+    results = check_to_general_standard_kanji_list("""升,,[昇8陞9]
+夭,,[殀]
+长,(長),
+仆,~,
+,(僕),
+仇,,[讐讎10]
+币,(幣),
+仅,(僅),
+斤,,[觔]
+从,(從),
+仑,(侖),[崘崙]
+凶,,[兇]
+""")
+    for result in results:
+        print(f"错误类型: {result.error_type}")
+        print(f"位置: {result.location}")
+        print(f"原文: {result.original_text}")
+        print(f"建议: {result.suggestion}")
+        print(f"置信度: {result.confidence}")
+        print("---")
 
-    print(is_in_xdhycd('信口开合'))
+    # 检查是否在现代汉语词典中
+    # print(is_in_xdhycd('信口开合'))
 
     # checker = LightweightTextChecker()
     # # 可以添加更多训练数据
