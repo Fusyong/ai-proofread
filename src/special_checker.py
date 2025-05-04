@@ -44,106 +44,126 @@ def check_to_general_standard_kanji_list(text: str) -> List[CheckResult]:
     Returns:
         List[CheckResult]: 检查结果列表，包含发现的非规范字及其建议
     """
+
     gsk_list_path = "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表（维基百科）.csv"
     gsk_to_traditional_kanji_list_path = "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表繁简对照表-增强（2025-03-04）.csv"
     gsk_to_traditional_kanji_list_notes_path = "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表规范字与繁体字、异体字对照表注释.md"
 
+    gsk_data_path = "src/gsk_data.json"
+
     # 预编译正则表达式
     pinzi_pattern = re.compile(r'〖([^〗]+)〗(\d*)')
     variant_pattern = re.compile(r'(\D)(\d*)')
-    ignore_pattern = re.compile(r'[0-9a-zA-Z，。！？；：""''（）《》,.!?;:"\'~\s\(\)\[\]]+')
+    ignore_pattern = re.compile(r"""[0-9a-zA-Z，。！？；：“”‘’（）《》,.!?;:"'~\s\(\)\[\]]+""")
 
-    # 存储检查结果
-    results = []
-
-    # 规范字表
+    # 列表和映射字典
     gsk_list = []
-
-    # 创建映射字典
     simplified_to_traditional = {}  # 简繁映射
     simplified_to_variants = {}    # 简异映射
     traditional_to_simplified = {} # 繁简映射
     variant_to_simplified = {}     # 异简映射
     notes = {}         # 注释号码
-    last_simplified = None
+    notes_content = []# 注释表正文
 
-    # 注释表正文
-    notes_content = []
+    # 检查gsk_data.json是否存在
+    if not os.path.exists(gsk_data_path):
 
-    # 读取规范字表
-    with open(gsk_list_path, 'r', encoding='utf-8') as f:
-        # 跳过标题行
-        next(f)
-        for line in f:
-            parts = line.strip().split(',')
-            gsk_list.append(parts[1])
+        last_simplified = None
+        # 读取规范字表
+        with open(gsk_list_path, 'r', encoding='utf-8') as f:
+            # 跳过标题行
+            next(f)
+            for line in f:
+                parts = line.strip().split(',')
+                gsk_list.append(parts[1])
 
-    # 读取注释表
-    with open(gsk_to_traditional_kanji_list_notes_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            notes_content.append(line)
+        # 读取注释表
+        with open(gsk_to_traditional_kanji_list_notes_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                notes_content.append(line)
 
-    # 读取并解析繁简异对照表
-    with open(gsk_to_traditional_kanji_list_path, 'r', encoding='utf-8') as f:
-        # 跳过标题行
-        next(f)
-        for line in f:
-            parts = line.strip().split(',')
-            # 获取规范字（简体字）
-            simplified = parts[2].strip()
-            if not simplified:  # 没有规范字的行表示跟上一行的规范字相同从而省略
-                simplified = last_simplified
-            last_simplified = simplified
+        # 读取并解析繁简异对照表
+        with open(gsk_to_traditional_kanji_list_path, 'r', encoding='utf-8') as f:
+            # 跳过标题行
+            next(f)
+            for line in f:
+                parts = line.strip().split(',')
+                # 获取规范字（简体字）
+                simplified = parts[2].strip()
+                if not simplified:  # 没有规范字的行表示跟上一行的规范字相同从而省略
+                    simplified = last_simplified
+                last_simplified = simplified
 
-            # 获取繁体字（去掉括号）和注释号码
-            traditional = parts[3].strip()
-            if not traditional or traditional == '~': # 空白和'~'表示繁体字与简体字相同
-                traditional = simplified
-            else:
-                traditional = traditional.strip('()')
-            # 抽取注释号码
-            note_match = re.search(r'(\d+)$', str(traditional))
-            note = note_match.group(1) if note_match else None
-            traditional = str(traditional).rstrip('0123456789')
+                # 获取繁体字（去掉括号）和注释号码
+                traditional = parts[3].strip()
+                if not traditional or traditional == '~': # 空白和'~'表示繁体字与简体字相同
+                    traditional = simplified
+                else:
+                    traditional = traditional.strip('()')
+                # 抽取注释号码
+                note_match = re.search(r'(\d+)$', str(traditional))
+                note = note_match.group(1) if note_match else None
+                traditional = str(traditional).rstrip('0123456789')
 
-            # 建立映射，可能一对多
-            simplified_to_traditional.setdefault(simplified, []).append(traditional)
-            traditional_to_simplified.setdefault(traditional, []).append(simplified)
-            if note:
-                notes[traditional] = note
+                # 建立映射，可能一对多
+                simplified_to_traditional.setdefault(simplified, []).append(traditional)
+                traditional_to_simplified.setdefault(traditional, []).append(simplified)
+                if note:
+                    notes[traditional] = note
 
-            # 获取异体字，去掉括号，保留注释号码，把拼字作为一个异体字，如`[靭11靱〖⿰韋刄〗12]`
-            variants = parts[4].strip()
-            if variants:
-                # 移除括号
-                variants = variants.strip('[]')
-                # 查找拼字及其注释号码
-                pinzi_matches = pinzi_pattern.findall(variants)
-                for pinzi, note in pinzi_matches:
-                    # 将拼字作为异体字处理
-                    simplified_to_variants.setdefault(simplified, []).append(pinzi)
-                    variant_to_simplified.setdefault(pinzi, []).append(simplified)
-                    if note:
-                        notes[pinzi] = note
-
-                # 移除拼字部分，处理剩余异体字
-                variants = re.sub(pinzi_pattern, '', variants)
-
-                # 处理多个异体字及其注释号码
-                matches = variant_pattern.findall(variants)
-                for variant, note in matches:
-                    if variant:
-                        simplified_to_variants.setdefault(simplified, []).append(variant)
-                        variant_to_simplified.setdefault(variant, []).append(simplified)
+                # 获取异体字，去掉括号，保留注释号码，把拼字作为一个异体字，如`[靭11靱〖⿰韋刄〗12]`
+                variants = parts[4].strip()
+                if variants:
+                    # 移除括号
+                    variants = variants.strip('[]')
+                    # 查找拼字及其注释号码
+                    pinzi_matches = pinzi_pattern.findall(variants)
+                    for pinzi, note in pinzi_matches:
+                        # 将拼字作为异体字处理
+                        simplified_to_variants.setdefault(simplified, []).append(pinzi)
+                        variant_to_simplified.setdefault(pinzi, []).append(simplified)
                         if note:
-                            notes[variant] = note
-    # # 保存映射字典以便检查
-    # with open('gsk_mapping.json', 'w', encoding='utf-8',newline='') as f:
-    #     json.dump([simplified_to_traditional,traditional_to_simplified,variant_to_simplified,notes],f,ensure_ascii=False,indent=2)
+                            notes[pinzi] = note
 
+                    # 移除拼字部分，处理剩余异体字
+                    variants = re.sub(pinzi_pattern, '', variants)
+
+                    # 处理多个异体字及其注释号码
+                    matches = variant_pattern.findall(variants)
+                    for variant, note in matches:
+                        if variant:
+                            simplified_to_variants.setdefault(simplified, []).append(variant)
+                            variant_to_simplified.setdefault(variant, []).append(simplified)
+                            if note:
+                                notes[variant] = note
+        # 保存映射字典以便检查
+        with open(gsk_data_path, 'w', encoding='utf-8') as f:
+            json.dump({'simplified_to_traditional': simplified_to_traditional,
+                       'traditional_to_simplified': traditional_to_simplified,
+                       'simplified_to_variants': simplified_to_variants,
+                       'variant_to_simplified': variant_to_simplified,
+                       'gsk_list': gsk_list,
+                       'notes': notes,
+                       'notes_content': notes_content
+                       },
+                      f,
+                      ensure_ascii=False)
+    else:
+        with open(gsk_data_path, 'r', encoding='utf-8') as f:
+            gsk_data = json.load(f)
+            simplified_to_traditional = gsk_data['simplified_to_traditional']
+            traditional_to_simplified = gsk_data['traditional_to_simplified']
+            simplified_to_variants = gsk_data['simplified_to_variants']
+            variant_to_simplified = gsk_data['variant_to_simplified']
+            gsk_list = gsk_data['gsk_list']
+            notes = gsk_data['notes']
+            notes_content = gsk_data['notes_content']
+
+    # 存储检查结果
+    results = []
     # 检查文本中的每个字符
-    # 忽略指定的字符集（数字、字母、标点符号、空白字符等）
     for i, char in enumerate(text):
+        # 忽略指定的字符集（数字、字母、标点符号、空白字符等）
         if ignore_pattern.match(char):
             continue
 
@@ -547,7 +567,7 @@ if __name__ == "__main__":
     从,(從),
     仑,(侖),[崘崙]
     凶,,[兇]
-    㺯兲
+    㺯兲干乾
     """)
     for result in results:
         print(f"错误类型: {result.error_type}")

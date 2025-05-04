@@ -76,19 +76,18 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
 * [x] 支持参考资料
     * [ ] 切分并添加语境
 * [x] 支持语境(上下文)
-* [ ] 介绍其他工具和文档
-    * [x] diff_tools.py
-    * [ ] jsdiff.html
-* [ ] 专项校对
-    1. [ ] 地名、行政区划
-    2. [ ] 引文
-    3. [ ] 术语，专名
-    4. [ ] 人名
-    5. [ ] 低频度词汇
-    6. [ ] 年代
-    7. [ ] 注释
-    8. [ ] 通用规范汉字表查询
-* [ ] 智能体(远景，对本地环境的感知和操控, 如查字典和参考文档)
+* [ ] 专项校对 special_checker.py
+    1. [x] 通用规范汉字表查询，提示表外字和附录中的繁体字、异体字
+    2. [ ] 地名、行政区划
+    3. [ ] 引文
+    4. [ ] 术语，专名
+    5. [ ] 人名
+    6. [ ] 低频度词汇
+    7. [ ] 年代
+    8. [ ] 注释
+* [ ] 智能体(远景，对本地环境的感知和操控, 如查字典和参考文档、rag)
+    * [x] 遇到专有名词查字典 lookup_mdict.py，示例，未集成到校对工作流中
+* [ ] 移入[ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension)中的新功能
 
 ## deepseek参考资料
 
