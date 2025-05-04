@@ -48,6 +48,11 @@ def check_to_general_standard_kanji_list(text: str) -> List[CheckResult]:
     gsk_to_traditional_kanji_list_path = "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表繁简对照表-增强（2025-03-04）.csv"
     gsk_to_traditional_kanji_list_notes_path = "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表规范字与繁体字、异体字对照表注释.md"
 
+    # 预编译正则表达式
+    pinzi_pattern = re.compile(r'〖([^〗]+)〗(\d*)')
+    variant_pattern = re.compile(r'(\D)(\d*)')
+    ignore_pattern = re.compile(r'[0-9a-zA-Z，。！？；：""''（）《》,.!?;:"\'~\s\(\)\[\]]+')
+
     # 存储检查结果
     results = []
 
@@ -113,8 +118,7 @@ def check_to_general_standard_kanji_list(text: str) -> List[CheckResult]:
                 # 移除括号
                 variants = variants.strip('[]')
                 # 查找拼字及其注释号码
-                pattern = r'〖([^〗]+)〗(\d*)'
-                pinzi_matches = re.findall(pattern, variants)
+                pinzi_matches = pinzi_pattern.findall(variants)
                 for pinzi, note in pinzi_matches:
                     # 将拼字作为异体字处理
                     simplified_to_variants.setdefault(simplified, []).append(pinzi)
@@ -123,10 +127,10 @@ def check_to_general_standard_kanji_list(text: str) -> List[CheckResult]:
                         notes[pinzi] = note
 
                 # 移除拼字部分，处理剩余异体字
-                variants = re.sub(pattern, '', variants)
+                variants = re.sub(pinzi_pattern, '', variants)
 
                 # 处理多个异体字及其注释号码
-                matches = re.findall(r'(\D)(\d*)', variants)
+                matches = variant_pattern.findall(variants)
                 for variant, note in matches:
                     if variant:
                         simplified_to_variants.setdefault(simplified, []).append(variant)
@@ -139,7 +143,6 @@ def check_to_general_standard_kanji_list(text: str) -> List[CheckResult]:
 
     # 检查文本中的每个字符
     # 忽略指定的字符集（数字、字母、标点符号、空白字符等）
-    ignore_pattern = re.compile(r'[0-9a-zA-Z，。！？；：""''（）《》,.!?;:"\'~\s\(\)\[\]]+')
     for i, char in enumerate(text):
         if ignore_pattern.match(char):
             continue
@@ -533,18 +536,19 @@ class LightweightTextChecker:
 if __name__ == "__main__":
     # 测试通用规范汉字表检查
     results = check_to_general_standard_kanji_list("""升,,[昇8陞9]
-夭,,[殀]
-长,(長),
-仆,~,
-,(僕),
-仇,,[讐讎10]
-币,(幣),
-仅,(僅),
-斤,,[觔]
-从,(從),
-仑,(侖),[崘崙]
-凶,,[兇]
-""")
+    夭,,[殀]
+    长,(長),
+    仆,~,
+    ,(僕),
+    仇,,[讐讎10]
+    币,(幣),
+    仅,(僅),
+    斤,,[觔]
+    从,(從),
+    仑,(侖),[崘崙]
+    凶,,[兇]
+    㺯兲
+    """)
     for result in results:
         print(f"错误类型: {result.error_type}")
         print(f"位置: {result.location}")
