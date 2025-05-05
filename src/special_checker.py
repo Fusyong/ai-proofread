@@ -35,12 +35,12 @@ def is_chinese_character(char: str) -> bool:
     """
     return '\u4e00' <= char <= '\u9fff'
 
-def check_to_general_standard_kanji_list(text: str) -> List[CheckResult]:
+def check_to_general_standard_kanji_list(text: str, ignore_list: List[str] | str = "") -> List[CheckResult]:
     """通用规范汉字(GSK)表检查
 
     Args:
         text: 要检查的文本
-
+        ignore_list: 要忽略的列表，可以是列表或字符串
     Returns:
         List[CheckResult]: 检查结果列表，包含发现的非规范字及其建议
     """
@@ -164,7 +164,7 @@ def check_to_general_standard_kanji_list(text: str) -> List[CheckResult]:
     # 检查文本中的每个字符
     for i, char in enumerate(text):
         # 忽略指定的字符集（数字、字母、标点符号、空白字符等）
-        if ignore_pattern.match(char):
+        if ignore_pattern.match(char) or char in ignore_list:
             continue
 
         # 是通用规范汉字表附录提及的繁字体或异体字
@@ -555,26 +555,19 @@ class LightweightTextChecker:
 
 if __name__ == "__main__":
     # 测试通用规范汉字表检查
-    results = check_to_general_standard_kanji_list("""升,,[昇8陞9]
-    夭,,[殀]
-    长,(長),
-    仆,~,
-    ,(僕),
-    仇,,[讐讎10]
-    币,(幣),
-    仅,(僅),
-    斤,,[觔]
-    从,(從),
-    仑,(侖),[崘崙]
-    凶,,[兇]
-    㺯兲干乾
+    results = check_to_general_standard_kanji_list("""
+    乃,     ,[廼迺2]
+    干, ~   ,
+            ,(乾3)  ,[乹亁]
+      ,(幹) ,[榦]
+    兲朝
     """)
     for result in results:
-        print(f"错误类型: {result.error_type}")
+        print(f"类型: {result.error_type}")
         print(f"位置: {result.location}")
         print(f"原文: {result.original_text}")
-        print(f"建议: {result.suggestion}")
-        print(f"置信度: {result.confidence}")
+        print(f"提示: {result.suggestion}")
+        # print(f"置信度: {result.confidence}")
         print("---")
 
     # 检查是否在现代汉语词典中
