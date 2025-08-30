@@ -21,7 +21,7 @@ load_dotenv()
 # 读取上一层文件夹中的提示文件
 # parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # prompt_file_path = os.path.join(parent_dir, "prompt-proofreader.md")
-PROMPT_FILE_PATH = "src/prompt-proofreader-system.xml"
+PROMPT_FILE_PATH = "src/resource/prompt-proofreader-system.xml"
 SYSTEM_PROMPT = ""
 with open(PROMPT_FILE_PATH, "r", encoding="utf-8") as file:
     SYSTEM_PROMPT = file.read()

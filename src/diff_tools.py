@@ -132,7 +132,7 @@ def jsdiff_md_text(path, file_name_a, file_name_b, diff_path=None):
     with open(f'{path}/{file_name_b}', 'r', encoding='utf-8') as f:
         text2 = f.read()
 
-    with open('src/jsdiff.html', 'r', encoding='utf-8') as f:
+    with open('src/resource/jsdiff.html', 'r', encoding='utf-8') as f:
         content = f.read()
         # 替换<title>Diff</title>中的名称
         content = content.replace(r'<title>Diff</title>', f'<title>{file_name_a} vs {file_name_b}</title>')
