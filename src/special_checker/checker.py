@@ -1,11 +1,8 @@
 """
 基于词表、模式、N-gram模型和机器学习的轻量级文本检查器
 """
-import os
-import zlib
+
 import re
-import sqlite3
-import time
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 from collections import defaultdict
@@ -14,7 +11,7 @@ import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
-from mdict_utils.reader import unpack_to_db
+
 
 @dataclass
 class CheckResult:
@@ -26,12 +23,6 @@ class CheckResult:
     original_text: str
     suggestion: str
     confidence: float
-
-def is_chinese_character(char: str) -> bool:
-    """判断是否是中文字符 TODO 有待于扩展字符集
-
-    """
-    return '\u4e00' <= char <= '\u9fff'
 
 
 
@@ -194,46 +185,6 @@ class LightweightMLModel:
         return float(prob[1]), float(prob[1])  # 返回错误概率和置信度
 
 
-
-def query_from_db(word,mdx_path):
-    """从数据库查询词条"""
-    # 数据库将保存在与mdx文件同名的目录下
-    db_dir = os.path.dirname(mdx_path)
-    db_name = os.path.basename(mdx_path).replace('.mdx', '.db')
-    db_path = os.path.join(db_dir, db_name)
-
-    if not os.path.exists(db_path):
-        print("首次运行，正在解包词典到数据库...")
-        start_time = time.time()
-        try:
-            # 确保目录存在
-            os.makedirs(db_dir, exist_ok=True)
-            unpack_to_db(db_dir, mdx_path)
-            print(f"解包完成，耗时: {time.time() - start_time:.2f}秒")
-        except Exception as e:
-            print(f"解包失败: {e}")
-
-    try:
-        with sqlite3.connect(db_path) as conn:
-            c = conn.execute('SELECT paraphrase FROM mdx WHERE entry = ?', (word,))
-            result = c.fetchone()
-            if result:
-                # 解压缩数据
-                return zlib.decompress(result[0]).decode('utf-8')
-            return None
-    except sqlite3.OperationalError as e:
-        print(f"数据库错误: {e}")
-        return None
-
-def is_in_xdhycd(word: str) -> bool:
-    """
-    词语见于现代汉语词典中
-    """
-    mdx_path = 'D:/通用资料/工具书/通用电子词典/2现代汉语/现代汉语词典7/现汉7.mdx'
-    result = query_from_db(word,mdx_path)
-    print(result)
-    return result is not None
-
 class LightweightTextChecker:
     """
     轻量级文本检查器类
@@ -251,6 +202,7 @@ class LightweightTextChecker:
             '護彤': '胡同',
             '龙晴鱼': '龙睛鱼',
             '出齐': '出奇',
+            '裡': '里',
         }
 
         # 正确词表
@@ -374,18 +326,14 @@ class LightweightTextChecker:
 
 if __name__ == "__main__":
 
-    # 检查是否在现代汉语词典中
-    print(is_in_xdhycd('信口开合'))
-
+    # 
+    # 轻量文本检查器检查
+    # 
     checker = LightweightTextChecker()
     # 可以添加更多训练数据
     # checker.ml_model.train(["更多训练文本..."], [0, 1, ...])  # 0表示正确，1表示错误
-    test_text = "床笫置换爱。"
-
-    # 检查文本
+    test_text = "我的爷爷住在北京的一条護彤裡。"
     results = checker.check_text(test_text)
-
-    # 打印检查结果
     for result in results:
         print(f"错误类型: {result.error_type}")
         print(f"位置: {result.location}")
@@ -394,7 +342,9 @@ if __name__ == "__main__":
         print(f"置信度: {result.confidence}")
         print("---")
 
+    # 
     # 应用修正
+    # 
+    test_text = "我的爷爷住在北京的一条護彤裡。她养了一条龙晴鱼。"
     corrected_text = checker.apply_corrections(test_text, results)
-    print("\n修正后的文本:")
-    print(corrected_text)
+    print(f"文本修正前后:\n{test_text}\n{corrected_text}")

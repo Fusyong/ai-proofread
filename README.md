@@ -1,4 +1,4 @@
-[一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek、阿里云百炼和Google Gemini（后者测试不充分）平台的大语言模型服务。**主要功能已经做成vscode插件： [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension)**
+[一个校对中文书稿的工具集](https://github.com/Fusyong/ai-proofread)，主要使用Deepseek、阿里云百炼和Google Gemini（后者测试不充分）平台的大语言模型服务。**主要功能、更新的功能已经做成vscode插件： [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension)**
 
 A toolkit for proofreading Chinese book manuscripts, mainly using the LLM services of Deepseek, Aliyun, and Google Gemini, the latter is not adequately tested. The main functions have been made into a vscode extension, [ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension).
 
@@ -25,6 +25,10 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
     pip install openai
     pip install google-genai
     pip install dotenv
+    pip install jieba
+    pip install scikit-learn
+    pip install numpy
+    pip install mdict-utils
     ```
     <!--词典解析 https://github.com/liuyug/mdict-utils -->
 
@@ -37,7 +41,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
 3. your_markdown_reference.md 参考文档，可选
 4. your_markdown_proofread.md 校对后的结果
 
-准备好必要的文档，打开校对脚本proofreading2.py，使用编辑器右上角的三角形图标（Run Python File）运行这个脚本（或在终端输入`py splitting1.py`，下同），等待校对结束。
+准备好必要的文档，打开校对脚本proofreading2.py，使用编辑器右上角的三角形图标（Run Python File）运行这个脚本（或在终端输入`py proofreading2.py`，下同），等待校对结束。
 
 校对后，参考后文提到的比较校对前后变动的diff方法，即看到清晰的结果。
 
@@ -54,7 +58,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
     >No.4    360     # 一级标题2
     >No.5    301     ## 二级标题2
     >```
-3.  校对准备好的文件：打开校对脚本proofreading.py, 其中有详细说明，可以根据需要调整；同上运行脚本，你会在终端看到正在调用API校对文本的进度信息。最后，如果有未成功的片段，可以重复运行（已经完成的部分会自动忽略）。最终得到三个文件：
+3. 校对准备好的文件：打开校对脚本proofreading1.py, 其中有详细说明，可以根据需要调整；同上运行脚本，你会在终端看到正在调用API校对文本的进度信息。最后，如果有未成功的片段，可以重复运行（已经完成的部分会自动忽略）。最终得到三个文件：
     1. your_markdown.proofread.json.md 校对后的markdown文件
     2. your_markdown.proofread.json 供脚本使用的结果文件，你通常不用在意
     3. your_markdown.proofread.json.log 日志，保留了统计信息、错误信息等
@@ -70,23 +74,55 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
 
 其三，使用diff_tools.py文件中的jsdiff_md_text函数比较，结果保存为HTML，用浏览器查看，或可进一步转换为PDF文档。如需改变显示效果，可以修改模版文件jsdiff.html。
 
+## 核心功能模块
+
+### 文本切分 (splitter.py)
+- **按长度切分**: `cut_text_by_length()` - 在指定长度前后最近空行处切分
+- **按标题切分**: `split_markdown_by_title()` - 按指定标题级别切分
+- **按标题、长度切分，带语境**: `split_markdown_by_title_and_length_with_context()` - 结合标题和长度，提供上下文信息
+
+### 校对引擎 (proofreader.py)
+- **多模型支持**: Deepseek (deepseek-chat, deepseek-reasoner), 阿里云百炼 (deepseek-v3), Google Gemini
+- **异步处理**: 支持并发校对，提高效率
+- **限速控制**: 内置API调用频率限制器
+- **错误重试**: 自动重试失败的API调用
+
+### 专项检查器 (special_checker/)
+- **汉字检查**: `check_kanji.py` - 通用规范汉字表查询，提示表外字和附录中的繁体字、异体字
+- **智能检查**: `checker.py` - 基于N-gram模型和机器学习的文本错误检测
+
+### 词典查询 (lookup_mdict.py)
+- **MDict支持**: 查询MDict格式词典
+- **专有名词识别**: 自动识别并查询人名、地名、机构名等
+
+### 差异比较 (diff_tools.py)
+- **HTML差异**: 生成可视化的HTML差异对比
+- **标题一致性**: 检查校对前后标题结构的一致性
+
+### PDF处理 (clear_pdf_book_txt_to_md.py)
+- **PDF转Markdown**: 将PDF文本转换为结构化的Markdown格式
+- **目录解析**: 自动识别和标记标题层级
+
 ## TODO
 
 * [x] 四种常见的文本切分方法
 * [x] 支持参考资料
-    * [ ] 切分并添加语境
+    * [x] 切分并添加语境
 * [x] 支持语境(上下文)
-* [ ] 专项校对 special_checker.py
+* [x] 专项校对 special_checker.py
     1. [x] 通用规范汉字表查询，提示表外字和附录中的繁体字、异体字
-    2. [ ] 地名、行政区划
-    3. [ ] 引文
-    4. [ ] 术语，专名
-    5. [ ] 人名
-    6. [ ] 低频度词汇
-    7. [ ] 年代
-    8. [ ] 注释
-* [ ] 智能体(远景，对本地环境的感知和操控, 如查字典和参考文档、rag)
+    2. [x] 基于N-gram模型和机器学习的智能错误检测
+    3. [ ] 地名、行政区划
+    4. [ ] 引文
+    5. [ ] 术语，专名
+    6. [ ] 人名
+    7. [ ] 低频度词汇
+    8. [ ] 年代
+    9. [ ] 注释
+*  [ ] 字词典数据、字表词表数据萃取
+* [x] 智能体功能
     * [x] 遇到专有名词查字典 lookup_mdict.py，示例，未集成到校对工作流中
+    * [x] 基于机器学习的文本错误检测
 * [ ] 移入[ai-proofread-vscode-extension](https://github.com/Fusyong/ai-proofread-vscode-extension)中的新功能
 
 ## deepseek参考资料
@@ -112,7 +148,7 @@ temperature 参数默认为 1.3（1.0时极少错误改动，但召回率较低 
 
 模型只适合处理文本文件，如纯文本、markdown等。
 
-Markdown是一种简单的标记文本格式，用来了整理书稿，可以保留标题级别、图表、公式、脚注等绝大多数Word书稿的格式。建议书稿从一开始就用markdown格式处理。进一步学习可以参考[markdownguide.org](https://www.markdownguide.org/)。
+Markdown是一种简单的标记文本格式，用来了整理书稿，可以保留标题级别、图表、公式、脚注等绝大多数Word书稿的格式。建议书稿从一开始就用markdown格式处理。进一步学习可以参考[markdownguide.org](https://markdownguide.org/)。
 
 目前你只需要了解，本库的文本分切工具需要依赖两种标记：
 （1）标题级别（若干`#`后加一个空格）；
@@ -145,7 +181,14 @@ pandoc -t markdown_strict --extract-media="./attachments/%myfilename%" %myfilena
 
 建议转换后与简单复制黏贴的纯文本（通常能保留所有字符）进行比较。
 
-## 许可 license
+## 感谢
+
+项目使用了以下数据资源，特此致谢：
+
+* [RIME-LMDG-dicts](https://github.com/amzxyz/RIME-LMDG/tree/wanxiang/dicts)
+* [jieba_dict.txt.big](https://github.com/fxsjy/jieba/tree/master/extra_dict)
+
+## 许可 license（不含上述两种数据资源）
 
 两个部分分别许可：
 

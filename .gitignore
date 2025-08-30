@@ -8,3 +8,6 @@ __pycache__
 2.md
 *.7z
 *.log
+*.mdictlist
+*.mdx.json
+
