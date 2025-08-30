@@ -211,33 +211,30 @@ if __name__ == "__main__":
     # 使用新的类结构
     manager = MdictManager()
     
-    # 读取 mdx 文件
-    try:
-        mdx = manager.load_mdict("现汉7.mdx")
+    # mdx = manager.load_mdict("现汉7.mdx")
+    
+    # # 词典信息
+    # print(manager.info("现汉7.mdx"))
+    
+    # # 条目
+    # print(f"\n词条总数：{manager.count('现汉7.mdx')}")
+    
+    # # 获取所有词条
+    # print("\n词条列表：")
+    # entries = manager.entries("现汉7.mdx", 100)
+    # for i, entry in enumerate(entries):
+    #     print(f"{i} {entry}")
+    
+    # # 检查是否在现代汉语词典中
+    # print(f"\n'多少'是否在现代汉语词典中: {manager.is_word_in('现汉7.mdx', '多少')}")
+    
+    # # 从mdx查询特定词条
+    # content = manager.query("现汉7.mdx", '多少')
+    # print(f"\n从MDX查询'多少': {content}")
+    
+    # # 从db查询特定词条
+    # content = manager.query("现汉7.mdx", '多少')
+    # print(f"\n从数据库查询'多少': {content}")
         
-        # 词典信息
-        print(manager.info("现汉7.mdx"))
-        
-        # 条目
-        print(f"\n词条总数：{manager.count('现汉7.mdx')}")
-        
-        # 获取所有词条
-        print("\n词条列表：")
-        entries = manager.entries("现汉7.mdx", 100)
-        for i, entry in enumerate(entries):
-            print(f"{i} {entry}")
-        
-        # 检查是否在现代汉语词典中
-        print(f"\n'多少'是否在现代汉语词典中: {manager.is_word_in('现汉7.mdx', '多少')}")
-        
-        # 从mdx查询特定词条
-        content = manager.query("现汉7.mdx", '多少')
-        print(f"\n从MDX查询'多少': {content}")
-        
-        # 从db查询特定词条
-        content = manager.query("现汉7.mdx", '多少')
-        print(f"\n从数据库查询'多少': {content}")
-        
-    except Exception as e:
-        print(f"错误: {e}")
+    print(manager.query("中華語文大辭典.mdx", '多少'))
 
