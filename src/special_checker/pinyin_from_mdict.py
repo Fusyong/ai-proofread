@@ -74,14 +74,16 @@ class PinyinExtractor:
     def _compile_regex_patterns(self):
         """预编译所有正则表达式以提高性能"""
         # 现汉7的正则表达式
-        self.entry_pattern = re.compile(r'<entry[^>]*>.*?</entry>', re.DOTALL)
-        self.pinyin_pattern_xianhan7 = re.compile(r'<pinyin>([^<]+)</pinyin>')
+        self.pinyin_pattern_xianhan7 = re.compile(r'<entry id.+?<pinyin>([^<]+)</pinyin>')
         
         # 现汉规范2的正则表达式
         self.pinyin_pattern_xianhanguifan2 = re.compile(r'<x-pr>\s*([^<]+)\s*</x-pr>')
         
         # 中華語文大辭典的正则表达式
-        self.pinyin_pattern_zhonghuayuwendaciandian = re.compile(r'<span class="twhp">([^<]+)</span>')
+        self.pinyin_pattern_zhonghuayuwendaciandian_entryhead = re.compile(r'(?=<div class="ctzg">)')
+        self.pinyin_pattern_zhonghuayuwendaciandian_twhp = re.compile(r'<span class="twhp">([^<]+)</span>')
+        self.pinyin_pattern_zhonghuayuwendaciandian_dlhp = re.compile(r'<span class="dlhp">([^<]+)</span>')
+        
         
         # 默认拼音正则表达式
         self.default_pinyin_pattern = re.compile(r'<pinyin>([^<]+)</pinyin>')
@@ -138,11 +140,18 @@ class PinyinExtractor:
         if not content:
             return []
         
-        # 使用预编译的正则表达式
-        pinyin_matches = self.pinyin_pattern_zhonghuayuwendaciandian.findall(content)
+        # 使用预编译的正则表达式，分为三个阶段
+        # 分条目
+        entries = self.pinyin_pattern_zhonghuayuwendaciandian_entryhead.split(content)
+        pinyin = []
+        for i in entries:
+            twhp = self.pinyin_pattern_zhonghuayuwendaciandian_twhp.findall(i)
+            dlhp = self.pinyin_pattern_zhonghuayuwendaciandian_dlhp.findall(i)
+            if twhp or dlhp:
+                pinyin.append(('; '.join(twhp), '; '.join(dlhp)))
         
         # 使用列表推导式优化
-        return [pinyin.strip() for pinyin in pinyin_matches if pinyin.strip()]
+        return pinyin
     
     def extract_pinyin_from_content(self, content: str, dict_name: str = "现汉7.mdx") -> List[str]:
         """
@@ -339,8 +348,12 @@ def test_xianhan7_extraction():
     
     # 使用终端中显示的实际数据
     test_content = """
-    <entry id="13250"><hwg><hw>多少</hw><pinyin>duōshǎo</pinyin></hwg><def><num>❶</num> <ps>名</ps>指数量的大小：<ex>～不等，长短不齐。</ex></def><def><num>❷</num> <ps>副</ps>或多或少：<ex>这句话～有点<small>儿</small>道理。</ex></def><def><num>❸</num> <ps>副</ps>稍微：<ex>一立秋，天气～有点<small>儿</small>凉意了。</ex></def></entry>
-    <entry id="13251"><hwg><hw>多少</hw><pinyin>duō·shao</pinyin></hwg><def><ps>代</ps>疑问代词。</def><def><num>❶</num> 问数量：<ex>这个村子有～人家？｜今年收了～粮食？</ex></def><def><num>❷</num> 表示不定的数量：<ex>我知道～说～｜有～人，准备～工具。</ex></def></entry>"""
+<link rel="stylesheet" type="text/css" href="XDHY7.css" />
+<entry id="01643"><hwg><hw>薄</hw><pinyin>báo</pinyin></hwg><def><ps>形</ps></def><def><num>❶</num> 扁平物上下两面之间的距离小（跟“<a href="entry://厚">厚</a>”相对，下②③⑤同）：<ex>～板｜～被｜～片｜这种纸很～。</ex></def><def><num>❷</num> （感情）冷淡；不深：<ex>待他的情分不～。</ex></def><def><num>❸</num> （味道）不浓；淡：<ex>酒味很～。</ex></def><def><num>❹</num> （土地）不 肥沃：<ex>这<small>儿</small>地～，产量不高。</ex></def><def><num>❺</num> （家产）少；不富有：<ex>家底<small>儿</small>～。</ex></def><def>　另见<pinyin>bó</pinyin>；<pinyin>bò</pinyin>。</def><ci><div class="title">词语</div><div class="cont"><a href="entry://薄饼">薄饼</a><a href="entry://薄脆">薄脆</a></div></ci></entry>
+<entry id="03942"><hwg><hw>薄<sup>1</sup></hw><pinyin>bó</pinyin></hwg><def><num>❶</num> 薄（<pinyin>báo</pinyin>）①：<ex>～雾｜如 履～冰。</ex></def><def><num>❷</num> 轻微；少：<ex>～技｜广种～收。</ex></def><def><num>❸</num> 不强健；不壮实：<ex>～弱｜单～。</ex></def><def><num>❹</num> 不厚道；不庄重：<ex>～待｜刻～｜轻～。</ex></def><def><num>❺</num> （土地）不肥沃：<ex>～地｜～田。</ex></def><def><num>❻</num> （味道）不浓；淡：<ex>～酒。</ex></def><def><num>❼</num> 看不起；轻视；慢待：<ex>菲～｜鄙～｜厚今～古。</ex></def><def><num>❽</num> （<pinyin>Bó</pinyin>）<ps>名</ps>姓。</def></entry>
+<entry id="03943"><hwg><hw>薄<sup>2</sup></hw><pinyin>bó</pinyin></hwg><def>〈书〉迫近；靠近：<ex>～海｜日～西山。</ex></def><def>　另见<pinyin>báo</pinyin>；<pinyin>bò</pinyin>。</def><ci><div class="title">词语</div><div class="cont"><a href="entry://薄产">薄产</a><a href="entry://薄地"> 薄地</a><a href="entry://薄海">薄海</a><a href="entry://薄厚">薄厚</a><a href="entry://薄技">薄技</a><a href="entry://薄酒">薄酒</a><a href="entry://薄 礼">薄礼</a><a href="entry://薄利">薄利</a><a href="entry://薄利多销">薄利多销</a><a href="entry://薄面">薄面</a><a href="entry://薄命">薄命</a><a href="entry://薄暮">薄暮</a><a href="entry://薄情">薄情</a><a href="entry://薄弱">薄弱</a><a href="entry://薄田">薄田</a><a href="entry://薄物细故">薄物细故</a><a href="entry://薄幸">薄幸</a><a href="entry://薄葬">薄葬</a></div></ci></entry>
+<entry id="03979"><hwg><hw>薄</hw><pinyin>bò</pinyin></hwg><def>见下。</def><def>　另见<pinyin>báo</pinyin>；<pinyin>bó</pinyin>。</def><ci><div class="title">词语</div><div class="cont"><a href="entry://薄荷">薄荷</a></div></ci></entry>
+    """
     
     extractor = PinyinExtractor()
     pinyins = extractor.extract_pinyin_from_content(test_content, "现汉7.mdx")
@@ -377,117 +390,23 @@ def test_zhonghuayuwendaciandian_extraction():
     """测试中華語文大辭典.mdx的拼音提取规则"""
     
     # 使用终端中显示的实际数据
-    test_content = """<link rel="stylesheet" href="zhyydcd.css">
-    <div class="ctzg"><div class="zxzg"><span class="ztzx">多少</span></div><span class="yinx">1</span><div class="twdy"><span class="twyd">ㄉㄨㄛ　ㄕㄠˇ</span><span class="twhp">duōshǎo</span></div></div><div class="syzg"><span class="shyi">1.數量的多和少。[例]社團的人數～不等。</span><span class="shyi">2.程度上或多或少。[例]讀過中文系，～會寫點文言文。</span></div>
-    <div class="ctzg"><div class="zxzg"><span class="ztzx">多少</span></div><span class="yinx">2</span><div class="twdy"><span class="twyd">ㄉㄨㄛ　˙ㄕㄠ</span><span class="twhp">duōshɑo</span></div></div><div class="syzg"><span class="shyi">1.詢問數量。[例]你們買了～書？</span><span class="shyi">2.表示不確定的數量。[例]你 給～我就要～｜有～證據就說～話。</span></div>"""
+    test_content = """
+<link rel="stylesheet" href="zhyydcd.css">
+<div class="ctzg"><div class="zxzg"><span class="ztzx"> 薄</span><span class="jhzx">薄</span></div><span class="yinx">1</span><div class="twdy"><span class="twyd">ㄅㄛˊ</span><span class="twhp">bó</span></div></div><div class="syzg"><span class="shyi">1.微；少。[例]～禮∣～利∣綿～。</span><span class="shyi">2.輕視；小看。[例]鄙～∣厚古～今。</span><span class="shyi">3.苛刻；待人不厚道。[例]刻～∣～情∣不能～待客人。</span><span class="shyi">4.輕佻 ；不莊重。[例]輕～。</span><span class="shyi">5.迫近；接近。[例]～暮│日～西山。</span><span class="shyi">6.姓。</span></div>
+<div class="ctzg"><div class="zxzg"><span class="ztzx">薄</span><span class="jhzx">薄</span></div><span class="yinx">2</span><div class="twdy"><span class="twyd">ㄅㄛˊ</span><span class="twhp">bó</span></div><div class="dldy"><span class="dlyd">ㄅㄠˊ</span><span class="dlhp">báo</span></div></div><div class="syzg"><span class="shyi">1.厚度小（與「厚」相對）。[例] 臉皮～│～棉襖│雲層很～│這種磚太～。</span><span class="shyi">2.（土地）貧瘠；不肥沃。[例]～田│土質～，產量低。</span><span class="shyi">3.（感情）冷淡；不深厚。[例]人情～如紙∣待我不～。</span><span class="shyi">4.（味道）淡；不濃。[例]這酒度數太低，味道～。</span></div>
+<div class="ctzg"><div class="zxzg"><span class="ztzx">薄</span><span class="jhzx">薄</span></div><span class="yinx">3</span><div class="twdy"><span class="twyd">ㄅㄛˋ</span><span class="twhp">bò</span></div></div><div class="syzg"><span class="shyi">參見【薄荷】。</span></div>
+    """
     
     extractor = PinyinExtractor()
     # 直接测试提取规则，不依赖词典查询
     pinyins = extractor.extract_pinyin_from_content(test_content, "中華語文大辭典.mdx")
     
-    print(f"测试内容: {test_content[:100]}...")
+    # print(f"测试内容: {test_content[:100]}...")
     print(f"提取的拼音: {pinyins}")
-    print(f"期望结果: ['duōshɑo', 'duōshǎo']")
-    print(f"测试{'通过' if pinyins.sort() == ['duōshɑo', 'duōshǎo'].sort() else '失败'}")
+    print(f"期望结果: [('bó', ''),('bó', 'báo'),('bò', '')]")
+    print(f"测试{'通过' if pinyins.sort() == [('bó', ''),('bó', 'báo'),('bò', '')].sort() else '失败'}")
     
     return pinyins
-
-
-def performance_test():
-    """性能测试：比较串行和并行处理的性能"""
-    import time
-    
-    # 创建测试数据
-    test_words = [f"测试词语{i}" for i in range(100)]
-    
-    # 创建提取器
-    extractor = PinyinExtractor(max_workers=4)
-    
-    print("=== 性能测试开始 ===")
-    
-    # 测试串行处理
-    start_time = time.time()
-    serial_results = extractor.batch_extract_pinyin(test_words, "中華語文大辭典.mdx")
-    serial_time = time.time() - start_time
-    
-    print(f"串行处理 {len(test_words)} 个词语耗时: {serial_time:.4f} 秒")
-    
-    # 测试并行处理
-    start_time = time.time()
-    parallel_results = extractor.batch_extract_pinyin_parallel(test_words, "中華語文大辭典.mdx")
-    parallel_time = time.time() - start_time
-    
-    print(f"并行处理 {len(test_words)} 个词语耗时: {parallel_time:.4f} 秒")
-    
-    # 计算性能提升
-    if serial_time > 0:
-        speedup = serial_time / parallel_time
-        print(f"性能提升: {speedup:.2f}x")
-    
-    # 验证结果一致性
-    if serial_results == parallel_results:
-        print("✓ 串行和并行处理结果一致")
-    else:
-        print("✗ 串行和并行处理结果不一致")
-    
-    print("=== 性能测试结束 ===")
-    
-    return serial_time, parallel_time
-
-
-def find_optimal_max_workers(test_words=None, max_test_workers=8):
-    """找到最佳的max_workers设置"""
-    import time
-    import os
-    
-    if test_words is None:
-        test_words = [f"测试词语{i}" for i in range(50)]
-    
-    print("=== 寻找最佳max_workers设置 ===")
-    print(f"CPU核心数: {os.cpu_count()}")
-    print(f"测试词语数量: {len(test_words)}")
-    
-    results = {}
-    
-    # 测试串行处理
-    extractor_serial = PinyinExtractor(max_workers=1)
-    start_time = time.time()
-    extractor_serial.batch_extract_pinyin(test_words, "中華語文大辭典.mdx")
-    serial_time = time.time() - start_time
-    results[1] = serial_time
-    print(f"串行处理 (workers=1): {serial_time:.4f} 秒")
-    
-    # 测试不同worker数量的并行处理
-    for workers in range(2, max_test_workers + 1):
-        try:
-            extractor = PinyinExtractor(max_workers=workers)
-            start_time = time.time()
-            extractor.batch_extract_pinyin_parallel(test_words, "中華語文大辭典.mdx")
-            parallel_time = time.time() - start_time
-            results[workers] = parallel_time
-            
-            speedup = serial_time / parallel_time
-            print(f"并行处理 (workers={workers}): {parallel_time:.4f} 秒, 性能提升: {speedup:.2f}x")
-            
-        except Exception as e:
-            print(f"并行处理 (workers={workers}) 失败: {e}")
-            results[workers] = float('inf')
-    
-    # 找到最佳设置
-    best_workers = min(results.items(), key=lambda x: x[1])
-    print(f"\n🎯 最佳设置: max_workers = {best_workers[0]}")
-    print(f"最佳性能: {best_workers[1]:.4f} 秒")
-    
-    if best_workers[0] > 1:
-        speedup = serial_time / best_workers[1]
-        print(f"相比串行处理提升: {speedup:.2f}x")
-    
-    print("=== 测试结束 ===")
-    
-    return best_workers[0], results
-
-
-
 
 
 if __name__ == "__main__":

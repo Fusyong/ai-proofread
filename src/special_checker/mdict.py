@@ -217,7 +217,15 @@ if __name__ == "__main__":
     # print(manager.info("现汉7.mdx"))
     
     # # 条目
-    # print(f"\n词条总数：{manager.count('现汉7.mdx')}")
+    # print(f"\n现汉7.mdx 词条总数：{manager.count('现汉7.mdx')}")
+    # print(f"\n现汉规范2.mdx 词条总数：{manager.count('现汉规范2.mdx')}")
+    # print(f"\n中華語文大辭典.mdx 词条总数：{manager.count('中華語文大辭典.mdx')}")
+    # print(f"\n中华语文大辞典.mdx 词条总数：{manager.count('中华语文大辞典.mdx')}")
+    # print(f"\n两岸词典.mdx 词条总数：{manager.count('两岸词典.mdx')}")
+    # print(f"\n汉语方言大词典.mdx 词条总数：{manager.count('汉语方言大词典.mdx')}")
+    # print(f"\n辭源3文字版2021.mdx 词条总数：{manager.count('辭源3文字版2021.mdx')}")
+    # print(f"\n大辞海.mdx 词条总数：{manager.count('大辞海.mdx')}")
+    # print(f"\n漢語大詞典(合)2020.5.1.mdx 词条总数：{manager.count('漢語大詞典(合)2020.5.1.mdx')}")
     
     # # 获取所有词条
     # print("\n词条列表：")
@@ -236,5 +244,5 @@ if __name__ == "__main__":
     # content = manager.query("现汉7.mdx", '多少')
     # print(f"\n从数据库查询'多少': {content}")
         
-    print(manager.query("中華語文大辭典.mdx", '多少'))
+    print(manager.query("中華語文大辭典.mdx", '薄'))
 
