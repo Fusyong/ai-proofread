@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "levels": [
+    {
+      "id": "chapter",
+      "name": "章",
+      "level": 1,
+      "enabled": true,
+      "optional": false,
+      "priority": 100,
+      "pattern": "(第(?P<num_cn>[一二三四五六七八九十百千零〇两壹贰叁肆伍陆柒捌玖拾]+)|第(?P<num_ar>[0-9]+)|第(?P<num_rm>[IVXLCDM]+))章",
+      "numbering": {
+        "normalize": ["cn", "roman", "arabic"],
+        "continuity": "strict_increase"
+      },
+      "children": ["section"]
+    },
+    {
+      "id": "section",
+      "name": "节",
+      "level": 2,
+      "enabled": true,
+      "optional": false,
+      "priority": 90,
+      "pattern": "(第(?P<num_cn>[一二三四五六七八九十百千零〇两壹贰叁肆伍陆柒捌玖拾]+)|第(?P<num_ar>[0-9]+))节",
+      "numbering": {
+        "normalize": ["cn", "arabic"],
+        "continuity": "strict_increase"
+      },
+      "children": ["subsection"]
+    },
+    {
+      "id": "subsection",
+      "name": "目",
+      "level": 3,
+      "enabled": true,
+      "optional": true,
+      "priority": 80,
+      "pattern": "(?P<num_ar>[0-9]+)\\.",
+      "numbering": {
+        "normalize": ["arabic"],
+        "continuity": "increase_or_restart"
+      },
+      "children": []
+    }
+  ]
+}
+
+
+

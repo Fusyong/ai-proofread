@@ -119,7 +119,8 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
     7. [ ] 低频度词汇
     8. [ ] 年代
     9. [ ] 注释
-*  [ ] 字词典数据、字表词表数据萃取
+* [ ] 用chopdiff、diff-match-patch、jsdiff匹配文档更改
+* [ ] 字词典数据、字表词表数据萃取
 * [x] 智能体功能
     * [x] 遇到专有名词查字典 lookup_mdict.py，示例，未集成到校对工作流中
     * [x] 基于机器学习的文本错误检测
