@@ -80,6 +80,11 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
 - **按长度切分**: `cut_text_by_length()` - 在指定长度前后最近空行处切分
 - **按标题切分**: `split_markdown_by_title()` - 按指定标题级别切分
 - **按标题、长度切分，带语境**: `split_markdown_by_title_and_length_with_context()` - 结合标题和长度，提供上下文信息
+- **中文句子切分**: `split_chinese_sentences()` - 按中文句子边界切分，支持：
+  - 基本句末标点：`[。！？…]+['"）]*`
+  - 段落标记（空行）
+  - 特殊处理：列表项、标题（末尾可能无标点）、引号内句号、小数点识别等
+- **简化版句子切分**: `split_chinese_sentences_simple()` - 仅按句末标点切分，不考虑格式
 
 ### 校对引擎 (proofreader.py)
 - **多模型支持**: Deepseek (deepseek-chat, deepseek-reasoner), 阿里云百炼 (deepseek-v3), Google Gemini
@@ -105,6 +110,7 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
 
 ## TODO
 
+* [ ] 校对前后的句子对齐
 * [x] 四种常见的文本切分方法
 * [x] 支持参考资料
     * [x] 切分并添加语境
