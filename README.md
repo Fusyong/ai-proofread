@@ -110,6 +110,8 @@ A toolkit for proofreading Chinese book manuscripts, mainly using the LLM servic
 
 ## TODO
 
+* [x] 句子切分器
+    * [ ] 测试
 * [ ] 校对前后的句子对齐
 * [x] 四种常见的文本切分方法
 * [x] 支持参考资料
