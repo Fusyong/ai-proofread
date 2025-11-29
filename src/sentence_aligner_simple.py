@@ -517,21 +517,33 @@ def rematch_delete_insert_sequences(
                     # 收集所有A的原始索引
                     if len(d_candidate['indices']) == 1:
                         a_text = d_candidate['original_item']['a']
-                        a_indices = [d_candidate['original_item']['a_index']]
+                        # 使用a_indices字段，如果没有则从a_index获取
+                        a_indices = d_candidate['original_item'].get('a_indices',
+                            [d_candidate['original_item'].get('a_index', d_candidate['indices'][0])])
                     else:
                         # 合并的句子，收集所有原始索引
-                        a_indices = [d_candidate['original_items'][j]['a_index']
-                                    for j in range(len(d_candidate['indices']))]
+                        a_indices = []
+                        for j in range(len(d_candidate['indices'])):
+                            orig_item = d_candidate['original_items'][j]
+                            item_indices = orig_item.get('a_indices',
+                                [orig_item.get('a_index', d_candidate['indices'][j])])
+                            a_indices.extend(item_indices)
                         a_text = d_candidate['text']
 
                     # 收集所有B的原始索引
                     if len(ins_candidate['indices']) == 1:
                         b_text = ins_candidate['original_item']['b']
-                        b_indices = [ins_candidate['original_item']['b_index']]
+                        # 使用b_indices字段，如果没有则从b_index获取
+                        b_indices = ins_candidate['original_item'].get('b_indices',
+                            [ins_candidate['original_item'].get('b_index', ins_candidate['indices'][0])])
                     else:
                         # 合并的句子，收集所有原始索引
-                        b_indices = [ins_candidate['original_items'][j]['b_index']
-                                    for j in range(len(ins_candidate['indices']))]
+                        b_indices = []
+                        for j in range(len(ins_candidate['indices'])):
+                            orig_item = ins_candidate['original_items'][j]
+                            item_indices = orig_item.get('b_indices',
+                                [orig_item.get('b_index', ins_candidate['indices'][j])])
+                            b_indices.extend(item_indices)
                         b_text = ins_candidate['text']
 
                     match_item = {
@@ -670,7 +682,9 @@ def merge_delete_into_match(
                         result[-1]['a'] = result[-1]['a'] + current_item['a']
                         result[-1]['similarity'] = best_similarity
                         # 更新索引数组
-                        result[-1]['a_indices'].append(current_item['a_index'])
+                        delete_a_indices = current_item.get('a_indices', [])
+                        if delete_a_indices:
+                            result[-1]['a_indices'].extend(delete_a_indices)
                     # 跳过当前DELETE
                     i += 1
                     continue
@@ -680,7 +694,9 @@ def merge_delete_into_match(
                     next_item['a'] = current_item['a'] + next_item['a']
                     next_item['similarity'] = best_similarity
                     # 更新索引数组
-                    next_item['a_indices'].insert(0, current_item['a_index'])
+                    delete_a_indices = current_item.get('a_indices', [])
+                    if delete_a_indices:
+                        next_item['a_indices'] = delete_a_indices + next_item.get('a_indices', [])
                     # 跳过当前DELETE
                     i += 1
                     continue
