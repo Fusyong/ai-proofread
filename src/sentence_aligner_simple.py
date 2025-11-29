@@ -209,8 +209,8 @@ def align_sentences_anchor(
                 'a': sentences_a[a_idx],
                 'b': sentences_b[best_match_idx],
                 'similarity': best_similarity,
-                'a_index': a_idx,
-                'b_index': best_match_idx
+                'a_indices': [a_idx],
+                'b_indices': [best_match_idx]
             }
             result.append(item)
             b_to_result[best_match_idx] = item
@@ -247,7 +247,12 @@ def align_sentences_anchor(
     # 创建B索引到结果位置的映射（包括匹配项和已插入的新增项）
     b_idx_to_result_pos = {}
     for pos, item in enumerate(result):
-        if item.get('b_index') is not None:
+        if item.get('b_indices'):
+            # 对于MATCH项，使用b_indices数组
+            for b_idx in item['b_indices']:
+                b_idx_to_result_pos[b_idx] = pos
+        elif item.get('b_index') is not None:
+            # 对于INSERT项，使用b_index
             b_idx_to_result_pos[item['b_index']] = pos
 
     # 按B的原始顺序处理未匹配的句子
@@ -290,7 +295,12 @@ def align_sentences_anchor(
         # 重新构建映射
         b_idx_to_result_pos = {}
         for pos, item in enumerate(result):
-            if item.get('b_index') is not None:
+            if item.get('b_indices'):
+                # 对于MATCH项，使用b_indices数组
+                for b_idx in item['b_indices']:
+                    b_idx_to_result_pos[b_idx] = pos
+            elif item.get('b_index') is not None:
+                # 对于INSERT项，使用b_index
                 b_idx_to_result_pos[item['b_index']] = pos
 
     # 结果已经按照A、B文件的原始顺序排列
@@ -504,21 +514,24 @@ def rematch_delete_insert_sequences(
                     insert_matched_indices.update(ins_candidate['indices'])
 
                     # 创建MATCH项
-                    # 如果合并了多个句子，使用第一个索引
+                    # 收集所有A的原始索引
                     if len(d_candidate['indices']) == 1:
-                        a_index = d_candidate['original_item']['a_index']
                         a_text = d_candidate['original_item']['a']
+                        a_indices = [d_candidate['original_item']['a_index']]
                     else:
-                        # 合并的句子，使用第一个索引
-                        a_index = d_candidate['original_items'][0]['a_index']
+                        # 合并的句子，收集所有原始索引
+                        a_indices = [d_candidate['original_items'][j]['a_index']
+                                    for j in range(len(d_candidate['indices']))]
                         a_text = d_candidate['text']
 
+                    # 收集所有B的原始索引
                     if len(ins_candidate['indices']) == 1:
-                        b_index = ins_candidate['original_item']['b_index']
                         b_text = ins_candidate['original_item']['b']
+                        b_indices = [ins_candidate['original_item']['b_index']]
                     else:
-                        # 合并的句子，使用第一个索引
-                        b_index = ins_candidate['original_items'][0]['b_index']
+                        # 合并的句子，收集所有原始索引
+                        b_indices = [ins_candidate['original_items'][j]['b_index']
+                                    for j in range(len(ins_candidate['indices']))]
                         b_text = ins_candidate['text']
 
                     match_item = {
@@ -526,8 +539,8 @@ def rematch_delete_insert_sequences(
                         'a': a_text,
                         'b': b_text,
                         'similarity': sim,
-                        'a_index': a_index,
-                        'b_index': b_index
+                        'a_indices': a_indices,
+                        'b_indices': b_indices
                     }
                     # 使用第一个DELETE索引作为键
                     match_items.append((d_candidate['indices'][0], match_item))
@@ -656,6 +669,8 @@ def merge_delete_into_match(
                     if result and result[-1].get('type') == 'match':
                         result[-1]['a'] = result[-1]['a'] + current_item['a']
                         result[-1]['similarity'] = best_similarity
+                        # 更新索引数组
+                        result[-1]['a_indices'].append(current_item['a_index'])
                     # 跳过当前DELETE
                     i += 1
                     continue
@@ -664,6 +679,8 @@ def merge_delete_into_match(
                     # 这样在后续处理时会使用更新后的值
                     next_item['a'] = current_item['a'] + next_item['a']
                     next_item['similarity'] = best_similarity
+                    # 更新索引数组
+                    next_item['a_indices'].insert(0, current_item['a_index'])
                     # 跳过当前DELETE
                     i += 1
                     continue

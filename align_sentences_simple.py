@@ -196,18 +196,34 @@ def save_html_report(
             </div>""")
 
         if item['a']:
-            a_idx = item.get('a_index', '?')
+            # 使用a_indices数组，如果有多个索引则显示范围
+            if item.get('a_indices'):
+                a_indices = item['a_indices']
+                if len(a_indices) == 1:
+                    a_idx_str = str(a_indices[0])
+                else:
+                    a_idx_str = f"{a_indices[0]}-{a_indices[-1]}"
+            else:
+                a_idx_str = item.get('a_index', '?')
             html_lines.append(f"""
             <div class="item-content">
                 <div class="sentence-a">
-                    <span class="index">[A-{a_idx}]</span>{item['a']}
+                    <span class="index">[A-{a_idx_str}]</span>{item['a']}
                 </div>""")
 
         if item['b']:
-            b_idx = item.get('b_index', '?')
+            # 使用b_indices数组，如果有多个索引则显示范围
+            if item.get('b_indices'):
+                b_indices = item['b_indices']
+                if len(b_indices) == 1:
+                    b_idx_str = str(b_indices[0])
+                else:
+                    b_idx_str = f"{b_indices[0]}-{b_indices[-1]}"
+            else:
+                b_idx_str = item.get('b_index', '?')
             html_lines.append(f"""
                 <div class="sentence-b">
-                    <span class="index">[B-{b_idx}]</span>{item['b']}
+                    <span class="index">[B-{b_idx_str}]</span>{item['b']}
                 </div>""")
 
         html_lines.append("""
