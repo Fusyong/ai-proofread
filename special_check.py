@@ -3,7 +3,8 @@
 from src.special_checker import check_to_cscc
 
 # 测试通用规范汉字表检查
-with open("E:/语文出版社/2025/蒙学经典古今读/稿件/20251008养正图解-标点/20251008养正图解.proofread.json.md","r", encoding="utf-8") as f:
+FILE = "E:\\语文出版社\\2025\\走出课本学语文\\汉魏六朝诗歌（下册）\\11.20汉魏六朝诗歌（下册）.proofread.json.md"
+with open(FILE,"r", encoding="utf-8") as f:
     text = f.read()
     results = check_to_cscc(text)
     with open("special_check_result.csv", "w", encoding="utf-16") as out_f:

@@ -267,6 +267,18 @@ def main():
         help='锚点偏移量，默认: 1'
     )
     parser.add_argument(
+        '--max-window-expansion',
+        type=int,
+        default=3,
+        help='最大窗口扩展倍数（用于处理大段落变化），默认: 3'
+    )
+    parser.add_argument(
+        '--consecutive-fail-threshold',
+        type=int,
+        default=3,
+        help='连续失败阈值（超过此值触发窗口扩展），默认: 3'
+    )
+    parser.add_argument(
         '--no-formatting',
         action='store_true',
         help='不保留Markdown格式'
@@ -297,7 +309,9 @@ def main():
         window_size=args.window_size,
         similarity_threshold=args.threshold,
         ngram_size=args.ngram,
-        offset=args.offset
+        offset=args.offset,
+        max_window_expansion=args.max_window_expansion,
+        consecutive_fail_threshold=args.consecutive_fail_threshold
     )
 
     # 统计信息
