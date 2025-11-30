@@ -1,0 +1,29 @@
+# AI/API 相关
+google-genai  # 或 google-generativeai，根据实际安装的包名调整
+openai
+python-dotenv
+
+# 中文文本处理
+jieba
+
+# 科学计算和机器学习
+numpy
+scikit-learn
+
+# 词典工具
+mdict-utils  # 或 mdict_utils，根据实际安装的包名调整
+
+# 日志
+loguru
+
+# PDF 处理
+pymupdf4llm
+marker-pdf  # 或 marker，根据实际安装的包名调整
+
+# 文档处理（OCR 和布局分析）
+rapid-doc  # 或 rapid_doc，根据实际安装的包名调整
+rapidocr-onnxruntime  # 或 rapidocr，根据实际安装的包名调整
+
+# 文本匹配
+rapidfuzz
+

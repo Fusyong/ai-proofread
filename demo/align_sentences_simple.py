@@ -2,7 +2,7 @@
 简单快速的句子对齐脚本（基于锚点算法）
 
 用法:
-    python align_sentences_simple.py -a example/a.md -b example/b.md -o result
+    python demo/align_sentences_simple.py -a demo/example/a.md -b demo/example/b.md -o result
 """
 
 import argparse
