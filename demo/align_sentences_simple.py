@@ -2,14 +2,18 @@
 简单快速的句子对齐脚本（基于锚点算法）
 
 用法:
-    python demo/align_sentences_simple.py -a demo/example/a.md -b demo/example/b.md -o result
+    python demo/align_sentences_simple.py -a demo/example/a.md -b demo/example/b.md -o result --ngram 1
 """
 
+import sys
+from pathlib import Path
 import argparse
 import json
 import csv
-from pathlib import Path
 from typing import List, Dict
+# 在导入 src 模块之前，先将项目根目录添加到 sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from src.sentence_aligner_simple import (
     align_texts_anchor,
     get_alignment_statistics
