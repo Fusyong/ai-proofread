@@ -1,0 +1,10 @@
+google-genai
+openai
+python-dotenv
+jieba
+numpy
+scikit-learn
+mdict-utils
+loguru
+pymupdf4llm
+rapidfuzz

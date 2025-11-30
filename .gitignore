@@ -10,4 +10,6 @@ __pycache__
 *.log
 *.mdictlist
 *.mdx.json
-
+alignment_result_simple.csv
+alignment_result_simple.html
+alignment_result_simple.json
