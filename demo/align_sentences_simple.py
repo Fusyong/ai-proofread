@@ -9,6 +9,7 @@ from pathlib import Path
 import argparse
 import json
 import csv
+import time
 from typing import List, Dict
 
 from src.sentence_aligner_simple import (
@@ -42,10 +43,20 @@ def save_csv_summary(alignment: List[Dict], output_path: str):
 def save_html_report(
     alignment: List[Dict],
     output_path: str,
-    title_a: str = "原文",
-    title_b: str = "校对后"
+    title_a: str = "",
+    title_b: str = "",
+    algorithm_name: str = "锚点算法",
+    threshold: float = 0.6,
+    ngram_size: int = 1,
+    runtime: float = 0.0
 ):
     """生成HTML格式的可视化报告"""
+    # 如果文件名为空，使用默认值
+    if not title_a:
+        title_a = "原文"
+    if not title_b:
+        title_b = "校对后"
+
     html_lines = []
 
     # HTML头部（注意：CSS中的花括号需要转义为{{和}}）
@@ -92,63 +103,91 @@ def save_html_report(
             background-color: #3498db;
             color: white;
         }}
-        .alignment-item {{
+        .alignment-results {{
             background-color: white;
-            margin-bottom: 15px;
             padding: 15px;
             border-radius: 5px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .alignment-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }}
+        .alignment-table th {{
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #2980b9;
+        }}
+        .alignment-table td {{
+            padding: 10px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }}
+        .alignment-table tr:nth-child(even) {{
+            background-color: #f9f9f9;
+        }}
+        .alignment-table tr:hover {{
+            background-color: #f0f0f0;
+        }}
+        .alignment-table tr.match {{
+            border-left: 4px solid #27ae60;
+        }}
+        .alignment-table tr.delete {{
+            border-left: 4px solid #e74c3c;
+        }}
+        .alignment-table tr.insert {{
             border-left: 4px solid #3498db;
         }}
-        .alignment-item.match {{
-            border-left-color: #27ae60;
+        .col-index {{
+            width: 5%;
+            text-align: center;
+            font-weight: bold;
         }}
-        .alignment-item.delete {{
-            border-left-color: #e74c3c;
+        .col-type {{
+            width: 5%;
+            font-weight: bold;
         }}
-        .alignment-item.insert {{
-            border-left-color: #3498db;
+        .col-similarity {{
+            width: 5%;
+            text-align: center;
+        }}
+        .col-sentence-a {{
+            width: 42.5%;
+        }}
+        .col-sentence-b {{
+            width: 42.5%;
         }}
         .item-header {{
             font-weight: bold;
-            margin-bottom: 10px;
-            padding: 5px;
-            background-color: #ecf0f1;
-            border-radius: 3px;
-        }}
-        .item-content {{
-            margin: 10px 0;
-        }}
-        .sentence-a {{
-            color: #c0392b;
-            padding: 8px;
-            background-color: #fadbd8;
-            border-radius: 3px;
-            margin: 5px 0;
-        }}
-        .sentence-b {{
-            color: #27ae60;
-            padding: 8px;
-            background-color: #d5f4e6;
-            border-radius: 3px;
-            margin: 5px 0;
         }}
         .similarity {{
             font-size: 12px;
             color: #7f8c8d;
-            margin-left: 10px;
+        }}
+        .sentence-a {{
+            color: #c0392b;
+        }}
+        .sentence-b {{
+            color: #27ae60;
         }}
         .index {{
             font-size: 12px;
             color: #95a5a6;
-            margin-right: 10px;
+            margin-right: 8px;
+            font-weight: normal;
         }}
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>句子对齐报告（锚点算法）</h1>
-        <p>原文: {title_a} | 校对后: {title_b}</p>
+        <h1>句子对齐报告（{algorithm_name}）</h1>
+        <p>比较文件 {title_a} 和 {title_b}</p>
+        <p style="font-size: 13px; margin-top: 10px; opacity: 0.9;">
+            相似度算法: {algorithm_name} | 阈值: {threshold:.2f} | N-gram大小: {ngram_size} | 运行时间: {runtime:.2f}秒
+        </p>
     </div>
 """)
 
@@ -184,18 +223,30 @@ def save_html_report(
     </div>""")
 
     # 对齐结果
-    html_lines.append("""    <div class="alignment-results">
-        <h2>对齐结果</h2>""")
+    html_lines.append(f"""    <div class="alignment-results">
+        <h2>对齐结果</h2>
+        <table class="alignment-table">
+            <thead>
+                <tr>
+                    <th class="col-index">序号</th>
+                    <th class="col-type">类型</th>
+                    <th class="col-similarity">相似度</th>
+                    <th class="col-sentence-a">{title_a}</th>
+                    <th class="col-sentence-b">{title_b}</th>
+                </tr>
+            </thead>
+            <tbody>""")
 
     for idx, item in enumerate(alignment, 1):
         item_type = item['type']
-        html_lines.append(f"""
-        <div class="alignment-item {item_type}">
-            <div class="item-header">
-                #{idx} - {item_type.upper()}
-                {f'<span class="similarity">相似度: {item["similarity"]:.2%}</span>' if item.get('similarity') else ''}
-            </div>""")
 
+        # 构建相似度文本
+        similarity_text = ""
+        if item.get('similarity'):
+            similarity_text = f'{item["similarity"]:.2f}'
+
+        # 构建原文句子
+        sentence_a_text = ""
         if item['a']:
             # 使用a_indices数组，如果有多个索引则显示范围
             if item.get('a_indices'):
@@ -206,12 +257,10 @@ def save_html_report(
                     a_idx_str = f"{a_indices[0]}-{a_indices[-1]}"
             else:
                 a_idx_str = item.get('a_index', '?')
-            html_lines.append(f"""
-            <div class="item-content">
-                <div class="sentence-a">
-                    <span class="index">[A-{a_idx_str}]</span>{item['a']}
-                </div>""")
+            sentence_a_text = f'<span class="index">[{a_idx_str}]</span><span class="sentence-a">{item["a"]}</span>'
 
+        # 构建校对后句子
+        sentence_b_text = ""
         if item['b']:
             # 使用b_indices数组，如果有多个索引则显示范围
             if item.get('b_indices'):
@@ -222,16 +271,20 @@ def save_html_report(
                     b_idx_str = f"{b_indices[0]}-{b_indices[-1]}"
             else:
                 b_idx_str = item.get('b_index', '?')
-            html_lines.append(f"""
-                <div class="sentence-b">
-                    <span class="index">[B-{b_idx_str}]</span>{item['b']}
-                </div>""")
+            sentence_b_text = f'<span class="index">[{b_idx_str}]</span><span class="sentence-b">{item["b"]}</span>'
 
-        html_lines.append("""
-            </div>
-        </div>""")
+        html_lines.append(f"""
+            <tr class="{item_type}">
+                <td class="col-index">{idx}</td>
+                <td class="col-type"><span class="item-header">{item_type.upper()}</span></td>
+                <td class="col-similarity"><span class="similarity">{similarity_text}</span></td>
+                <td class="col-sentence-a">{sentence_a_text}</td>
+                <td class="col-sentence-b">{sentence_b_text}</td>
+            </tr>""")
 
     html_lines.append("""
+            </tbody>
+        </table>
     </div>
 </body>
 </html>""")
@@ -303,6 +356,9 @@ def main():
 
     args = parser.parse_args()
 
+    # 记录开始时间
+    start_time = time.time()
+
     # 读取文件
     print(f"读取原文: {args.text_a}")
     with open(args.text_a, 'r', encoding='utf-8') as f:
@@ -354,15 +410,27 @@ def main():
     print(f"保存HTML报告: {html_path}")
     title_a = Path(args.text_a).name
     title_b = Path(args.text_b).name
-    save_html_report(alignment, html_path, title_a, title_b)
+
+    # 计算运行时间
+    runtime = time.time() - start_time
+
+    save_html_report(
+        alignment,
+        html_path,
+        title_a,
+        title_b,
+        algorithm_name="锚点算法",
+        threshold=args.threshold,
+        ngram_size=args.ngram,
+        runtime=runtime
+    )
 
     print(f"\n所有报告已保存到: {output_base}.*")
 
 
 if __name__ == '__main__':
-    import time
     start_time = time.time()
     main()
     end_time = time.time()
-    print(f"运行时间: {end_time - start_time}秒")
+    print(f"运行时间: {end_time - start_time:.2f}秒")
 

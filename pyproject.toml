@@ -7,7 +7,7 @@ name = "ai-proofread"
 version = "0.1.0"
 description = "A toolkit for proofreading Chinese book manuscripts"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "google-genai",
     "openai",
