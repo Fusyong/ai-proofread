@@ -1,6 +1,7 @@
 .env
-.venv
-ai_proofread.egg-info
+
+.venv/
+ai_proofread.egg-info/
 
 
 node_modules
