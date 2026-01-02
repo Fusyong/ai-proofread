@@ -10,6 +10,7 @@ import argparse
 import json
 import csv
 import time
+import html
 from typing import List, Dict
 
 from src.sentence_aligner_simple import (
@@ -82,26 +83,6 @@ def save_html_report(
             padding: 20px;
             border-radius: 5px;
             margin-bottom: 20px;
-        }}
-        .stats {{
-            background-color: white;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        .stats table {{
-            width: 100%;
-            border-collapse: collapse;
-        }}
-        .stats th, .stats td {{
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }}
-        .stats th {{
-            background-color: #3498db;
-            color: white;
         }}
         .alignment-results {{
             background-color: white;
@@ -179,7 +160,200 @@ def save_html_report(
             margin-right: 8px;
             font-weight: normal;
         }}
+        .filter-controls {{
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #bdc3c7;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: nowrap;
+        }}
+        .filter-group {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 0 1 auto;
+        }}
+        .filter-label {{
+            font-weight: bold;
+            margin: 0;
+            display: inline-block;
+            color: #2c3e50;
+            font-size: 13px;
+            white-space: nowrap;
+        }}
+        .filter-buttons {{
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }}
+        .filter-btn {{
+            padding: 6px 12px;
+            border: 2px solid #3498db;
+            background-color: white;
+            color: #3498db;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }}
+        .filter-btn:hover {{
+            background-color: #e8f4f8;
+        }}
+        .filter-btn.active {{
+            background-color: #3498db;
+            color: white;
+        }}
+        .filter-input-group {{
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }}
+        .filter-input {{
+            padding: 6px 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 80px;
+        }}
+        .filter-search {{
+            padding: 6px 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 200px;
+        }}
+        .filter-reset {{
+            padding: 6px 15px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }}
+        .filter-reset:hover {{
+            background-color: #c0392b;
+        }}
+        .filter-stats {{
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }}
+        .alignment-table tr.hidden {{
+            display: none;
+        }}
+        .compare-btn {{
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            width: 100%;
+        }}
+        .alignment-table tr:hover .compare-btn {{
+            opacity: 1;
+        }}
+        .compare-btn:hover {{
+            background-color: #2980b9;
+        }}
+        .modal {{
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }}
+        .modal-content {{
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 5px;
+            width: 90%;
+            max-width: 1000px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }}
+        .modal-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }}
+        .modal-title {{
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }}
+        .close-btn {{
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 14px;
+        }}
+        .close-btn:hover {{
+            background-color: #c0392b;
+        }}
+        .diff-container {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }}
+        .diff-panel {{
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }}
+        .diff-panel-title {{
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }}
+        .diff-content {{
+            font-family: "SimSun", "宋体" !important;
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }}
+        .diff-content span {{
+            display: inline;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }}
+        .diff-added {{
+            background-color: #d5f4e6;
+            color: #27ae60;
+        }}
+        .diff-removed {{
+            background-color: #fadbd8;
+            color: #c0392b;
+        }}
+        .diff-common {{
+            color: #34495e;
+        }}
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
 </head>
 <body>
     <div class="header">
@@ -191,40 +365,36 @@ def save_html_report(
     </div>
 """)
 
-    # 统计信息
-    stats = get_alignment_statistics(alignment)
-    html_lines.append("""    <div class="stats">
-        <h2>统计信息</h2>
-        <table>
-            <tr>
-                <th>类型</th>
-                <th>数量</th>
-                <th>占比</th>
-            </tr>""")
-
-    total = stats['total']
-    for key in ['match', 'delete', 'insert']:
-        count = stats[key]
-        percentage = f"{count / total * 100:.2f}%" if total > 0 else "0%"
-        html_lines.append(f"""
-            <tr>
-                <td>{key}</td>
-                <td>{count}</td>
-                <td>{percentage}</td>
-            </tr>""")
-
-    html_lines.append(f"""
-            <tr>
-                <td><strong>总计</strong></td>
-                <td><strong>{total}</strong></td>
-                <td><strong>100%</strong></td>
-            </tr>
-        </table>
-    </div>""")
-
     # 对齐结果
     html_lines.append(f"""    <div class="alignment-results">
         <h2>对齐结果</h2>
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label class="filter-label">类型筛选：</label>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-type="all" onclick="filterByType('all')">全部</button>
+                    <button class="filter-btn active" data-type="match" onclick="filterByType('match')">MATCH</button>
+                    <button class="filter-btn active" data-type="delete" onclick="filterByType('delete')">DELETE</button>
+                    <button class="filter-btn active" data-type="insert" onclick="filterByType('insert')">INSERT</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">相似度范围：</label>
+                <div class="filter-input-group">
+                    <input type="number" class="filter-input" id="minSimilarity" placeholder="最小值" min="0" max="1" step="0.01" oninput="applyFilters()">
+                    <span>至</span>
+                    <input type="number" class="filter-input" id="maxSimilarity" placeholder="最大值" min="0" max="1" step="0.01" oninput="applyFilters()">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">文本搜索：</label>
+                <div class="filter-input-group">
+                    <input type="text" class="filter-search" id="searchText" placeholder="在原文或校对后文本中搜索..." oninput="applyFilters()">
+                    <button class="filter-reset" onclick="resetFilters()">重置筛选</button>
+                </div>
+            </div>
+        </div>
+        <div class="filter-stats" id="filterStats"></div>
         <table class="alignment-table">
             <thead>
                 <tr>
@@ -233,6 +403,7 @@ def save_html_report(
                     <th class="col-similarity">相似度</th>
                     <th class="col-sentence-a">{title_a}</th>
                     <th class="col-sentence-b">{title_b}</th>
+                    <th style="width: 50px;"></th>
                 </tr>
             </thead>
             <tbody>""")
@@ -240,10 +411,23 @@ def save_html_report(
     for idx, item in enumerate(alignment, 1):
         item_type = item['type']
 
+        # 获取相似度数值（用于筛选）
+        similarity_value = item.get('similarity')
+        if similarity_value is None:
+            similarity_value = 0.0
+        else:
+            similarity_value = float(similarity_value)
+
         # 构建相似度文本
         similarity_text = ""
-        if item.get('similarity'):
-            similarity_text = f'{item["similarity"]:.2f}'
+        if similarity_value:
+            similarity_text = f'{similarity_value:.2f}'
+
+        # 获取文本内容（用于搜索，需要转义HTML特殊字符）
+        text_a_raw = item.get('a') or ''
+        text_b_raw = item.get('b') or ''
+        text_a_escaped = html.escape(str(text_a_raw))
+        text_b_escaped = html.escape(str(text_b_raw))
 
         # 构建原文句子
         sentence_a_text = ""
@@ -252,11 +436,15 @@ def save_html_report(
             if item.get('a_indices'):
                 a_indices = item['a_indices']
                 if len(a_indices) == 1:
-                    a_idx_str = str(a_indices[0])
+                    a_idx_str = str(a_indices[0] + 1)
                 else:
-                    a_idx_str = f"{a_indices[0]}-{a_indices[-1]}"
+                    a_idx_str = f"{a_indices[0] + 1}-{a_indices[-1] + 1}"
             else:
-                a_idx_str = item.get('a_index', '?')
+                a_index = item.get('a_index', '?')
+                if isinstance(a_index, (int, float)):
+                    a_idx_str = str(int(a_index) + 1)
+                else:
+                    a_idx_str = str(a_index)
             sentence_a_text = f'<span class="index">[{a_idx_str}]</span><span class="sentence-a">{item["a"]}</span>'
 
         # 构建校对后句子
@@ -266,26 +454,274 @@ def save_html_report(
             if item.get('b_indices'):
                 b_indices = item['b_indices']
                 if len(b_indices) == 1:
-                    b_idx_str = str(b_indices[0])
+                    b_idx_str = str(b_indices[0] + 1)
                 else:
-                    b_idx_str = f"{b_indices[0]}-{b_indices[-1]}"
+                    b_idx_str = f"{b_indices[0] + 1}-{b_indices[-1] + 1}"
             else:
-                b_idx_str = item.get('b_index', '?')
+                b_index = item.get('b_index', '?')
+                if isinstance(b_index, (int, float)):
+                    b_idx_str = str(int(b_index) + 1)
+                else:
+                    b_idx_str = str(b_index)
             sentence_b_text = f'<span class="index">[{b_idx_str}]</span><span class="sentence-b">{item["b"]}</span>'
 
         html_lines.append(f"""
-            <tr class="{item_type}">
+            <tr class="{item_type}" data-type="{item_type}" data-similarity="{similarity_value:.4f}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}">
                 <td class="col-index">{idx}</td>
                 <td class="col-type"><span class="item-header">{item_type.upper()}</span></td>
                 <td class="col-similarity"><span class="similarity">{similarity_text}</span></td>
                 <td class="col-sentence-a">{sentence_a_text}</td>
                 <td class="col-sentence-b">{sentence_b_text}</td>
+                <td style="position: relative; width: 50px; padding: 0;">
+                    <button class="compare-btn" onclick="showDiffForRow(this)" title="比较差异">🔍</button>
+                </td>
             </tr>""")
 
     html_lines.append("""
             </tbody>
         </table>
     </div>
+
+    <!-- 差异比较弹窗 -->
+    <div id="diffModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">文本差异比较</div>
+                <button class="close-btn" onclick="closeDiffModal()">关闭</button>
+            </div>
+            <div class="diff-container">
+                <div class="diff-panel">
+                    <div class="diff-panel-title">原文</div>
+                    <div id="diffOriginal" class="diff-content"></div>
+                </div>
+                <div class="diff-panel">
+                    <div class="diff-panel-title">校对后</div>
+                    <div id="diffModified" class="diff-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 类型筛选状态
+        const typeFilters = {
+            'all': true,
+            'match': true,
+            'delete': true,
+            'insert': true
+        };
+
+        // 类型筛选函数
+        function filterByType(type) {
+            const btn = document.querySelector(`[data-type="${type}"]`);
+            typeFilters[type] = !typeFilters[type];
+
+            if (type === 'all') {
+                // 全部按钮：切换所有类型
+                const allActive = !typeFilters['all'];
+                typeFilters['match'] = allActive;
+                typeFilters['delete'] = allActive;
+                typeFilters['insert'] = allActive;
+
+                // 更新所有按钮状态
+                document.querySelectorAll('.filter-btn[data-type]').forEach(b => {
+                    if (b.dataset.type === 'all') {
+                        b.classList.toggle('active', allActive);
+                    } else {
+                        b.classList.toggle('active', allActive);
+                    }
+                });
+            } else {
+                // 单个类型按钮
+                btn.classList.toggle('active', typeFilters[type]);
+
+                // 更新"全部"按钮状态
+                const allActive = typeFilters['match'] && typeFilters['delete'] && typeFilters['insert'];
+                const allBtn = document.querySelector('[data-type="all"]');
+                allBtn.classList.toggle('active', allActive);
+                typeFilters['all'] = allActive;
+            }
+
+            applyFilters();
+        }
+
+        // 应用所有筛选条件
+        function applyFilters() {
+            const rows = document.querySelectorAll('.alignment-table tbody tr');
+            const minSimilarity = parseFloat(document.getElementById('minSimilarity').value) || 0;
+            const maxSimilarity = parseFloat(document.getElementById('maxSimilarity').value) || 1;
+            const searchText = document.getElementById('searchText').value.toLowerCase().trim();
+
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                // 类型筛选
+                const rowType = row.dataset.type;
+                const typeMatch = typeFilters[rowType];
+
+                // 相似度筛选
+                const similarity = parseFloat(row.dataset.similarity) || 0;
+                const similarityMatch = similarity >= minSimilarity && similarity <= maxSimilarity;
+
+                // 文本搜索
+                const textA = (row.dataset.textA || '').toLowerCase();
+                const textB = (row.dataset.textB || '').toLowerCase();
+                const textMatch = !searchText || textA.includes(searchText) || textB.includes(searchText);
+
+                // 综合判断
+                const shouldShow = typeMatch && similarityMatch && textMatch;
+
+                if (shouldShow) {
+                    row.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+
+            // 更新统计信息
+            updateFilterStats(visibleCount, rows.length);
+        }
+
+        // 更新筛选统计信息
+        function updateFilterStats(visible, total) {
+            const statsEl = document.getElementById('filterStats');
+            if (visible === total) {
+                statsEl.textContent = `显示全部 ${total} 条结果`;
+            } else {
+                statsEl.textContent = `显示 ${visible} / ${total} 条结果`;
+            }
+        }
+
+        // 重置所有筛选
+        function resetFilters() {
+            // 重置类型筛选
+            typeFilters['all'] = true;
+            typeFilters['match'] = true;
+            typeFilters['delete'] = true;
+            typeFilters['insert'] = true;
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.add('active');
+            });
+
+            // 重置相似度范围
+            document.getElementById('minSimilarity').value = '';
+            document.getElementById('maxSimilarity').value = '';
+
+            // 重置文本搜索
+            document.getElementById('searchText').value = '';
+
+            // 应用筛选
+            applyFilters();
+        }
+
+        // 显示差异比较弹窗
+        function showDiffForRow(btn) {
+            const row = btn.closest('tr');
+            const textA = row.dataset.textA || '';
+            const textB = row.dataset.textB || '';
+            const rowIdx = row.dataset.rowIdx || '';
+
+            showDiff(rowIdx, textA, textB);
+        }
+
+        function showDiff(idx, textA, textB) {
+            const modal = document.getElementById('diffModal');
+            const originalEl = document.getElementById('diffOriginal');
+            const modifiedEl = document.getElementById('diffModified');
+
+            // 使用jsdiff比较文本
+            if (typeof Diff !== 'undefined') {
+                // 使用Intl.Segmenter处理中文分词（如果支持）
+                let segmenter = null;
+                if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+                    try {
+                        segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
+                    } catch (e) {
+                        // 如果不支持，使用默认方式
+                    }
+                }
+
+                // 使用diffWordsWithSpace进行词级别的比较（更适合中文）
+                const diff = segmenter
+                    ? Diff.diffWordsWithSpace(textA, textB, segmenter)
+                    : Diff.diffWords(textA, textB);
+
+                // 渲染差异（合并显示，参考参考文件的样式）
+                let displayHtml = '';
+
+                diff.forEach(part => {
+                    const escapedValue = escapeHtml(part.value);
+                    let span = '<span';
+
+                    if (part.added) {
+                        span += ' style="color: green; text-decoration: underline 2px;">';
+                    } else if (part.removed) {
+                        span += ' style="color: red; text-decoration: dotted underline 2px;">';
+                    } else {
+                        span += ' style="color: black;">';
+                    }
+
+                    span += escapedValue + '</span>';
+                    displayHtml += span;
+                });
+
+                // 在原文面板显示删除的内容，在校对后面板显示新增的内容
+                let originalHtml = '';
+                let modifiedHtml = '';
+
+                diff.forEach(part => {
+                    const escapedValue = escapeHtml(part.value);
+                    if (part.removed) {
+                        originalHtml += '<span class="diff-removed">' + escapedValue + '</span>';
+                    } else if (!part.added) {
+                        originalHtml += '<span class="diff-common">' + escapedValue + '</span>';
+                    }
+
+                    if (part.added) {
+                        modifiedHtml += '<span class="diff-added">' + escapedValue + '</span>';
+                    } else if (!part.removed) {
+                        modifiedHtml += '<span class="diff-common">' + escapedValue + '</span>';
+                    }
+                });
+
+                originalEl.innerHTML = originalHtml || '<span class="diff-common">（空）</span>';
+                modifiedEl.innerHTML = modifiedHtml || '<span class="diff-common">（空）</span>';
+            } else {
+                // 如果jsdiff未加载，显示原始文本
+                originalEl.textContent = textA || '（空）';
+                modifiedEl.textContent = textB || '（空）';
+            }
+
+            modal.style.display = 'block';
+        }
+
+        // 关闭弹窗
+        function closeDiffModal() {
+            document.getElementById('diffModal').style.display = 'none';
+        }
+
+        // HTML转义函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 点击弹窗外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('diffModal');
+            if (event.target === modal) {
+                closeDiffModal();
+            }
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            applyFilters();
+        });
+    </script>
 </body>
 </html>""")
 
