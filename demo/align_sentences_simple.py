@@ -149,10 +149,10 @@ def save_html_report(
             color: #7f8c8d;
         }}
         .sentence-a {{
-            color: #c0392b;
+            color: black;
         }}
         .sentence-b {{
-            color: #27ae60;
+            color: black;
         }}
         .index {{
             font-size: 12px;
@@ -247,6 +247,11 @@ def save_html_report(
         .alignment-table tr.hidden {{
             display: none;
         }}
+        .col-action {{
+            width: 5%;
+            text-align: center;
+            position: relative;
+        }}
         .compare-btn {{
             background-color: #3498db;
             color: white;
@@ -257,100 +262,15 @@ def save_html_report(
             font-size: 12px;
             opacity: 0;
             transition: opacity 0.2s;
-            width: 100%;
+        }}
+        .header-compare-btn {{
+            opacity: 1 !important;
         }}
         .alignment-table tr:hover .compare-btn {{
             opacity: 1;
         }}
         .compare-btn:hover {{
             background-color: #2980b9;
-        }}
-        .modal {{
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }}
-        .modal-content {{
-            background-color: white;
-            margin: 5% auto;
-            padding: 20px;
-            border-radius: 5px;
-            width: 90%;
-            max-width: 1000px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }}
-        .modal-header {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1;
-        }}
-        .modal-title {{
-            font-size: 18px;
-            font-weight: bold;
-            color: #2c3e50;
-        }}
-        .close-btn {{
-            background-color: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 8px 15px;
-            cursor: pointer;
-            font-size: 14px;
-        }}
-        .close-btn:hover {{
-            background-color: #c0392b;
-        }}
-        .diff-container {{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
-        }}
-        .diff-panel {{
-            border: 1px solid #bdc3c7;
-            border-radius: 4px;
-            padding: 15px;
-            background-color: #f9f9f9;
-        }}
-        .diff-panel-title {{
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }}
-        .diff-content {{
-            font-family: "SimSun", "宋体" !important;
-            font-size: 14px !important;
-            line-height: 1.5 !important;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }}
-        .diff-content span {{
-            display: inline;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-        }}
-        .diff-added {{
-            background-color: #d5f4e6;
-            color: #27ae60;
-        }}
-        .diff-removed {{
-            background-color: #fadbd8;
-            color: #c0392b;
-        }}
-        .diff-common {{
-            color: #34495e;
         }}
     </style>
     <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
@@ -403,7 +323,9 @@ def save_html_report(
                     <th class="col-similarity">相似度</th>
                     <th class="col-sentence-a">{title_a}</th>
                     <th class="col-sentence-b">{title_b}</th>
-                    <th style="width: 50px;"></th>
+                    <th class="col-action">
+                        <button class="compare-btn header-compare-btn" onclick="toggleAllDiffs()" title="从上到下逐一切换差异显示">🔍</button>
+                    </th>
                 </tr>
             </thead>
             <tbody>""")
@@ -466,40 +388,20 @@ def save_html_report(
             sentence_b_text = f'<span class="index">[{b_idx_str}]</span><span class="sentence-b">{item["b"]}</span>'
 
         html_lines.append(f"""
-            <tr class="{item_type}" data-type="{item_type}" data-similarity="{similarity_value:.4f}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}">
+            <tr class="{item_type}" data-type="{item_type}" data-similarity="{similarity_value:.4f}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}" data-diff-mode="false">
                 <td class="col-index">{idx}</td>
                 <td class="col-type"><span class="item-header">{item_type.upper()}</span></td>
                 <td class="col-similarity"><span class="similarity">{similarity_text}</span></td>
                 <td class="col-sentence-a">{sentence_a_text}</td>
                 <td class="col-sentence-b">{sentence_b_text}</td>
-                <td style="position: relative; width: 50px; padding: 0;">
-                    <button class="compare-btn" onclick="showDiffForRow(this)" title="比较差异">🔍</button>
+                <td class="col-action">
+                    <button class="compare-btn" onclick="toggleDiffForRow(this)" title="切换差异显示">🔍</button>
                 </td>
             </tr>""")
 
     html_lines.append("""
             </tbody>
         </table>
-    </div>
-
-    <!-- 差异比较弹窗 -->
-    <div id="diffModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-title">文本差异比较</div>
-                <button class="close-btn" onclick="closeDiffModal()">关闭</button>
-            </div>
-            <div class="diff-container">
-                <div class="diff-panel">
-                    <div class="diff-panel-title">原文</div>
-                    <div id="diffOriginal" class="diff-content"></div>
-                </div>
-                <div class="diff-panel">
-                    <div class="diff-panel-title">校对后</div>
-                    <div id="diffModified" class="diff-content"></div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -616,90 +518,133 @@ def save_html_report(
             applyFilters();
         }
 
-        // 显示差异比较弹窗
-        function showDiffForRow(btn) {
-            const row = btn.closest('tr');
-            const textA = row.dataset.textA || '';
-            const textB = row.dataset.textB || '';
-            const rowIdx = row.dataset.rowIdx || '';
+        // 全局差异显示状态
+        let globalDiffMode = false;
+        const BUFFER_SIZE = 50; // 视口上下各缓冲50行
 
-            showDiff(rowIdx, textA, textB);
+        // 检查元素是否在视口内（带缓冲区）
+        function isInViewportWithBuffer(element) {
+            const rect = element.getBoundingClientRect();
+            const buffer = BUFFER_SIZE * 40; // 假设每行约40px高度
+            return (
+                rect.top >= -buffer &&
+                rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) + buffer
+            );
         }
 
-        function showDiff(idx, textA, textB) {
-            const modal = document.getElementById('diffModal');
-            const originalEl = document.getElementById('diffOriginal');
-            const modifiedEl = document.getElementById('diffModified');
-
-            // 使用jsdiff比较文本
-            if (typeof Diff !== 'undefined') {
-                // 使用Intl.Segmenter处理中文分词（如果支持）
-                let segmenter = null;
-                if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-                    try {
-                        segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
-                    } catch (e) {
-                        // 如果不支持，使用默认方式
+        // 更新可见区域的差异显示
+        function updateVisibleRowsDiff() {
+            const rows = document.querySelectorAll('.alignment-table tbody tr:not(.hidden)');
+            rows.forEach(row => {
+                if (isInViewportWithBuffer(row)) {
+                    const btn = row.querySelector('.compare-btn');
+                    if (btn) {
+                        const currentDiffMode = row.dataset.diffMode === 'true';
+                        // 如果全局状态与当前状态不一致，则切换
+                        if (globalDiffMode !== currentDiffMode) {
+                            applyDiffToRow(row, globalDiffMode);
+                        }
                     }
                 }
-
-                // 使用diffWordsWithSpace进行词级别的比较（更适合中文）
-                const diff = segmenter
-                    ? Diff.diffWordsWithSpace(textA, textB, segmenter)
-                    : Diff.diffWords(textA, textB);
-
-                // 渲染差异（合并显示，参考参考文件的样式）
-                let displayHtml = '';
-
-                diff.forEach(part => {
-                    const escapedValue = escapeHtml(part.value);
-                    let span = '<span';
-
-                    if (part.added) {
-                        span += ' style="color: green; text-decoration: underline 2px;">';
-                    } else if (part.removed) {
-                        span += ' style="color: red; text-decoration: dotted underline 2px;">';
-                    } else {
-                        span += ' style="color: black;">';
-                    }
-
-                    span += escapedValue + '</span>';
-                    displayHtml += span;
-                });
-
-                // 在原文面板显示删除的内容，在校对后面板显示新增的内容
-                let originalHtml = '';
-                let modifiedHtml = '';
-
-                diff.forEach(part => {
-                    const escapedValue = escapeHtml(part.value);
-                    if (part.removed) {
-                        originalHtml += '<span class="diff-removed">' + escapedValue + '</span>';
-                    } else if (!part.added) {
-                        originalHtml += '<span class="diff-common">' + escapedValue + '</span>';
-                    }
-
-                    if (part.added) {
-                        modifiedHtml += '<span class="diff-added">' + escapedValue + '</span>';
-                    } else if (!part.removed) {
-                        modifiedHtml += '<span class="diff-common">' + escapedValue + '</span>';
-                    }
-                });
-
-                originalEl.innerHTML = originalHtml || '<span class="diff-common">（空）</span>';
-                modifiedEl.innerHTML = modifiedHtml || '<span class="diff-common">（空）</span>';
-            } else {
-                // 如果jsdiff未加载，显示原始文本
-                originalEl.textContent = textA || '（空）';
-                modifiedEl.textContent = textB || '（空）';
-            }
-
-            modal.style.display = 'block';
+            });
         }
 
-        // 关闭弹窗
-        function closeDiffModal() {
-            document.getElementById('diffModal').style.display = 'none';
+        // 应用差异显示到指定行
+        function applyDiffToRow(row, showDiff) {
+            const textA = row.dataset.textA || '';
+            const textB = row.dataset.textB || '';
+            const cellA = row.querySelector('.col-sentence-a');
+            const cellB = row.querySelector('.col-sentence-b');
+            const btn = row.querySelector('.compare-btn');
+
+            if (!cellA || !cellB) return;
+
+            // 获取索引元素
+            const indexA = cellA.querySelector('.index');
+            const indexB = cellB.querySelector('.index');
+            const indexAHtml = indexA ? indexA.outerHTML : '';
+            const indexBHtml = indexB ? indexB.outerHTML : '';
+
+            if (showDiff) {
+                // 保存原始内容（如果还没有保存）
+                if (row._originalA === undefined || row._originalB === undefined) {
+                    row._originalA = cellA.innerHTML;
+                    row._originalB = cellB.innerHTML;
+                }
+
+                // 显示差异
+                if (typeof Diff !== 'undefined') {
+                    let segmenter = null;
+                    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+                        try {
+                            segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
+                        } catch (e) {
+                            // 如果不支持，使用默认方式
+                        }
+                    }
+
+                    const diff = segmenter
+                        ? Diff.diffWordsWithSpace(textA, textB, segmenter)
+                        : Diff.diffWords(textA, textB);
+
+                    let originalHtml = '';
+                    let modifiedHtml = '';
+
+                    diff.forEach(part => {
+                        const escapedValue = escapeHtml(part.value);
+
+                        if (part.removed) {
+                            originalHtml += '<span style="color: red; text-decoration: dotted underline 2px;">' + escapedValue + '</span>';
+                        } else if (!part.added) {
+                            originalHtml += '<span style="color: black;">' + escapedValue + '</span>';
+                        }
+
+                        if (part.added) {
+                            modifiedHtml += '<span style="color: green; text-decoration: underline 2px;">' + escapedValue + '</span>';
+                        } else if (!part.removed) {
+                            modifiedHtml += '<span style="color: black;">' + escapedValue + '</span>';
+                        }
+                    });
+
+                    // 保留索引号码
+                    cellA.innerHTML = indexAHtml + (originalHtml || '');
+                    cellB.innerHTML = indexBHtml + (modifiedHtml || '');
+                } else {
+                    cellA.innerHTML = indexAHtml + escapeHtml(textA);
+                    cellB.innerHTML = indexBHtml + escapeHtml(textB);
+                }
+                row.dataset.diffMode = 'true';
+                if (btn) btn.title = '恢复原始显示';
+            } else {
+                // 恢复原始显示
+                if (row._originalA !== undefined && row._originalB !== undefined) {
+                    cellA.innerHTML = row._originalA;
+                    cellB.innerHTML = row._originalB;
+                } else {
+                    // 如果原始内容未保存，从data属性重新构建
+                    cellA.innerHTML = indexAHtml + '<span class="sentence-a">' + escapeHtml(textA) + '</span>';
+                    cellB.innerHTML = indexBHtml + '<span class="sentence-b">' + escapeHtml(textB) + '</span>';
+                }
+                row.dataset.diffMode = 'false';
+                if (btn) btn.title = '切换差异显示';
+            }
+        }
+
+        // 从上到下切换所有行的差异显示状态（仅标记，实际只更新可见区域）
+        function toggleAllDiffs() {
+            // 切换全局状态
+            globalDiffMode = !globalDiffMode;
+
+            // 更新可见区域的行
+            updateVisibleRowsDiff();
+        }
+
+        // 切换差异显示（就地显示）- 单行切换
+        function toggleDiffForRow(btn) {
+            const row = btn.closest('tr');
+            const isDiffMode = row.dataset.diffMode === 'true';
+            // 切换该行的状态（不受全局状态影响）
+            applyDiffToRow(row, !isDiffMode);
         }
 
         // HTML转义函数
@@ -709,17 +654,48 @@ def save_html_report(
             return div.innerHTML;
         }
 
-        // 点击弹窗外部关闭
-        window.onclick = function(event) {
-            const modal = document.getElementById('diffModal');
-            if (event.target === modal) {
-                closeDiffModal();
+        // 滚动监听（使用防抖优化性能）
+        let scrollTimer = null;
+        function handleScroll() {
+            if (scrollTimer) {
+                clearTimeout(scrollTimer);
             }
+            scrollTimer = setTimeout(() => {
+                if (globalDiffMode) {
+                    updateVisibleRowsDiff();
+                }
+            }, 100); // 100ms防抖
         }
 
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
             applyFilters();
+
+            // 添加滚动监听
+            window.addEventListener('scroll', handleScroll, { passive: true });
+
+            // 添加鼠标移动监听，更新鼠标所在行附近的行
+            let mouseRow = null;
+            document.addEventListener('mouseover', function(e) {
+                const row = e.target.closest('.alignment-table tbody tr');
+                if (row && row !== mouseRow) {
+                    mouseRow = row;
+                    if (globalDiffMode) {
+                        // 更新鼠标所在行及其附近的行
+                        const rows = Array.from(document.querySelectorAll('.alignment-table tbody tr:not(.hidden)'));
+                        const currentIndex = rows.indexOf(row);
+                        const start = Math.max(0, currentIndex - BUFFER_SIZE);
+                        const end = Math.min(rows.length, currentIndex + BUFFER_SIZE + 1);
+
+                        for (let i = start; i < end; i++) {
+                            const r = rows[i];
+                            if (r && r.dataset.diffMode !== 'true') {
+                                applyDiffToRow(r, true);
+                            }
+                        }
+                    }
+                }
+            });
         });
     </script>
 </body>
