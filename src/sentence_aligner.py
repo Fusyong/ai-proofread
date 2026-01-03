@@ -627,8 +627,9 @@ def detect_and_handle_movements(
     result = []
     movements = []  # 存储检测到的移动项：[(原match项, movein项, moveout项), ...]
 
-    # 第一步：检测移动的match项
-    for item in alignment:
+    # 第一步：收集所有match项的索引信息，用于上下文判断
+    match_items = []  # [(item, a_idx, b_idx, position_in_alignment), ...]
+    for pos, item in enumerate(alignment):
         if item['type'] == 'match':
             # 获取a_index和b_index
             a_idx = None
@@ -644,43 +645,81 @@ def detect_and_handle_movements(
             elif item.get('b_index') is not None:
                 b_idx = item['b_index']
 
-            # 如果a_idx和b_idx都存在，检查是否移动
             if a_idx is not None and b_idx is not None:
-                movement_distance = abs(b_idx - a_idx)
-                if movement_distance > movement_threshold:
-                    # 检测到移动，创建movein和moveout条目
-                    # 获取原始相似度值，确保正确传递
-                    original_similarity = item.get('similarity')
-                    # 确保相似度值存在且有效
-                    if original_similarity is None:
-                        original_similarity = 0.0
-                    else:
-                        # 确保是数值类型
-                        original_similarity = float(original_similarity)
+                match_items.append((item, a_idx, b_idx, pos))
 
-                    # moveout：在原位置（a_idx），显示原文和校对后（表示从这里移出）
-                    moveout_item = {
-                        'type': 'moveout',
-                        'a': item['a'],
-                        'b': item['b'],  # 保留对侧句子
-                        'similarity': original_similarity,  # 使用原始相似度
-                        'a_index': a_idx,
-                        'b_index': b_idx,  # 保留b_index用于显示
-                        'original_b_index': b_idx,  # 保存原始b_index用于排序
-                    }
+    # 第二步：检测移动的match项（考虑相邻关系）
+    for idx, (item, a_idx, b_idx, pos) in enumerate(match_items):
+        movement_distance = abs(b_idx - a_idx)
 
-                    # movein：在新位置（b_idx），显示原文和校对后（表示移入到这里）
-                    movein_item = {
-                        'type': 'movein',
-                        'a': item['a'],  # 保留对侧句子
-                        'b': item['b'],
-                        'similarity': original_similarity,  # 使用原始相似度
-                        'a_index': a_idx,  # 保留a_index用于显示
-                        'b_index': b_idx,
-                        'original_a_index': a_idx,  # 保存原始a_index用于排序
-                    }
+        # 基本条件：索引差值必须超过阈值
+        if movement_distance <= movement_threshold:
+            continue
 
-                    movements.append((item, moveout_item, movein_item))
+        # 关键修复：检查相邻的match项，避免将相邻条目误判为移动
+        # 如果当前项在结果列表中与相邻的match项接近，且索引是连续的，则不是真正的移动
+        is_real_movement = True
+
+        # 检查前一个match项
+        if idx > 0:
+            prev_item, prev_a_idx, prev_b_idx, prev_pos = match_items[idx - 1]
+            # 检查在结果列表中的位置是否相邻或接近（中间最多间隔2个非match项）
+            if pos - prev_pos <= 3:
+                # 检查a_index和b_index是否连续或接近连续
+                a_idx_diff = abs(a_idx - prev_a_idx)
+                b_idx_diff = abs(b_idx - prev_b_idx)
+                # 如果a_index和b_index的差值都较小（<=2），说明是连续的，不应该判断为移动
+                # 即使索引绝对值差值很大，只要相对于前一项是连续的，就不是移动
+                if a_idx_diff <= 2 and b_idx_diff <= 2:
+                    is_real_movement = False
+
+        # 检查后一个match项（如果前一个检查已经判断不是移动，则跳过）
+        if is_real_movement and idx < len(match_items) - 1:
+            next_item, next_a_idx, next_b_idx, next_pos = match_items[idx + 1]
+            # 检查在结果列表中的位置是否相邻或接近
+            if next_pos - pos <= 3:
+                # 检查a_index和b_index是否连续或接近连续
+                a_idx_diff = abs(next_a_idx - a_idx)
+                b_idx_diff = abs(next_b_idx - b_idx)
+                # 如果a_index和b_index的差值都较小（<=2），说明是连续的，不应该判断为移动
+                if a_idx_diff <= 2 and b_idx_diff <= 2:
+                    is_real_movement = False
+
+        # 只有当确实是真正的移动时才创建movein和moveout条目
+        if is_real_movement:
+            # 检测到移动，创建movein和moveout条目
+            # 获取原始相似度值，确保正确传递
+            original_similarity = item.get('similarity')
+            # 确保相似度值存在且有效
+            if original_similarity is None:
+                original_similarity = 0.0
+            else:
+                # 确保是数值类型
+                original_similarity = float(original_similarity)
+
+            # moveout：在原位置（a_idx），显示原文和校对后（表示从这里移出）
+            moveout_item = {
+                'type': 'moveout',
+                'a': item['a'],
+                'b': item['b'],  # 保留对侧句子
+                'similarity': original_similarity,  # 使用原始相似度
+                'a_index': a_idx,
+                'b_index': b_idx,  # 保留b_index用于显示
+                'original_b_index': b_idx,  # 保存原始b_index用于排序
+            }
+
+            # movein：在新位置（b_idx），显示原文和校对后（表示移入到这里）
+            movein_item = {
+                'type': 'movein',
+                'a': item['a'],  # 保留对侧句子
+                'b': item['b'],
+                'similarity': original_similarity,  # 使用原始相似度
+                'a_index': a_idx,  # 保留a_index用于显示
+                'b_index': b_idx,
+                'original_a_index': a_idx,  # 保存原始a_index用于排序
+            }
+
+            movements.append((item, moveout_item, movein_item))
 
     # 如果没有检测到移动，直接返回原结果
     if not movements:

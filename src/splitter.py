@@ -256,11 +256,11 @@ def _split_sentences_plain(text: str) -> List[str]:
         current_sentence.append(char)
 
         # 处理引号状态
-        if char in ['"', '"', ''', ''', '「', '」', '『', '』']:
+        if char in ['“', '”', '‘', '’', '「', '」', '『', '』']:
             if not in_quote:
                 in_quote = True
                 quote_char = char
-            elif char == quote_char or (char in ['"', '"'] and quote_char in ['"', '"']):
+            elif char == quote_char or (char in ['“', '”'] and quote_char in ['“', '”']):
                 in_quote = False
                 quote_char = None
 
@@ -317,11 +317,11 @@ def _split_sentences_plain_with_lines(text: str) -> List[Tuple[str, int, int]]:
         current_sentence.append(char)
 
         # 处理引号状态
-        if char in ['"', '"', ''', ''', '「', '」', '『', '』']:
+        if char in ['“', '”', '‘', '’', '「', '」', '『', '』']:
             if not in_quote:
                 in_quote = True
                 quote_char = char
-            elif char == quote_char or (char in ['"', '"'] and quote_char in ['"', '"']):
+            elif char == quote_char or (char in ['“', '”'] and quote_char in ['“', '”']):
                 in_quote = False
                 quote_char = None
 
@@ -433,11 +433,11 @@ def _split_sentences_with_formatting(text: str) -> List[str]:
             current_sentence.append(char)
 
             # 处理引号状态
-            if char in ['"', '"', ''', ''', '「', '」', '『', '』']:
+            if char in ['“', '”', '‘', '’', '「', '」', '『', '』']:
                 if not in_quote:
                     in_quote = True
                     quote_char = char
-                elif char == quote_char or (char in ['"', '"'] and quote_char in ['"', '"']):
+                elif char == quote_char or (char in ['“', '”'] and quote_char in ['“', '”']):
                     in_quote = False
                     quote_char = None
 
@@ -555,11 +555,11 @@ def _split_sentences_with_formatting_with_lines(text: str) -> List[Tuple[str, in
             current_sentence.append(char)
 
             # 处理引号状态
-            if char in ['"', '"', ''', ''', '「', '」', '『', '』']:
+            if char in ['“', '”', '‘', '’', '「', '」', '『', '』']:
                 if not in_quote:
                     in_quote = True
                     quote_char = char
-                elif char == quote_char or (char in ['"', '"'] and quote_char in ['"', '"']):
+                elif char == quote_char or (char in ['“', '”'] and quote_char in ['“', '”']):
                     in_quote = False
                     quote_char = None
 
@@ -621,14 +621,8 @@ def _get_sentence_end_pos(text: str, pos: int) -> int:
             end_pos += 1
 
         # 然后检查后面是否跟引号、括号等
-        while end_pos < len(text) and text[end_pos] in ['"', '"', ''', ''', '）', ']', '】', '》', '」', '』']:
+        while end_pos < len(text) and text[end_pos] in ['"', '”', "'", '’', '）', ']', '】', '》', '」', '』']:
             end_pos += 1
-
-        # 检查是否是数字后的句号（可能是小数点）
-        if char == '。' and pos > 0:
-            prev_char = text[pos - 1]
-            if prev_char.isdigit() and end_pos < len(text) and text[end_pos].isdigit():
-                return pos  # 不是句子结尾
 
         return end_pos
 
@@ -649,9 +643,14 @@ def _get_sentence_end_pos(text: str, pos: int) -> int:
             if '\u4e00' <= prev_char <= '\u9fff':  # 前一个字符是中文
                 end_pos = pos + 1
                 # 检查后面是否跟引号、括号等
-                while end_pos < len(text) and text[end_pos] in ['"', '"', ''', ''', '）', ']', '】', '》', '」', '』']:
+                while end_pos < len(text) and text[end_pos] in ['"', '”', "'", '’', '）', ']', '】', '》', '」', '』']:
                     end_pos += 1
                 return end_pos
+        # 检查是否是数字后的句号（可能是小数点）
+        if char == '.' and pos > 0:
+            prev_char = text[pos - 1]
+            if prev_char.isdigit() and end_pos < len(text) and text[end_pos].isdigit():
+                return pos  # 不是句子结尾
 
     return pos  # 不是句子结尾
 
@@ -675,7 +674,7 @@ def _get_sentence_end_pos_in_line(line: str, pos: int) -> int:
             end_pos += 1
 
         # 然后检查后面是否跟引号、括号等
-        while end_pos < len(line) and line[end_pos] in ['"', '"', ''', ''', '）', ']', '】', '》', '」', '』']:
+        while end_pos < len(line) and line[end_pos] in ['"', '”', "'", '’', '）', ']', '】', '》', '」', '』']:
             end_pos += 1
 
         # 检查是否是数字后的句号
@@ -700,7 +699,7 @@ def _get_sentence_end_pos_in_line(line: str, pos: int) -> int:
             if '\u4e00' <= prev_char <= '\u9fff':
                 end_pos = pos + 1
                 # 检查后面是否跟引号、括号等
-                while end_pos < len(line) and line[end_pos] in ['"', '"', ''', ''', '）', ']', '】', '》', '」', '』']:
+                while end_pos < len(line) and line[end_pos] in ['"', '”', "'", '’', '）', ']', '】', '》', '」', '』']:
                     end_pos += 1
                 return end_pos
 
@@ -760,7 +759,7 @@ def _ends_with_sentence_punct(text: str) -> bool:
     if not text:
         return False
     # 去除末尾可能的引号、括号等
-    text = text.rstrip('"\'"\'）]】》」』')
+    text = text.rstrip('"\'”’）]】》」』')
     if not text:
         return False
     return text[-1] in ['。', '！', '？', '…', '.', '!', '?']
@@ -780,7 +779,7 @@ def split_chinese_sentences_simple(text: str) -> List[str]:
     """
     # 句子结尾模式：[。！？…]+ 后面可能跟引号、括号等
     # 也考虑英文句号（但需要排除小数点等情况）
-    pattern = r'([。！？…]+["\'"\'）\]】》」』]*)|([.!?]+["\'"\'）\]】》」』]*)'
+    pattern = r'([。！？…]+["\'”’）\]】》」』]*)|([.!?]+["\'”’）\]】》」』]*)'
 
     sentences = []
     last_end = 0
