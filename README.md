@@ -93,19 +93,19 @@ Also includes some experimental tools related to proofreading.
 
 ### 专项检查器 (src/special_checker/)
 - **汉字检查**: `cscc.py` - 通用规范汉字表查询，提示表外字和附录中的繁体字、异体字
-- **智能检查**: `checker.py` - 基于N-gram模型和机器学习的文本错误检测
-- **中文处理**: `chinese.py` - 中文文本处理工具
+- **智能检查**: `checker.py` - 基于N-gram模型和机器学习的文本错误检测（未完成）
+- **中文处理**: `chinese.py` - 中文文本处理常用工具
 - **相似文本匹配**: `match_similar_text.py` - 基于rapidfuzz的相似文本匹配
 
-### 结构检查器 (src/structure_checker/)
+### 结构检查器 (src/structure_checker/)（未完成）
 - **规则驱动检查**: 基于JSON规则文件检查文本的层级结构
 - **标题和编号检查**: 检查标题层级、编号连续性等
 - **树形结构构建**: 构建文本的树形结构并验证
 - **HTML/JSON报告**: 生成可视化的检查报告
 
-### 句子对齐工具 (src/sentence_aligner_*.py)
-- **简单对齐（推荐）**: `sentence_aligner_simple.py` - 基于锚点机制和Jaccard相似度的快速对齐算法，适用于改动不大的文本
-- **两阶段对齐**: `sentence_aligner_two_stage.py` - 结合长度序列LCS和锚点算法的两阶段对齐，适用于改动较大的文本（目前速度较慢且效果略逊）
+### 句子对齐工具
+- **对齐算法**: `sentence_aligner.py` - 基于锚点机制和Jaccard相似度的快速对齐算法，适用于改动不大的文本
+- **对齐两个文件的句子**： `align_sentences_in_two_files.py` - 生成可视化的HTML差异对比结果（逐条比较差异消耗资源因而有些卡顿），以及JSON数据
 
 ### 词典查询 (src/lookup_mdict.py)
 - **MDict支持**: 查询MDict格式词典
@@ -115,18 +115,14 @@ Also includes some experimental tools related to proofreading.
 - **HTML差异**: 生成可视化的HTML差异对比
 - **标题一致性**: 检查校对前后标题结构的一致性
 
-### PDF处理 (src/*.py)
-- **PDF转Markdown**: `clear_pdf_book_txt_to_md.py` - 将PDF文本转换为结构化的Markdown格式，支持目录解析
-- **PyMuPDF转换**: `pymupdf2md.py` - 基于PyMuPDF的PDF转Markdown工具
-- **PDF2MD**: `pdf2md.py` - 另一种PDF转Markdown实现
+### PDF转Markdown格式清理
+- `clear_pdf_book_txt_to_md.py` - 将PDF文本转换为结构化的Markdown格式，支持目录解析
 
 ## TODO
 
 * [x] 句子切分器
-    * [ ] 测试
-* [x] 校对前后的句子对齐
+* [x] 校对前后的句子对齐，生成类似勘误表的结果
     * [x] 简单锚点对齐算法
-    * [x] 两阶段对齐算法
 * [x] 四种常见的文本切分方法
 * [x] 支持参考资料
     * [x] 切分并添加语境

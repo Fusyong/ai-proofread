@@ -2,7 +2,7 @@
 简单快速的句子对齐脚本（基于锚点算法）
 
 用法:
-    python demo/align_sentences_simple.py -a demo/example/a.md -b demo/example/b.md
+    python demo/align_sentences_in_two_files.py -a demo/example/a.md -b demo/example/b.md
 """
 
 from pathlib import Path
@@ -13,7 +13,7 @@ import time
 import html
 from typing import List, Dict
 
-from src.sentence_aligner_simple import (
+from src.sentence_aligner import (
     align_sentences_anchor,
     get_alignment_statistics
 )
@@ -1044,6 +1044,8 @@ def main():
     print(f"  匹配: {stats['match']}")
     print(f"  删除: {stats['delete']}")
     print(f"  新增: {stats['insert']}")
+    print(f"  移出: {stats['moveout']}")
+    print(f"  移入: {stats['movein']}")
 
     # 保存结果
     output_base = args.output
@@ -1052,9 +1054,9 @@ def main():
     print(f"\n保存JSON报告: {json_path}")
     save_json_report(alignment, json_path)
 
-    csv_path = f"{output_base}.csv"
-    print(f"保存CSV摘要: {csv_path}")
-    save_csv_summary(alignment, csv_path)
+    # csv_path = f"{output_base}.csv"
+    # print(f"保存CSV摘要: {csv_path}")
+    # save_csv_summary(alignment, csv_path)
 
     html_path = f"{output_base}.html"
     print(f"保存HTML报告: {html_path}")
