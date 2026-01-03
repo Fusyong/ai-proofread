@@ -216,6 +216,12 @@ def save_html_report(
         .alignment-table tr.match.partial-match {{
             border-left: 4px solid #f39c12;
         }}
+        .alignment-table tr.movein {{
+            border-left: 4px solid #f39c12;
+        }}
+        .alignment-table tr.moveout {{
+            border-left: 4px solid #f39c12;
+        }}
         .alignment-table tr.delete {{
             border-left: 4px solid #e74c3c;
         }}
@@ -393,6 +399,8 @@ def save_html_report(
                 <div class="filter-buttons">
                     <button class="filter-btn active" data-type="all" onclick="filterByType('all')">全部</button>
                     <button class="filter-btn active" data-type="match" onclick="filterByType('match')">MATCH</button>
+                    <button class="filter-btn active" data-type="movein" onclick="filterByType('movein')">MOVEIN</button>
+                    <button class="filter-btn active" data-type="moveout" onclick="filterByType('moveout')">MOVEOUT</button>
                     <button class="filter-btn active" data-type="delete" onclick="filterByType('delete')">DELETE</button>
                     <button class="filter-btn active" data-type="insert" onclick="filterByType('insert')">INSERT</button>
                 </div>
@@ -441,8 +449,8 @@ def save_html_report(
         if similarity_value:
             similarity_text = f'{similarity_value:.2f}'
 
-        # 判断是否需要显示差异（非完全匹配的行）
-        needs_diff = item_type == 'match' and similarity_value < 1.0
+        # 判断是否需要显示差异（非完全匹配的行，包括movein和moveout）
+        needs_diff = (item_type == 'match' and similarity_value < 1.0) or item_type in ['movein', 'moveout']
 
         # 获取文本内容（用于搜索，需要转义HTML特殊字符）
         text_a_raw = item.get('a') or ''
@@ -525,6 +533,8 @@ def save_html_report(
         const typeFilters = {
             'all': true,
             'match': true,
+            'movein': true,
+            'moveout': true,
             'delete': true,
             'insert': true
         };
@@ -538,6 +548,8 @@ def save_html_report(
                 // 全部按钮：切换所有类型
                 const allActive = !typeFilters['all'];
                 typeFilters['match'] = allActive;
+                typeFilters['movein'] = allActive;
+                typeFilters['moveout'] = allActive;
                 typeFilters['delete'] = allActive;
                 typeFilters['insert'] = allActive;
 
@@ -554,7 +566,7 @@ def save_html_report(
                 btn.classList.toggle('active', typeFilters[type]);
 
                 // 更新"全部"按钮状态
-                const allActive = typeFilters['match'] && typeFilters['delete'] && typeFilters['insert'];
+                const allActive = typeFilters['match'] && typeFilters['movein'] && typeFilters['moveout'] && typeFilters['delete'] && typeFilters['insert'];
                 const allBtn = document.querySelector('[data-type="all"]');
                 allBtn.classList.toggle('active', allActive);
                 typeFilters['all'] = allActive;
@@ -621,6 +633,8 @@ def save_html_report(
             // 重置类型筛选
             typeFilters['all'] = true;
             typeFilters['match'] = true;
+            typeFilters['movein'] = true;
+            typeFilters['moveout'] = true;
             typeFilters['delete'] = true;
             typeFilters['insert'] = true;
 
@@ -963,7 +977,7 @@ def main():
     parser.add_argument(
         '--ngram',
         type=int,
-        default=1,
+        default=2,
         help='n-gram大小，默认: 1'
     )
     parser.add_argument(

@@ -320,6 +320,9 @@ def align_sentences_anchor(
         ngram_size
     )
 
+    # 后处理：检测和处理句子移动，创建movein和moveout条目
+    result = detect_and_handle_movements(result)
+
     return result
 
 
@@ -597,6 +600,168 @@ def rematch_delete_insert_sequences(
     return result
 
 
+def detect_and_handle_movements(
+    alignment: List[Dict],
+    movement_threshold: int = 2
+) -> List[Dict]:
+    """
+    检测和处理句子移动，创建movein和moveout条目
+
+    算法：
+    1. 扫描对齐结果，找到移动的match项（a_index和b_index差值超过阈值）
+    2. 对于移动的句子，创建两个条目：
+       - movein：在原位置（按A的顺序），显示原文句子，右侧显示占位
+       - moveout：在新位置（按B的顺序），左侧显示占位，显示校对后句子
+    3. 替换原来的match项
+
+    Args:
+        alignment: 对齐结果
+        movement_threshold: 移动阈值，a_index和b_index差值超过此值认为是移动（默认2）
+
+    Returns:
+        处理后的对齐结果，包含movein和moveout条目
+    """
+    if not alignment:
+        return alignment
+
+    result = []
+    movements = []  # 存储检测到的移动项：[(原match项, movein项, moveout项), ...]
+
+    # 第一步：检测移动的match项
+    for item in alignment:
+        if item['type'] == 'match':
+            # 获取a_index和b_index
+            a_idx = None
+            b_idx = None
+
+            if item.get('a_indices') and len(item['a_indices']) == 1:
+                a_idx = item['a_indices'][0]
+            elif item.get('a_index') is not None:
+                a_idx = item['a_index']
+
+            if item.get('b_indices') and len(item['b_indices']) == 1:
+                b_idx = item['b_indices'][0]
+            elif item.get('b_index') is not None:
+                b_idx = item['b_index']
+
+            # 如果a_idx和b_idx都存在，检查是否移动
+            if a_idx is not None and b_idx is not None:
+                movement_distance = abs(b_idx - a_idx)
+                if movement_distance > movement_threshold:
+                    # 检测到移动，创建movein和moveout条目
+                    # 获取原始相似度值，确保正确传递
+                    original_similarity = item.get('similarity')
+                    # 确保相似度值存在且有效
+                    if original_similarity is None:
+                        original_similarity = 0.0
+                    else:
+                        # 确保是数值类型
+                        original_similarity = float(original_similarity)
+
+                    # moveout：在原位置（a_idx），显示原文和校对后（表示从这里移出）
+                    moveout_item = {
+                        'type': 'moveout',
+                        'a': item['a'],
+                        'b': item['b'],  # 保留对侧句子
+                        'similarity': original_similarity,  # 使用原始相似度
+                        'a_index': a_idx,
+                        'b_index': b_idx,  # 保留b_index用于显示
+                        'original_b_index': b_idx,  # 保存原始b_index用于排序
+                    }
+
+                    # movein：在新位置（b_idx），显示原文和校对后（表示移入到这里）
+                    movein_item = {
+                        'type': 'movein',
+                        'a': item['a'],  # 保留对侧句子
+                        'b': item['b'],
+                        'similarity': original_similarity,  # 使用原始相似度
+                        'a_index': a_idx,  # 保留a_index用于显示
+                        'b_index': b_idx,
+                        'original_a_index': a_idx,  # 保存原始a_index用于排序
+                    }
+
+                    movements.append((item, moveout_item, movein_item))
+
+    # 如果没有检测到移动，直接返回原结果
+    if not movements:
+        return alignment
+
+    # 第二步：构建新的结果列表
+    # 对于移动的match项，替换为movein和moveout
+    # movein保持A的顺序（在原位置），moveout保持B的顺序（在新位置）
+
+    # 创建移动项的映射
+    match_to_movements = {}
+    for original, moveout, movein in movements:
+        match_to_movements[id(original)] = (moveout, movein)
+
+    # 第一遍：处理A的顺序（创建moveout项，在原位置）
+    result_a_order = []
+    for item in alignment:
+        if id(item) in match_to_movements:
+            # 这是移动的match项，替换为moveout（在原位置）
+            moveout, movein = match_to_movements[id(item)]
+            result_a_order.append(moveout)
+        else:
+            result_a_order.append(item)
+
+    # 第二遍：处理B的顺序（插入movein项）
+    # 需要找到每个movein应该插入的位置（按b_index排序）
+    movein_items = []
+    for original, moveout, movein in movements:
+        movein_items.append((movein['b_index'], movein))
+
+    # 按b_index排序movein项
+    movein_items.sort(key=lambda x: x[0])
+
+    # 创建b_index到结果位置的映射
+    b_idx_to_pos = {}
+    for pos, item in enumerate(result_a_order):
+        if item.get('b_indices'):
+            for b_idx in item['b_indices']:
+                b_idx_to_pos[b_idx] = pos
+        elif item.get('b_index') is not None:
+            b_idx_to_pos[item['b_index']] = pos
+
+    # 优化：预先计算所有movein项应该插入的位置
+    # 使用字典存储：位置 -> [movein项列表]
+    insertions = {}  # {position: [movein_items]}
+
+    for b_idx, movein in movein_items:
+        # 找到movein应该插入的位置
+        insert_pos = len(result_a_order)  # 默认插入到末尾
+
+        if b_idx > 0:
+            prev_b_idx = b_idx - 1
+            if prev_b_idx in b_idx_to_pos:
+                insert_pos = b_idx_to_pos[prev_b_idx] + 1
+            else:
+                # 前一句也是新增的，继续往前找（最多查找10次，避免无限循环）
+                for p_idx in range(prev_b_idx, max(-1, prev_b_idx - 10), -1):
+                    if p_idx in b_idx_to_pos:
+                        insert_pos = b_idx_to_pos[p_idx] + 1
+                        break
+
+        # 将movein项添加到对应位置的列表中
+        if insert_pos not in insertions:
+            insertions[insert_pos] = []
+        insertions[insert_pos].append(movein)
+
+    # 优化：一次性构建结果，避免频繁insert
+    # 创建一个包含所有位置的列表，然后填充
+    result = []
+    for pos in range(len(result_a_order) + 1):  # +1 用于处理末尾插入
+        # 先添加当前位置的moveout项（如果有）
+        if pos in insertions:
+            result.extend(insertions[pos])
+
+        # 然后添加原始项（如果不是末尾）
+        if pos < len(result_a_order):
+            result.append(result_a_order[pos])
+
+    return result
+
+
 def merge_delete_into_match(
     alignment: List[Dict],
     ngram_size: int = 2
@@ -772,12 +937,16 @@ def get_alignment_statistics(alignment: List[Dict]) -> Dict:
     stats = {
         'total': len(alignment),
         'match': 0,
+        'movein': 0,
+        'moveout': 0,
         'delete': 0,
         'insert': 0
     }
 
     for item in alignment:
-        stats[item['type']] += 1
+        item_type = item['type']
+        if item_type in stats:
+            stats[item_type] += 1
 
     return stats
 
