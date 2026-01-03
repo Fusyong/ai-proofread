@@ -14,10 +14,107 @@ import html
 from typing import List, Dict
 
 from src.sentence_aligner_simple import (
-    align_texts_anchor,
+    align_sentences_anchor,
     get_alignment_statistics
 )
-from src.splitter import split_chinese_sentences
+from src.splitter import split_chinese_sentences, split_chinese_sentences_with_line_numbers
+
+
+def split_sentences_with_line_numbers(text: str, preserve_formatting: bool = True) -> List[tuple]:
+    """
+    切分句子并跟踪每个句子在原始文本中的行号
+
+    使用 splitter 模块的优化版本，在切分时直接跟踪行号
+
+    Args:
+        text: 要切分的文本
+        preserve_formatting: 是否保留格式
+
+    Returns:
+        List[tuple]: [(sentence, start_line), ...] 列表，start_line是句子开头所在的行号（从1开始）
+        注意：函数返回 (sentence, start_line, end_line)，但这里只使用 start_line
+    """
+    # 直接使用 splitter 模块的优化函数
+    result = split_chinese_sentences_with_line_numbers(text, preserve_formatting)
+    # 只返回 (sentence, start_line)，因为对齐时只需要首行行号
+    return [(sentence, start_line) for sentence, start_line, _ in result]
+
+
+def align_texts_anchor_with_line_numbers(
+    text_a: str,
+    text_b: str,
+    preserve_formatting: bool = True,
+    window_size: int = 10,
+    similarity_threshold: float = 0.6,
+    ngram_size: int = 2,
+    offset: int = 1,
+    max_window_expansion: int = 3,
+    consecutive_fail_threshold: int = 3
+) -> List[Dict]:
+    """
+    对齐两个文本并添加行号信息
+
+    Args:
+        参数与align_texts_anchor相同
+
+    Returns:
+        对齐结果列表，每个元素包含行号信息：
+        - a_line_number: 原文句子所在的行号
+        - b_line_number: 校对后句子所在的行号（如果有）
+        - a_line_numbers: 原文句子所在的行号列表（如果合并了多个句子，取首行）
+        - b_line_numbers: 校对后句子所在的行号列表（如果合并了多个句子，取首行）
+    """
+    # 切分句子并获取行号
+    sentences_a_with_lines = split_sentences_with_line_numbers(text_a, preserve_formatting)
+    sentences_b_with_lines = split_sentences_with_line_numbers(text_b, preserve_formatting)
+
+    # 提取句子列表
+    sentences_a = [s for s, _ in sentences_a_with_lines]
+    sentences_b = [s for s, _ in sentences_b_with_lines]
+
+    # 创建行号映射
+    line_numbers_a = [line_num for _, line_num in sentences_a_with_lines]
+    line_numbers_b = [line_num for _, line_num in sentences_b_with_lines]
+
+    # 对齐句子
+    alignment = align_sentences_anchor(
+        sentences_a,
+        sentences_b,
+        window_size=window_size,
+        similarity_threshold=similarity_threshold,
+        ngram_size=ngram_size,
+        offset=offset,
+        max_window_expansion=max_window_expansion,
+        consecutive_fail_threshold=consecutive_fail_threshold
+    )
+
+    # 为对齐结果添加行号信息
+    for item in alignment:
+        # 处理原文行号
+        if 'a_indices' in item:
+            # 多个句子合并，取首行的行号
+            a_indices = item['a_indices']
+            if a_indices:
+                item['a_line_numbers'] = [line_numbers_a[i] for i in a_indices]
+                item['a_line_number'] = line_numbers_a[a_indices[0]]  # 首行
+        elif 'a_index' in item and item['a_index'] is not None:
+            a_idx = item['a_index']
+            item['a_line_number'] = line_numbers_a[a_idx]
+            item['a_line_numbers'] = [line_numbers_a[a_idx]]
+
+        # 处理校对后行号
+        if 'b_indices' in item:
+            # 多个句子合并，取首行的行号
+            b_indices = item['b_indices']
+            if b_indices:
+                item['b_line_numbers'] = [line_numbers_b[i] for i in b_indices]
+                item['b_line_number'] = line_numbers_b[b_indices[0]]  # 首行
+        elif 'b_index' in item and item['b_index'] is not None:
+            b_idx = item['b_index']
+            item['b_line_number'] = line_numbers_b[b_idx]
+            item['b_line_numbers'] = [line_numbers_b[b_idx]]
+
+    return alignment
 
 
 def save_json_report(alignment: List[Dict], output_path: str):
@@ -321,8 +418,8 @@ def save_html_report(
                     <th class="col-index">序号</th>
                     <th class="col-type">类型</th>
                     <th class="col-similarity">相似度</th>
-                    <th class="col-sentence-a">{title_a}</th>
-                    <th class="col-sentence-b">{title_b}</th>
+                    <th class="col-sentence-a">[句ID, 行ID]{title_a}</th>
+                    <th class="col-sentence-b">[句ID, 行ID]{title_b}</th>
                     <th class="col-action">
                         <button class="compare-btn header-compare-btn" onclick="toggleAllDiffs()" title="从上到下逐一切换差异显示">🔍</button>
                     </th>
@@ -354,7 +451,7 @@ def save_html_report(
         # 构建原文句子
         sentence_a_text = ""
         if item['a']:
-            # 使用a_indices数组，如果有多个索引则显示范围
+            # 获取句子索引
             if item.get('a_indices'):
                 a_indices = item['a_indices']
                 if len(a_indices) == 1:
@@ -367,12 +464,20 @@ def save_html_report(
                     a_idx_str = str(int(a_index) + 1)
                 else:
                     a_idx_str = str(a_index)
-            sentence_a_text = f'<span class="index">[{a_idx_str}]</span><span class="sentence-a">{item["a"]}</span>'
+
+            # 获取行号（如果合并了多个句子，取首行的行号）
+            a_line_num = item.get('a_line_number', '?')
+            if isinstance(a_line_num, (int, float)):
+                a_line_str = str(int(a_line_num))
+            else:
+                a_line_str = str(a_line_num)
+
+            sentence_a_text = f'<span class="index">[{a_idx_str}, {a_line_str}]</span><span class="sentence-a">{item["a"]}</span>'
 
         # 构建校对后句子
         sentence_b_text = ""
         if item['b']:
-            # 使用b_indices数组，如果有多个索引则显示范围
+            # 获取句子索引
             if item.get('b_indices'):
                 b_indices = item['b_indices']
                 if len(b_indices) == 1:
@@ -385,7 +490,15 @@ def save_html_report(
                     b_idx_str = str(int(b_index) + 1)
                 else:
                     b_idx_str = str(b_index)
-            sentence_b_text = f'<span class="index">[{b_idx_str}]</span><span class="sentence-b">{item["b"]}</span>'
+
+            # 获取行号（如果合并了多个句子，取首行的行号）
+            b_line_num = item.get('b_line_number', '?')
+            if isinstance(b_line_num, (int, float)):
+                b_line_str = str(int(b_line_num))
+            else:
+                b_line_str = str(b_line_num)
+
+            sentence_b_text = f'<span class="index">[{b_idx_str}, {b_line_str}]</span><span class="sentence-b">{item["b"]}</span>'
 
         html_lines.append(f"""
             <tr class="{item_type}" data-type="{item_type}" data-similarity="{similarity_value:.4f}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}" data-diff-mode="false">
@@ -787,7 +900,7 @@ def main():
     print(f"  原文句子数: {sentences_a_count}")
     print(f"  校对后句子数: {sentences_b_count}")
 
-    alignment = align_texts_anchor(
+    alignment = align_texts_anchor_with_line_numbers(
         text_a,
         text_b,
         preserve_formatting=not args.no_formatting,
