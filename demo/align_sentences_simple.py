@@ -213,6 +213,9 @@ def save_html_report(
         .alignment-table tr.match {{
             border-left: 4px solid #27ae60;
         }}
+        .alignment-table tr.match.partial-match {{
+            border-left: 4px solid #f39c12;
+        }}
         .alignment-table tr.delete {{
             border-left: 4px solid #e74c3c;
         }}
@@ -374,8 +377,8 @@ def save_html_report(
 </head>
 <body>
     <div class="header">
-        <h1>句子对齐报告（{algorithm_name}）</h1>
-        <p>比较文件 {title_a} 和 {title_b}</p>
+        <h1>句子对齐</h1>
+        <p>对齐文件 {title_a} 和 {title_b}</p>
         <p style="font-size: 13px; margin-top: 10px; opacity: 0.9;">
             相似度算法: {algorithm_name} | 阈值: {threshold:.2f} | N-gram大小: {ngram_size} | 运行时间: {runtime:.2f}秒
         </p>
@@ -384,7 +387,6 @@ def save_html_report(
 
     # 对齐结果
     html_lines.append(f"""    <div class="alignment-results">
-        <h2>对齐结果</h2>
         <div class="filter-controls">
             <div class="filter-group">
                 <label class="filter-label">类型筛选：</label>
@@ -406,7 +408,7 @@ def save_html_report(
             <div class="filter-group">
                 <label class="filter-label">文本搜索：</label>
                 <div class="filter-input-group">
-                    <input type="text" class="filter-search" id="searchText" placeholder="在原文或校对后文本中搜索..." oninput="applyFilters()">
+                    <input type="text" class="filter-search" id="searchText" placeholder="在左右文本中搜索..." oninput="applyFilters()">
                     <button class="filter-reset" onclick="resetFilters()">重置筛选</button>
                 </div>
             </div>
@@ -420,9 +422,6 @@ def save_html_report(
                     <th class="col-similarity">相似度</th>
                     <th class="col-sentence-a">[句ID, 行ID]{title_a}</th>
                     <th class="col-sentence-b">[句ID, 行ID]{title_b}</th>
-                    <th class="col-action">
-                        <button class="compare-btn header-compare-btn" onclick="toggleAllDiffs()" title="从上到下逐一切换差异显示">🔍</button>
-                    </th>
                 </tr>
             </thead>
             <tbody>""")
@@ -441,6 +440,9 @@ def save_html_report(
         similarity_text = ""
         if similarity_value:
             similarity_text = f'{similarity_value:.2f}'
+
+        # 判断是否需要显示差异（非完全匹配的行）
+        needs_diff = item_type == 'match' and similarity_value < 1.0
 
         # 获取文本内容（用于搜索，需要转义HTML特殊字符）
         text_a_raw = item.get('a') or ''
@@ -500,16 +502,17 @@ def save_html_report(
 
             sentence_b_text = f'<span class="index">[{b_idx_str}, {b_line_str}]</span><span class="sentence-b">{item["b"]}</span>'
 
+        # 为需要比较的行添加标记
+        needs_diff_attr = 'data-needs-diff="true"' if needs_diff else ''
+        # 为相似度不足1的match行添加partial-match类（用于显示黄色边框）
+        partial_match_class = ' partial-match' if (item_type == 'match' and similarity_value < 1.0) else ''
         html_lines.append(f"""
-            <tr class="{item_type}" data-type="{item_type}" data-similarity="{similarity_value:.4f}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}" data-diff-mode="false">
+            <tr class="{item_type}{partial_match_class}" data-type="{item_type}" data-similarity="{similarity_value:.4f}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}" data-diff-mode="false" {needs_diff_attr}>
                 <td class="col-index">{idx}</td>
                 <td class="col-type"><span class="item-header">{item_type.upper()}</span></td>
                 <td class="col-similarity"><span class="similarity">{similarity_text}</span></td>
                 <td class="col-sentence-a">{sentence_a_text}</td>
                 <td class="col-sentence-b">{sentence_b_text}</td>
-                <td class="col-action">
-                    <button class="compare-btn" onclick="toggleDiffForRow(this)" title="切换差异显示">🔍</button>
-                </td>
             </tr>""")
 
     html_lines.append("""
@@ -596,6 +599,11 @@ def save_html_report(
 
             // 更新统计信息
             updateFilterStats(visibleCount, rows.length);
+
+            // 筛选后重新初始化渲染队列
+            renderedRows.clear();
+            updateRenderQueue();
+            initialRender();
         }
 
         // 更新筛选统计信息
@@ -631,133 +639,196 @@ def save_html_report(
             applyFilters();
         }
 
-        // 全局差异显示状态
-        let globalDiffMode = false;
-        const BUFFER_SIZE = 50; // 视口上下各缓冲50行
+        // 懒加载渲染配置
+        const RENDER_BATCH_SIZE = 10; // 每批渲染的行数
+        const VIEWPORT_BUFFER = 100; // 视口上下缓冲区（像素）
+        const INITIAL_RENDER_BUFFER = 2000; // 初始渲染缓冲区（像素）
+
+        // 渲染队列和状态
+        let renderQueue = [];
+        let isRendering = false;
+        let renderedRows = new Set();
 
         // 检查元素是否在视口内（带缓冲区）
-        function isInViewportWithBuffer(element) {
+        function isInViewportWithBuffer(element, buffer = VIEWPORT_BUFFER) {
             const rect = element.getBoundingClientRect();
-            const buffer = BUFFER_SIZE * 40; // 假设每行约40px高度
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
             return (
                 rect.top >= -buffer &&
-                rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) + buffer
+                rect.bottom <= viewportHeight + buffer
             );
         }
 
-        // 更新可见区域的差异显示
-        function updateVisibleRowsDiff() {
-            const rows = document.querySelectorAll('.alignment-table tbody tr:not(.hidden)');
-            rows.forEach(row => {
-                if (isInViewportWithBuffer(row)) {
-                    const btn = row.querySelector('.compare-btn');
-                    if (btn) {
-                        const currentDiffMode = row.dataset.diffMode === 'true';
-                        // 如果全局状态与当前状态不一致，则切换
-                        if (globalDiffMode !== currentDiffMode) {
-                            applyDiffToRow(row, globalDiffMode);
-                        }
-                    }
-                }
-            });
+        // 计算行到视口的距离（用于优先级排序）
+        function getDistanceToViewport(row) {
+            const rect = row.getBoundingClientRect();
+            const viewportTop = window.pageYOffset || document.documentElement.scrollTop;
+            const viewportBottom = viewportTop + (window.innerHeight || document.documentElement.clientHeight);
+            const rowTop = viewportTop + rect.top;
+            const rowBottom = viewportTop + rect.bottom;
+
+            if (rowBottom < viewportTop) {
+                return viewportTop - rowBottom; // 在视口上方
+            } else if (rowTop > viewportBottom) {
+                return rowTop - viewportBottom; // 在视口下方
+            } else {
+                return 0; // 在视口内
+            }
         }
 
-        // 应用差异显示到指定行
-        function applyDiffToRow(row, showDiff) {
+        // 更新渲染队列（按优先级排序）
+        function updateRenderQueue() {
+            const allRows = document.querySelectorAll('.alignment-table tbody tr[data-needs-diff="true"]:not(.hidden)');
+            renderQueue = [];
+
+            allRows.forEach(row => {
+                if (!renderedRows.has(row)) {
+                    const distance = getDistanceToViewport(row);
+                    renderQueue.push({ row: row, distance: distance });
+                }
+            });
+
+            // 按距离排序：距离越近优先级越高
+            renderQueue.sort((a, b) => a.distance - b.distance);
+        }
+
+        // 渲染单行的差异显示
+        function renderDiffForRow(row) {
             const textA = row.dataset.textA || '';
             const textB = row.dataset.textB || '';
             const cellA = row.querySelector('.col-sentence-a');
             const cellB = row.querySelector('.col-sentence-b');
-            const btn = row.querySelector('.compare-btn');
 
-            if (!cellA || !cellB) return;
+            if (!cellA || !cellB) return false;
 
-            // 获取索引元素
-            const indexA = cellA.querySelector('.index');
-            const indexB = cellB.querySelector('.index');
-            const indexAHtml = indexA ? indexA.outerHTML : '';
-            const indexBHtml = indexB ? indexB.outerHTML : '';
+            // 保存原始内容（如果还没有保存）
+            if (row._originalA === undefined || row._originalB === undefined) {
+                row._originalA = cellA.innerHTML;
+                row._originalB = cellB.innerHTML;
+            }
 
-            if (showDiff) {
-                // 保存原始内容（如果还没有保存）
-                if (row._originalA === undefined || row._originalB === undefined) {
-                    row._originalA = cellA.innerHTML;
-                    row._originalB = cellB.innerHTML;
+            // 显示差异
+            if (typeof Diff !== 'undefined') {
+                let segmenter = null;
+                if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+                    try {
+                        segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
+                    } catch (e) {
+                        // 如果不支持，使用默认方式
+                    }
                 }
 
-                // 显示差异
-                if (typeof Diff !== 'undefined') {
-                    let segmenter = null;
-                    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-                        try {
-                            segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
-                        } catch (e) {
-                            // 如果不支持，使用默认方式
-                        }
+                const diff = segmenter
+                    ? Diff.diffWordsWithSpace(textA, textB, segmenter)
+                    : Diff.diffWords(textA, textB);
+
+                let originalHtml = '';
+                let modifiedHtml = '';
+
+                diff.forEach(part => {
+                    const escapedValue = escapeHtml(part.value);
+
+                    if (part.removed) {
+                        originalHtml += '<span style="color: red; text-decoration: dotted underline 2px;">' + escapedValue + '</span>';
+                    } else if (!part.added) {
+                        originalHtml += '<span style="color: black;">' + escapedValue + '</span>';
                     }
 
-                    const diff = segmenter
-                        ? Diff.diffWordsWithSpace(textA, textB, segmenter)
-                        : Diff.diffWords(textA, textB);
+                    if (part.added) {
+                        modifiedHtml += '<span style="color: green; text-decoration: underline 2px;">' + escapedValue + '</span>';
+                    } else if (!part.removed) {
+                        modifiedHtml += '<span style="color: black;">' + escapedValue + '</span>';
+                    }
+                });
 
-                    let originalHtml = '';
-                    let modifiedHtml = '';
+                // 获取索引元素
+                const indexA = cellA.querySelector('.index');
+                const indexB = cellB.querySelector('.index');
+                const indexAHtml = indexA ? indexA.outerHTML : '';
+                const indexBHtml = indexB ? indexB.outerHTML : '';
 
-                    diff.forEach(part => {
-                        const escapedValue = escapeHtml(part.value);
-
-                        if (part.removed) {
-                            originalHtml += '<span style="color: red; text-decoration: dotted underline 2px;">' + escapedValue + '</span>';
-                        } else if (!part.added) {
-                            originalHtml += '<span style="color: black;">' + escapedValue + '</span>';
-                        }
-
-                        if (part.added) {
-                            modifiedHtml += '<span style="color: green; text-decoration: underline 2px;">' + escapedValue + '</span>';
-                        } else if (!part.removed) {
-                            modifiedHtml += '<span style="color: black;">' + escapedValue + '</span>';
-                        }
-                    });
-
-                    // 保留索引号码
-                    cellA.innerHTML = indexAHtml + (originalHtml || '');
-                    cellB.innerHTML = indexBHtml + (modifiedHtml || '');
-                } else {
-                    cellA.innerHTML = indexAHtml + escapeHtml(textA);
-                    cellB.innerHTML = indexBHtml + escapeHtml(textB);
-                }
-                row.dataset.diffMode = 'true';
-                if (btn) btn.title = '恢复原始显示';
+                // 保留索引号码
+                cellA.innerHTML = indexAHtml + (originalHtml || '');
+                cellB.innerHTML = indexBHtml + (modifiedHtml || '');
             } else {
-                // 恢复原始显示
-                if (row._originalA !== undefined && row._originalB !== undefined) {
-                    cellA.innerHTML = row._originalA;
-                    cellB.innerHTML = row._originalB;
-                } else {
-                    // 如果原始内容未保存，从data属性重新构建
-                    cellA.innerHTML = indexAHtml + '<span class="sentence-a">' + escapeHtml(textA) + '</span>';
-                    cellB.innerHTML = indexBHtml + '<span class="sentence-b">' + escapeHtml(textB) + '</span>';
+                // 如果jsdiff不可用，显示原始文本
+                const indexA = cellA.querySelector('.index');
+                const indexB = cellB.querySelector('.index');
+                const indexAHtml = indexA ? indexA.outerHTML : '';
+                const indexBHtml = indexB ? indexB.outerHTML : '';
+                cellA.innerHTML = indexAHtml + escapeHtml(textA);
+                cellB.innerHTML = indexBHtml + escapeHtml(textB);
+            }
+
+            row.dataset.diffMode = 'true';
+            return true;
+        }
+
+        // 批量渲染函数
+        function renderBatch() {
+            if (isRendering || renderQueue.length === 0) {
+                return;
+            }
+
+            isRendering = true;
+            let rendered = 0;
+
+            // 优先渲染视口内的行
+            const viewportRows = renderQueue.filter(item =>
+                isInViewportWithBuffer(item.row, VIEWPORT_BUFFER)
+            );
+
+            // 先渲染视口内的行
+            const rowsToRender = viewportRows.length > 0
+                ? viewportRows.slice(0, RENDER_BATCH_SIZE)
+                : renderQueue.slice(0, RENDER_BATCH_SIZE);
+
+            rowsToRender.forEach(item => {
+                if (renderDiffForRow(item.row)) {
+                    renderedRows.add(item.row);
+                    rendered++;
                 }
-                row.dataset.diffMode = 'false';
-                if (btn) btn.title = '切换差异显示';
+            });
+
+            // 从队列中移除已渲染的行
+            renderQueue = renderQueue.filter(item => !renderedRows.has(item.row));
+
+            isRendering = false;
+
+            // 如果还有待渲染的行，继续渲染
+            if (renderQueue.length > 0) {
+                // 使用 requestAnimationFrame 确保不阻塞UI
+                requestAnimationFrame(() => {
+                    setTimeout(renderBatch, 0);
+                });
             }
         }
 
-        // 从上到下切换所有行的差异显示状态（仅标记，实际只更新可见区域）
-        function toggleAllDiffs() {
-            // 切换全局状态
-            globalDiffMode = !globalDiffMode;
+        // 初始渲染：优先渲染视口内的行
+        function initialRender() {
+            updateRenderQueue();
 
-            // 更新可见区域的行
-            updateVisibleRowsDiff();
-        }
+            // 先渲染视口内的行
+            const viewportRows = renderQueue.filter(item =>
+                isInViewportWithBuffer(item.row, INITIAL_RENDER_BUFFER)
+            );
 
-        // 切换差异显示（就地显示）- 单行切换
-        function toggleDiffForRow(btn) {
-            const row = btn.closest('tr');
-            const isDiffMode = row.dataset.diffMode === 'true';
-            // 切换该行的状态（不受全局状态影响）
-            applyDiffToRow(row, !isDiffMode);
+            // 渲染视口内的行
+            viewportRows.forEach(item => {
+                if (renderDiffForRow(item.row)) {
+                    renderedRows.add(item.row);
+                }
+            });
+
+            // 更新队列
+            renderQueue = renderQueue.filter(item => !renderedRows.has(item.row));
+
+            // 继续渲染其余行
+            if (renderQueue.length > 0) {
+                requestAnimationFrame(() => {
+                    setTimeout(renderBatch, 100); // 延迟100ms开始渲染其余行
+                });
+            }
         }
 
         // HTML转义函数
@@ -767,27 +838,67 @@ def save_html_report(
             return div.innerHTML;
         }
 
-        // 滚动监听（使用防抖优化性能）
+        // 滚动监听（使用节流优化性能）
         let scrollTimer = null;
         function handleScroll() {
             if (scrollTimer) {
-                clearTimeout(scrollTimer);
+                return;
             }
+
             scrollTimer = setTimeout(() => {
-                if (globalDiffMode) {
-                    updateVisibleRowsDiff();
-                }
-            }, 100); // 100ms防抖
+                // 更新渲染队列（重新计算优先级）
+                updateRenderQueue();
+
+                // 优先渲染视口内的行
+                renderBatch();
+
+                scrollTimer = null;
+            }, 150); // 150ms节流
+        }
+
+        // 使用 Intersection Observer 监听行进入视口
+        let intersectionObserver = null;
+        function setupIntersectionObserver() {
+            if (!('IntersectionObserver' in window)) {
+                // 如果不支持 Intersection Observer，使用滚动监听
+                return;
+            }
+
+            intersectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const row = entry.target;
+                        if (row.dataset.needsDiff === 'true' && !renderedRows.has(row)) {
+                            // 行进入视口，如果还没渲染，则渲染
+                            updateRenderQueue();
+                            renderBatch();
+                        }
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: `${VIEWPORT_BUFFER}px`,
+                threshold: 0
+            });
+
+            // 观察所有需要渲染的行
+            document.querySelectorAll('.alignment-table tbody tr[data-needs-diff="true"]').forEach(row => {
+                intersectionObserver.observe(row);
+            });
         }
 
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
             applyFilters();
 
-            // 添加滚动监听
-            window.addEventListener('scroll', handleScroll, { passive: true });
+            // 初始渲染
+            initialRender();
 
-            // 添加鼠标移动监听，更新鼠标所在行附近的行
+            // 设置 Intersection Observer
+            setupIntersectionObserver();
+
+            // 添加滚动监听（作为 Intersection Observer 的补充）
+            window.addEventListener('scroll', handleScroll, { passive: true });
             let mouseRow = null;
             document.addEventListener('mouseover', function(e) {
                 const row = e.target.closest('.alignment-table tbody tr');
