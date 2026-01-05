@@ -555,11 +555,11 @@ def _split_sentences_with_formatting_with_lines(text: str) -> List[Tuple[str, in
             current_sentence.append(char)
 
             # 处理引号状态
-            if char in ['“', '”', '‘', '’', '「', '」', '『', '』']:
+            if char in ['"', '"', ''', ''', '「', '」', '『', '』']:
                 if not in_quote:
                     in_quote = True
                     quote_char = char
-                elif char == quote_char or (char in ['“', '”'] and quote_char in ['“', '”']):
+                elif char == quote_char or (char in ['"', '"'] and quote_char in ['"', '"']):
                     in_quote = False
                     quote_char = None
 
@@ -571,21 +571,64 @@ def _split_sentences_with_formatting_with_lines(text: str) -> List[Tuple[str, in
                     for j in range(i + 1, end_pos):
                         if j < len(line):
                             current_sentence.append(line[j])
+
+                    # 检查句号后面的内容
+                    remaining_in_line = line[end_pos:]
+                    remaining_stripped = remaining_in_line.strip()
+
+                    # 判断是否应该切分
+                    should_split = False
+
+                    if not remaining_stripped:
+                        # 句号后面只有空格或换行，应该切分
+                        should_split = True
+                    elif remaining_stripped.startswith(('"', '"', ''', ''', '）', ']', '】', '》', '」', '』')):
+                        # 句号后面紧跟引号/括号，可能是同一句子的延续，不切分
+                        should_split = False
+                    else:
+                        # 句号后面有普通文本，检查是否有空格分隔
+                        # 如果句号后是空格，然后是非引号/括号的文本，应该切分
+                        if remaining_in_line.startswith((' ', '\t')):
+                            # 句号后面是空格，应该切分（新句子开始）
+                            should_split = True
+                        else:
+                            # 句号后面直接跟文本（无空格），可能是同一句子，不切分
+                            should_split = False
+
+                    if should_split:
+                        sentence = ''.join(current_sentence).strip()
+                        if sentence:
+                            sentences.append((sentence, sentence_start_line, current_line_number))
+                        current_sentence = []
+                        i = end_pos
+                        continue
+                    # 如果不切分，继续处理剩余内容
+                    # 将剩余内容添加到current_sentence
+                    for j in range(end_pos, len(line)):
+                        current_sentence.append(line[j])
+                    i = len(line)
+                    break  # 跳出while循环，继续下一行
+
+            i += 1
+
+        # 检查行尾：如果当前行以句号结尾（后面只有空格），且下一行不是空行，应该切分
+        if current_sentence and line_idx < len(lines) - 1:
+            next_line = lines[line_idx + 1]
+
+            # 检查当前行是否以句号结尾（后面只有空格）
+            line_stripped = line.rstrip()
+            if line_stripped and line_stripped[-1] in ['。', '！', '？', '…']:
+                # 当前行以句号结尾，且下一行不是空行，应该切分
+                if next_line.strip() and not _is_markdown_title(next_line) and not _is_list_item(next_line):
                     sentence = ''.join(current_sentence).strip()
                     if sentence:
                         sentences.append((sentence, sentence_start_line, current_line_number))
                     current_sentence = []
-                    i = end_pos
-                    continue
 
-            i += 1
-
-        # 如果当前行以列表项或标题结尾，且下一行是空行或新列表项/标题，则切分
-        if current_sentence and line_idx < len(lines) - 1:
-            next_line = lines[line_idx + 1]
-            if (not next_line.strip() or
-                _is_markdown_title(next_line) or
-                _is_list_item(next_line)):
+            # 如果当前行以列表项或标题结尾，且下一行是空行或新列表项/标题，则切分
+            elif (not next_line.strip() or
+                  _is_markdown_title(next_line) or
+                  _is_list_item(next_line)):
                 sentence = ''.join(current_sentence).strip()
                 if sentence:
                     sentences.append((sentence, sentence_start_line, current_line_number))
