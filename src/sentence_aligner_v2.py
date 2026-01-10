@@ -302,10 +302,8 @@ def align_sentences_exact_match(sentences_a: List[Sentence],
     # 策略：按A侧顺序处理，对于未匹配的A侧句子，插入delete项
     # 对于未匹配的B侧句子，在合适位置插入insert项
 
-    # 先按A侧顺序插入delete项
+    # 先按A侧顺序插入delete项和match项
     result = []
-    a_idx = 0
-    b_idx = 0
 
     # 创建已匹配项的索引映射，用于确定插入位置
     a_to_item = {}  # A侧索引 -> 对齐项
@@ -344,9 +342,7 @@ def align_sentences_exact_match(sentences_a: List[Sentence],
             result.append(delete_item)
 
     # 处理B侧未匹配的句子，插入到合适位置
-    # 策略：在B侧已匹配项之后插入对应的insert项
-    # 需要找到每个B侧未匹配句子应该插入的位置
-
+    # 策略：找到b_idx前后最近的已匹配B侧句子，插入到它们之间
     # 创建B侧索引到结果位置的映射
     b_idx_to_result_pos = {}
     for pos, item in enumerate(result):
@@ -354,51 +350,38 @@ def align_sentences_exact_match(sentences_a: List[Sentence],
             for b_idx in item.b_indices:
                 b_idx_to_result_pos[b_idx] = pos
 
-    # 按B侧顺序处理未匹配的句子
-    # 策略：按B侧索引顺序，逐个插入到正确位置
-    # 对于每个未匹配的B侧句子，应该插入到前一个B侧句子（无论是否匹配）之后
-
-    # 首先，为所有B侧句子（包括已匹配的）建立索引到结果位置的映射
-    # 这个映射会在插入过程中动态更新
-    b_idx_to_result_pos = {}
-    for pos, item in enumerate(result):
-        if item.b_indices:
-            for b_idx in item.b_indices:
-                b_idx_to_result_pos[b_idx] = pos
-
-    # 按B侧索引顺序处理未匹配的句子
+    # 按B侧顺序处理未匹配的句子，立即插入到正确位置
     for b_idx in range(len(sentences_b)):
         if b_idx in b_used:
-            continue  # 已匹配，跳过
+            continue
 
-        # 找到插入位置：在前一个B侧句子之后
+        # 找到插入位置：在b_idx前后最近的已匹配B侧句子之间
         insert_pos = len(result)  # 默认插入到末尾
 
-        if b_idx > 0:
-            # 查找前一个B侧句子（b_idx-1）在结果中的位置
-            prev_b_idx = b_idx - 1
+        # 查找前面最近的已匹配B侧句子
+        prev_matched_pos = -1
+        for p_idx in range(b_idx - 1, -1, -1):
+            if p_idx in b_idx_to_result_pos:
+                prev_matched_pos = b_idx_to_result_pos[p_idx]
+                break
 
-            # 如果前一个B侧句子已匹配，直接使用它的位置
-            if prev_b_idx in b_idx_to_result_pos:
-                insert_pos = b_idx_to_result_pos[prev_b_idx] + 1
-            else:
-                # 前一个B侧句子也是未匹配的，应该已经插入到结果中了
-                # 需要找到它在结果中的位置
-                # 由于我们按顺序处理，前一个未匹配的句子应该已经在结果中
-                # 查找结果中最后一个b_indices包含prev_b_idx的项
-                for pos in range(len(result) - 1, -1, -1):
-                    item = result[pos]
-                    if item.b_indices and prev_b_idx in item.b_indices:
-                        insert_pos = pos + 1
-                        break
-                else:
-                    # 如果找不到，继续往前找已匹配的B侧句子
-                    for p_idx in range(prev_b_idx - 1, max(-1, prev_b_idx - 20), -1):
-                        if p_idx in b_idx_to_result_pos:
-                            insert_pos = b_idx_to_result_pos[p_idx] + 1
-                            break
+        # 查找后面最近的已匹配B侧句子
+        next_matched_pos = len(result)
+        for n_idx in range(b_idx + 1, len(sentences_b)):
+            if n_idx in b_idx_to_result_pos:
+                next_matched_pos = b_idx_to_result_pos[n_idx]
+                break
 
-        # 创建insert项
+        # 确定插入位置
+        if prev_matched_pos >= 0:
+            # 前面有已匹配的，插入到它之后
+            insert_pos = prev_matched_pos + 1
+        elif next_matched_pos < len(result):
+            # 前面没有已匹配的，但后面有，插入到它之前
+            insert_pos = next_matched_pos
+        # 否则 insert_pos = len(result)，插入到末尾
+
+        # 创建insert项并立即插入
         insert_item = AlignmentItem(
             type=AlignmentType.INSERT,
             a=None,
@@ -411,19 +394,14 @@ def align_sentences_exact_match(sentences_a: List[Sentence],
             offset=None
         )
 
-        # 立即插入到结果中
         result.insert(insert_pos, insert_item)
 
-        # 更新映射：所有在insert_pos之后的项的位置都需要+1
-        # 同时更新b_idx_to_result_pos
-        for pos in range(insert_pos + 1, len(result)):
-            item = result[pos]
-            if item.b_indices:
-                for idx in item.b_indices:
-                    if idx in b_idx_to_result_pos:
-                        b_idx_to_result_pos[idx] += 1
-
-        # 更新当前插入项的映射
+        # 更新b_idx_to_result_pos映射（插入后，后面的位置都+1了）
+        # 需要更新所有位置 >= insert_pos 的映射
+        for key in list(b_idx_to_result_pos.keys()):
+            if b_idx_to_result_pos[key] >= insert_pos:
+                b_idx_to_result_pos[key] += 1
+        # 添加当前插入的项
         b_idx_to_result_pos[b_idx] = insert_pos
 
     return result

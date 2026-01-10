@@ -563,8 +563,9 @@ def _split_sentences_with_formatting_with_lines(text: str) -> List[Tuple[str, in
                     in_quote = False
                     quote_char = None
 
-            # 检查是否是句子结尾（不在引号内）
-            if not in_quote:
+            # 检查是否是句子结尾（引号内的句号也要切分，因为引号内可能包含多个句子）
+            # 注意：即使引号内，如果遇到句号，也应该切分
+            if True:  # 移除引号检查，允许引号内的句号也触发切分
                 end_pos = _get_sentence_end_pos_in_line(line, i)
                 if end_pos > i:
                     # 收集从当前位置+1到句子结尾的所有字符（当前位置已添加）
