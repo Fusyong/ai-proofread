@@ -99,51 +99,76 @@ def main():
         for sent in sentences_b:
             writer.writerow([sent.index, sent.line_number, sent.text])
 
-    # 对齐句子（目前只实现阶段一：全等匹配）
-    print("正在进行句子对齐（阶段一：全等匹配）...")
-    alignment = align_texts_dual_chain(
+    # 对齐句子（获取每个阶段的中间结果）
+    print("正在进行句子对齐...")
+    print("  阶段1: 全等匹配...")
+    alignment_final, alignment_stage1, alignment_stage2 = align_texts_dual_chain(
         text_a,
         text_b,
         preserve_formatting=not args.no_formatting,
         similarity_threshold=args.threshold,
-        ngram_size=args.ngram
+        ngram_size=args.ngram,
+        return_stages=True
     )
 
-    # 统计信息
-    stats = get_alignment_statistics_v2(alignment)
-    print("\n对齐完成！统计信息:")
-    print(f"  总计: {stats['total']}")
-    print(f"  匹配: {stats['match']}")
-    print(f"  删除: {stats['delete']}")
-    print(f"  新增: {stats['insert']}")
-
-    if stats['total'] > 0:
-        match_rate = stats['match'] / stats['total'] * 100
-        print(f"  匹配率: {match_rate:.2f}%")
-
-    # 保存结果
-    output_base = args.output
-
-    json_path = f"{output_base}.json"
-    print(f"\n保存JSON报告: {json_path}")
-    with open(json_path, 'w', encoding='utf-8') as f:
-        json.dump(alignment, f, ensure_ascii=False, indent=2)
-
-    html_path = f"{output_base}.html"
-    print(f"保存HTML报告: {html_path}")
     title_a = Path(args.text_a).name
     title_b = Path(args.text_b).name
+    output_base = args.output
 
-    # 计算运行时间
+    # 保存每个阶段的JSON和HTML
+    stages = [
+        ("stage1_exact_match", "阶段1: 全等匹配", alignment_stage1),
+        ("stage2_similarity", "阶段2: 相似度匹配", alignment_stage2),
+        ("final", "最终结果", alignment_final)
+    ]
+
+    for stage_key, stage_name, alignment in stages:
+        # 统计信息
+        stats = get_alignment_statistics_v2(alignment)
+        print(f"\n{stage_name} - 统计信息:")
+        print(f"  总计: {stats['total']}")
+        print(f"  匹配: {stats['match']}")
+        print(f"  删除: {stats['delete']}")
+        print(f"  新增: {stats['insert']}")
+        if stats['total'] > 0:
+            match_rate = stats['match'] / stats['total'] * 100
+            print(f"  匹配率: {match_rate:.2f}%")
+
+        # 保存JSON
+        json_path = f"{output_base}_{stage_key}.json"
+        print(f"  保存JSON: {json_path}")
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(alignment, f, ensure_ascii=False, indent=2)
+
+        # 保存HTML
+        html_path = f"{output_base}_{stage_key}.html"
+        print(f"  保存HTML: {html_path}")
+        runtime = time.time() - start_time
+        save_html_report_stage1(
+            alignment,
+            html_path,
+            title_a,
+            title_b,
+            runtime=runtime,
+            stats=stats
+        )
+
+    # 也保存一个最终结果的简化文件名（向后兼容）
+    json_path_final = f"{output_base}.json"
+    print(f"\n保存最终结果JSON: {json_path_final}")
+    with open(json_path_final, 'w', encoding='utf-8') as f:
+        json.dump(alignment_final, f, ensure_ascii=False, indent=2)
+
+    html_path_final = f"{output_base}.html"
+    print(f"保存最终结果HTML: {html_path_final}")
     runtime = time.time() - start_time
-
     save_html_report_stage1(
-        alignment,
-        html_path,
+        alignment_final,
+        html_path_final,
         title_a,
         title_b,
         runtime=runtime,
-        stats=stats
+        stats=get_alignment_statistics_v2(alignment_final)
     )
 
     print(f"\n所有报告已保存到: {output_base}.*")

@@ -355,26 +355,48 @@ def align_sentences_exact_match(sentences_a: List[Sentence],
                 b_idx_to_result_pos[b_idx] = pos
 
     # 按B侧顺序处理未匹配的句子
-    insert_items = []  # [(插入位置, item), ...]
+    # 策略：按B侧索引顺序，逐个插入到正确位置
+    # 对于每个未匹配的B侧句子，应该插入到前一个B侧句子（无论是否匹配）之后
 
+    # 首先，为所有B侧句子（包括已匹配的）建立索引到结果位置的映射
+    # 这个映射会在插入过程中动态更新
+    b_idx_to_result_pos = {}
+    for pos, item in enumerate(result):
+        if item.b_indices:
+            for b_idx in item.b_indices:
+                b_idx_to_result_pos[b_idx] = pos
+
+    # 按B侧索引顺序处理未匹配的句子
     for b_idx in range(len(sentences_b)):
         if b_idx in b_used:
-            continue
+            continue  # 已匹配，跳过
 
-        # 找到插入位置：在b_idx-1之后
+        # 找到插入位置：在前一个B侧句子之后
         insert_pos = len(result)  # 默认插入到末尾
 
         if b_idx > 0:
-            # 查找前一个B侧句子在结果中的位置
+            # 查找前一个B侧句子（b_idx-1）在结果中的位置
             prev_b_idx = b_idx - 1
+
+            # 如果前一个B侧句子已匹配，直接使用它的位置
             if prev_b_idx in b_idx_to_result_pos:
                 insert_pos = b_idx_to_result_pos[prev_b_idx] + 1
             else:
-                # 前一句也是未匹配的，继续往前找（最多查找10次，避免无限循环）
-                for p_idx in range(prev_b_idx, max(-1, prev_b_idx - 10), -1):
-                    if p_idx in b_idx_to_result_pos:
-                        insert_pos = b_idx_to_result_pos[p_idx] + 1
+                # 前一个B侧句子也是未匹配的，应该已经插入到结果中了
+                # 需要找到它在结果中的位置
+                # 由于我们按顺序处理，前一个未匹配的句子应该已经在结果中
+                # 查找结果中最后一个b_indices包含prev_b_idx的项
+                for pos in range(len(result) - 1, -1, -1):
+                    item = result[pos]
+                    if item.b_indices and prev_b_idx in item.b_indices:
+                        insert_pos = pos + 1
                         break
+                else:
+                    # 如果找不到，继续往前找已匹配的B侧句子
+                    for p_idx in range(prev_b_idx - 1, max(-1, prev_b_idx - 20), -1):
+                        if p_idx in b_idx_to_result_pos:
+                            insert_pos = b_idx_to_result_pos[p_idx] + 1
+                            break
 
         # 创建insert项
         insert_item = AlignmentItem(
@@ -389,16 +411,20 @@ def align_sentences_exact_match(sentences_a: List[Sentence],
             offset=None
         )
 
-        insert_items.append((insert_pos, b_idx, insert_item))  # 添加b_idx用于排序
-
-    # 按插入位置排序（从后往前插入，避免位置变化）
-    # 对于相同插入位置的项，按B侧索引降序排序
-    # 这样从后往前插入时，先插入索引大的，后插入索引小的，最终顺序是升序的
-    insert_items.sort(key=lambda x: (x[0], x[1]), reverse=True)  # 位置降序，b_idx降序
-
-    # 插入insert项（从后往前插入，避免位置偏移）
-    for insert_pos, b_idx, insert_item in insert_items:
+        # 立即插入到结果中
         result.insert(insert_pos, insert_item)
+
+        # 更新映射：所有在insert_pos之后的项的位置都需要+1
+        # 同时更新b_idx_to_result_pos
+        for pos in range(insert_pos + 1, len(result)):
+            item = result[pos]
+            if item.b_indices:
+                for idx in item.b_indices:
+                    if idx in b_idx_to_result_pos:
+                        b_idx_to_result_pos[idx] += 1
+
+        # 更新当前插入项的映射
+        b_idx_to_result_pos[b_idx] = insert_pos
 
     return result
 
@@ -681,7 +707,8 @@ def align_sentences_dual_chain(
     sentences_a: List[Sentence],
     sentences_b: List[Sentence],
     similarity_threshold: float = 0.6,
-    ngram_size: int = 2
+    ngram_size: int = 2,
+    return_stages: bool = False
 ) -> List[AlignmentItem]:
     """
     主对齐函数：使用双链结构对齐句子
@@ -691,27 +718,30 @@ def align_sentences_dual_chain(
         sentences_b: 校对后句子列表
         similarity_threshold: 相似度阈值
         ngram_size: n-gram大小
+        return_stages: 是否返回每个阶段的中间结果
 
     Returns:
-        对齐结果列表
+        对齐结果列表，如果return_stages=True，返回(最终结果, 阶段1结果, 阶段2结果)
     """
     # 阶段一：全等匹配
-    alignment = align_sentences_exact_match(sentences_a, sentences_b)
+    alignment_stage1 = align_sentences_exact_match(sentences_a, sentences_b)
 
     # 阶段二：相似度匹配
-    alignment = align_sentences_similarity(
-        sentences_a, sentences_b, alignment,
+    alignment_stage2 = align_sentences_similarity(
+        sentences_a, sentences_b, alignment_stage1,
         similarity_threshold, ngram_size
     )
 
     # 验证双链
-    is_valid, errors = validate_dual_chain(alignment, sentences_a, sentences_b)
+    is_valid, errors = validate_dual_chain(alignment_stage2, sentences_a, sentences_b)
     if not is_valid:
         print("警告：双链验证失败：")
         for error in errors:
             print(f"  - {error}")
 
-    return alignment
+    if return_stages:
+        return alignment_stage2, alignment_stage1, alignment_stage2
+    return alignment_stage2
 
 
 def align_texts_dual_chain(
@@ -719,7 +749,8 @@ def align_texts_dual_chain(
     text_b: str,
     preserve_formatting: bool = True,
     similarity_threshold: float = 0.6,
-    ngram_size: int = 2
+    ngram_size: int = 2,
+    return_stages: bool = False
 ) -> List[Dict]:
     """
     对齐两个完整文本（使用双链算法）
@@ -730,20 +761,30 @@ def align_texts_dual_chain(
         preserve_formatting: 是否保留格式
         similarity_threshold: 相似度阈值
         ngram_size: n-gram大小
+        return_stages: 是否返回每个阶段的中间结果
 
     Returns:
-        对齐结果列表（字典格式）
+        对齐结果列表（字典格式），如果return_stages=True，返回(最终结果, 阶段1结果, 阶段2结果)
     """
     # 准备句子
     sentences_a = prepare_sentences(text_a, preserve_formatting)
     sentences_b = prepare_sentences(text_b, preserve_formatting)
 
     # 对齐
-    alignment = align_sentences_dual_chain(
+    result = align_sentences_dual_chain(
         sentences_a, sentences_b,
-        similarity_threshold, ngram_size
+        similarity_threshold, ngram_size,
+        return_stages=return_stages
     )
 
+    if return_stages:
+        alignment_final, alignment_stage1, alignment_stage2 = result
+        return (
+            [item.to_dict() for item in alignment_final],
+            [item.to_dict() for item in alignment_stage1],
+            [item.to_dict() for item in alignment_stage2]
+        )
+
     # 转换为字典格式
-    return [item.to_dict() for item in alignment]
+    return [item.to_dict() for item in result]
 

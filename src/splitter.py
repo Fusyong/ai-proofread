@@ -573,6 +573,8 @@ def _split_sentences_with_formatting_with_lines(text: str) -> List[Tuple[str, in
                             current_sentence.append(line[j])
 
                     # 检查句号后面的内容
+                    # 注意：_get_sentence_end_pos_in_line已经跳过了句号后的引号/括号
+                    # 所以remaining_in_line不会包含这些引号/括号
                     remaining_in_line = line[end_pos:]
                     remaining_stripped = remaining_in_line.strip()
 
@@ -582,18 +584,26 @@ def _split_sentences_with_formatting_with_lines(text: str) -> List[Tuple[str, in
                     if not remaining_stripped:
                         # 句号后面只有空格或换行，应该切分
                         should_split = True
-                    elif remaining_stripped.startswith(('"', '"', ''', ''', '）', ']', '】', '》', '」', '』')):
-                        # 句号后面紧跟引号/括号，可能是同一句子的延续，不切分
-                        should_split = False
                     else:
-                        # 句号后面有普通文本，检查是否有空格分隔
-                        # 如果句号后是空格，然后是非引号/括号的文本，应该切分
+                        # 句号后面有文本
+                        # 检查句号后是否有空格，或者后面是否是新句子（中文、大写字母等）
                         if remaining_in_line.startswith((' ', '\t')):
                             # 句号后面是空格，应该切分（新句子开始）
                             should_split = True
                         else:
-                            # 句号后面直接跟文本（无空格），可能是同一句子，不切分
-                            should_split = False
+                            # 句号后面直接跟文本（无空格，且_get_sentence_end_pos_in_line已跳过引号）
+                            # 检查是否可能是新句子：中文、大写字母、数字等
+                            first_char = remaining_stripped[0] if remaining_stripped else ''
+                            # 如果是中文、大写字母、数字，可能是新句子，应该切分
+                            if (first_char and (
+                                '\u4e00' <= first_char <= '\u9fff' or  # 中文
+                                first_char.isupper() or  # 大写字母
+                                first_char.isdigit()  # 数字
+                            )):
+                                should_split = True
+                            else:
+                                # 其他情况（小写字母等），可能是同一句子，不切分
+                                should_split = False
 
                     if should_split:
                         sentence = ''.join(current_sentence).strip()
