@@ -2,7 +2,7 @@
 简单快速的句子对齐脚本（基于锚点算法）
 
 用法:
-    python demo/align_sentences_in_two_files.py -a demo/example/a.md -b demo/example/b.md
+    python demo/align_sentences.py -a demo/example/a.md -b demo/example/b.md
 """
 
 from pathlib import Path

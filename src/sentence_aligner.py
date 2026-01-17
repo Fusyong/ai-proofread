@@ -1092,7 +1092,14 @@ def merge_delete_into_match(
                         # 更新索引数组
                         delete_a_indices = current_item.get('a_indices', [])
                         if delete_a_indices:
+                            if 'a_indices' not in result[-1]:
+                                result[-1]['a_indices'] = []
                             result[-1]['a_indices'].extend(delete_a_indices)
+                        elif current_item.get('a_index') is not None:
+                            # 如果a_indices不存在，但a_index存在，也处理a_index
+                            if 'a_indices' not in result[-1]:
+                                result[-1]['a_indices'] = []
+                            result[-1]['a_indices'].append(current_item['a_index'])
                     # 跳过当前DELETE
                     i += 1
                     continue
@@ -1104,7 +1111,14 @@ def merge_delete_into_match(
                     # 更新索引数组
                     delete_a_indices = current_item.get('a_indices', [])
                     if delete_a_indices:
+                        if 'a_indices' not in next_item:
+                            next_item['a_indices'] = []
                         next_item['a_indices'] = delete_a_indices + next_item.get('a_indices', [])
+                    elif current_item.get('a_index') is not None:
+                        # 如果a_indices不存在，但a_index存在，也处理a_index
+                        if 'a_indices' not in next_item:
+                            next_item['a_indices'] = []
+                        next_item['a_indices'] = [current_item['a_index']] + next_item.get('a_indices', [])
                     # 跳过当前DELETE
                     i += 1
                     continue
