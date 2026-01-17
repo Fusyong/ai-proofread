@@ -4,7 +4,7 @@
 这个示例展示了如何在对齐过程中获取各个阶段的中间结果并输出HTML。
 
 用法:
-    python demo/align_sentences_all_stages_example.py -a demo/example/a.md -b demo/example/b.md
+    python demo/align_sentences_all_stages_example.py -a demo/example/a.md -b demo/example/b.md --threshold 0.6
 """
 
 import sys
@@ -222,7 +222,7 @@ def main():
     parser.add_argument(
         '--threshold',
         type=float,
-        default=0.5,
+        default=0.6,
         help='相似度阈值（0-1），默认: 0.6'
     )
     parser.add_argument(
