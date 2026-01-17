@@ -1020,8 +1020,10 @@ def main():
 
     # 对齐句子
     print("正在对齐句子（锚点算法）...")
-    sentences_a_count = len([s for s in split_chinese_sentences(text_a, not args.no_formatting) if s.strip()])
-    sentences_b_count = len([s for s in split_chinese_sentences(text_b, not args.no_formatting) if s.strip()])
+    sentences_a = [s for s in split_chinese_sentences(text_a) if s.strip()]
+    sentences_b = [s for s in split_chinese_sentences(text_b) if s.strip()]
+    sentences_a_count = len(sentences_a)
+    sentences_b_count = len(sentences_b)
     print(f"  原文句子数: {sentences_a_count}")
     print(f"  校对后句子数: {sentences_b_count}")
 

@@ -89,7 +89,7 @@ def example_5_special_cases():
 列表项没有标点
 但这也是一个句子。"""
 
-    sentences = split_chinese_sentences(text, preserve_formatting=True)
+    sentences = split_chinese_sentences(text)
 
     for i, s in enumerate(sentences, 1):
         print(f"{i}. {s}")

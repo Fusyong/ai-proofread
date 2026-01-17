@@ -6,8 +6,9 @@
 """
 
 import re
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Optional
 from src.splitter import split_chinese_sentences
+from src.html_report_v2 import save_html_report_stage1
 
 
 def get_ngrams(text: str, n: int = 2) -> Set[str]:
@@ -308,10 +309,18 @@ def align_sentences_anchor(
     # - 新增按B的原始顺序插入到合适位置
 
     # 后处理：在相邻的DELETE和INSERT序列之间尝试重新匹配
-    result = rematch_delete_insert_sequences(
+    result = rematch_adjacent_delete_insert(
         result,
         similarity_threshold,
         ngram_size
+    )
+
+    # 后处理：在一定的序号上下范围内处理不相邻的DELETE和INSERT
+    result = rematch_non_adjacent_delete_insert(
+        result,
+        similarity_threshold,
+        ngram_size,
+        index_range=window_size  # 使用窗口大小作为索引范围
     )
 
     # 后处理：将单独的DELETE项合并到相邻的MATCH组中
@@ -402,10 +411,13 @@ def _generate_merged_candidates(items: List[Dict], text_key: str, merge: bool = 
     return candidates
 
 
-def rematch_delete_insert_sequences(
+def rematch_adjacent_delete_insert(
     alignment: List[Dict],
     similarity_threshold: float = 0.6,
-    ngram_size: int = 2
+    ngram_size: int = 2,
+    html_output_path: Optional[str] = None,
+    title_a: str = "原文",
+    title_b: str = "校对后"
 ) -> List[Dict]:
     """
     后处理：在相邻的DELETE和INSERT序列之间尝试重新匹配
@@ -419,6 +431,9 @@ def rematch_delete_insert_sequences(
         alignment: 初始对齐结果
         similarity_threshold: 相似度阈值
         ngram_size: n-gram大小
+        html_output_path: 可选的HTML输出路径，如果提供则生成HTML报告
+        title_a: 原文标题（用于HTML报告）
+        title_b: 校对后标题（用于HTML报告）
 
     Returns:
         优化后的对齐结果
@@ -596,6 +611,195 @@ def rematch_delete_insert_sequences(
             # 其他类型的项（MATCH等），直接添加
             result.append(current_item)
             i += 1
+
+    # 如果提供了HTML输出路径，生成HTML报告
+    if html_output_path:
+        stats = get_alignment_statistics(result)
+        save_html_report_stage1(
+            result,
+            html_output_path,
+            title_a=title_a,
+            title_b=title_b,
+            runtime=0.0,
+            stats=stats
+        )
+
+    return result
+
+
+def rematch_non_adjacent_delete_insert(
+    alignment: List[Dict],
+    similarity_threshold: float = 0.6,
+    ngram_size: int = 2,
+    index_range: int = 10,
+    html_output_path: Optional[str] = None,
+    title_a: str = "原文",
+    title_b: str = "校对后"
+) -> List[Dict]:
+    """
+    后处理：在一定的序号上下范围内处理不相邻的DELETE和INSERT
+
+    算法：
+    1. 收集所有的DELETE和INSERT项，记录它们的原始索引（a_index和b_index）
+    2. 对于每个DELETE，在一定的索引范围内查找INSERT
+       - 基于a_index和b_index的差值来判断是否在范围内
+       - 或者基于在结果列表中的位置范围
+    3. 尝试匹配，如果找到相似度足够高的匹配，将它们合并为MATCH
+    4. 避免重复匹配（每个DELETE和INSERT最多匹配一次）
+
+    Args:
+        alignment: 对齐结果（已经过相邻匹配处理）
+        similarity_threshold: 相似度阈值
+        ngram_size: n-gram大小
+        index_range: 序号范围，用于判断DELETE和INSERT是否在合理范围内（默认10）
+        html_output_path: 可选的HTML输出路径，如果提供则生成HTML报告
+        title_a: 原文标题（用于HTML报告）
+        title_b: 校对后标题（用于HTML报告）
+
+    Returns:
+        优化后的对齐结果
+    """
+    if not alignment:
+        return alignment
+
+    # 第一步：收集所有的DELETE和INSERT项，记录它们在结果中的位置和原始索引
+    delete_items = []  # [(position, item, a_index), ...]
+    insert_items = []  # [(position, item, b_index), ...]
+
+    for pos, item in enumerate(alignment):
+        if item['type'] == 'delete':
+            # 获取a_index
+            a_idx = None
+            if item.get('a_indices') and len(item['a_indices']) == 1:
+                a_idx = item['a_indices'][0]
+            elif item.get('a_index') is not None:
+                a_idx = item['a_index']
+
+            if a_idx is not None:
+                delete_items.append((pos, item, a_idx))
+
+        elif item['type'] == 'insert':
+            # 获取b_index
+            b_idx = None
+            if item.get('b_indices') and len(item['b_indices']) == 1:
+                b_idx = item['b_indices'][0]
+            elif item.get('b_index') is not None:
+                b_idx = item['b_index']
+
+            if b_idx is not None:
+                insert_items.append((pos, item, b_idx))
+
+    if not delete_items or not insert_items:
+        # 没有DELETE或INSERT，直接返回
+        return alignment
+
+    # 第二步：尝试匹配不相邻的DELETE和INSERT
+    # 对于每个DELETE，在一定的范围内查找INSERT
+    matched_pairs = []  # [(delete_pos, insert_pos, similarity), ...]
+    delete_matched = set()  # 已匹配的DELETE位置
+    insert_matched = set()  # 已匹配的INSERT位置
+
+    # 按a_index排序DELETE项，按b_index排序INSERT项
+    delete_items_sorted = sorted(delete_items, key=lambda x: x[2])  # 按a_index排序
+    insert_items_sorted = sorted(insert_items, key=lambda x: x[2])  # 按b_index排序
+
+    for d_pos, d_item, d_a_idx in delete_items_sorted:
+        if d_pos in delete_matched:
+            continue
+
+        best_insert = None
+        best_similarity = 0.0
+        best_insert_pos = None
+
+        # 在INSERT项中查找匹配
+        for ins_pos, ins_item, ins_b_idx in insert_items_sorted:
+            if ins_pos in insert_matched:
+                continue
+
+            # 判断是否在合理范围内
+            # 方法1：基于原始索引的差值（如果a_index和b_index接近，说明可能是同一内容）
+            index_diff = abs(d_a_idx - ins_b_idx)
+
+            # 方法2：基于在结果列表中的位置差值
+            position_diff = abs(d_pos - ins_pos)
+
+            # 如果索引差值或位置差值在范围内，尝试匹配
+            if index_diff <= index_range or position_diff <= index_range:
+                # 计算相似度
+                if d_item.get('a') and ins_item.get('b'):
+                    sent_a = normalize_sentence(d_item['a'])
+                    sent_b = normalize_sentence(ins_item['b'])
+                    similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
+
+                    if similarity > best_similarity and similarity >= similarity_threshold:
+                        best_similarity = similarity
+                        best_insert = ins_item
+                        best_insert_pos = ins_pos
+
+        # 如果找到匹配，记录
+        if best_insert is not None:
+            matched_pairs.append((d_pos, best_insert_pos, best_similarity))
+            delete_matched.add(d_pos)
+            insert_matched.add(best_insert_pos)
+
+    # 如果没有找到匹配，直接返回原结果
+    if not matched_pairs:
+        return alignment
+
+    # 第三步：构建新的结果列表，将匹配的DELETE和INSERT替换为MATCH
+    result = []
+    delete_matched_positions = {d_pos for d_pos, _, _ in matched_pairs}
+    insert_matched_positions = {ins_pos for _, ins_pos, _ in matched_pairs}
+    match_items_by_delete_pos = {}  # {delete_pos: match_item}
+
+    # 创建匹配项
+    for d_pos, ins_pos, sim in matched_pairs:
+        d_item = alignment[d_pos]
+        ins_item = alignment[ins_pos]
+
+        # 收集索引
+        a_indices = d_item.get('a_indices', [])
+        if not a_indices and d_item.get('a_index') is not None:
+            a_indices = [d_item['a_index']]
+
+        b_indices = ins_item.get('b_indices', [])
+        if not b_indices and ins_item.get('b_index') is not None:
+            b_indices = [ins_item['b_index']]
+
+        match_item = {
+            'type': 'match',
+            'a': d_item['a'],
+            'b': ins_item['b'],
+            'similarity': sim,
+            'a_indices': a_indices,
+            'b_indices': b_indices
+        }
+        match_items_by_delete_pos[d_pos] = match_item
+
+    # 构建结果：按照原始顺序，将匹配的项替换为MATCH
+    for pos, item in enumerate(alignment):
+        if pos in delete_matched_positions:
+            # DELETE已匹配，添加MATCH项
+            if pos in match_items_by_delete_pos:
+                result.append(match_items_by_delete_pos[pos])
+        elif pos in insert_matched_positions:
+            # INSERT已匹配，跳过（MATCH项已在对应的DELETE位置添加）
+            pass
+        else:
+            # 其他项，直接添加
+            result.append(item)
+
+    # 如果提供了HTML输出路径，生成HTML报告
+    if html_output_path:
+        stats = get_alignment_statistics(result)
+        save_html_report_stage1(
+            result,
+            html_output_path,
+            title_a=title_a,
+            title_b=title_b,
+            runtime=0.0,
+            stats=stats
+        )
 
     return result
 
@@ -942,11 +1146,11 @@ def align_texts_anchor(
     """
     # 切分句子
     sentences_a = [
-        s.strip() for s in split_chinese_sentences(text_a, preserve_formatting)
+        s.strip() for s in split_chinese_sentences(text_a)
         if s.strip()
     ]
     sentences_b = [
-        s.strip() for s in split_chinese_sentences(text_b, preserve_formatting)
+        s.strip() for s in split_chinese_sentences(text_b)
         if s.strip()
     ]
 

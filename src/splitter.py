@@ -188,44 +188,129 @@ def split_markdown_by_title_and_length_and_merge(text: str, levels: List[int]=[2
 
     return text_list
 
-def split_chinese_sentences(text: str, preserve_formatting: bool = True) -> List[str]:
+def split_chinese_sentences_simple(text: str) -> List[str]:
     """
-    将中文文本按句子切分
+    简化版中文句子切分（按句末标点和连续换行切分，保留所有空白字符）
 
-    句子结尾标记包括：
-    1. 基本句末标点：[。！？…]+ 后面可能跟引号、括号等
-    2. 段落标记：空行、换行符
-    3. 特殊情况：
-       - 列表项、标题等末尾可能没有标点，但遇到空行或新行时也应切分
-       - 引号内的句号可能不是句子结尾（如"他说："你好。"）
-       - 数字后的句号可能是小数点（如3.14）
-       - 省略号可能是...或……
-       - 括号内的内容（如（注：这是注释））
+    适用于纯文本，不考虑Markdown格式、列表项等特殊情况。
+    连续两个以上的换行（忽略行中空白字符）视作句子结束标记。
 
     Args:
         text (str): 要切分的文本
-        preserve_formatting (bool): 是否保留原始格式（换行、空格等），默认True
 
     Returns:
-        List[str]: 切分后的句子列表
+        List[str]: 切分后的句子列表（保留所有空白字符，包括首尾换行符）
+    """
+    # 句子结尾模式：
+    # 1. 句末标点：[。！？…]+ 后面可能跟引号、括号等
+    # 2. 英文句号（需要排除小数点等情况）
+    # 3. 连续两个以上的换行（忽略行中空白字符）：\n[\s]*\n+
+    pattern = r'([。！？…]+[”’）\]】」』]*)|([.!?]+[”’"\'）\]】」』]*)|(\n(\s*\n)+)'
+
+    sentences = []
+    last_end = 0
+
+    for match in re.finditer(pattern, text):
+        end_pos = match.end()
+
+        # 检查是否是小数点或缩写
+        if match.group(2):  # 英文标点
+            # 检查前后是否是数字
+            if end_pos < len(text) and text[end_pos - 1] == '.':
+                prev_pos = match.start() - 1
+                if prev_pos >= 0 and text[prev_pos].isdigit():
+                    if end_pos < len(text) and text[end_pos].isdigit():
+                        continue  # 是小数点，跳过
+
+        # 提取句子
+        sentence = text[last_end:end_pos]
+        if sentence:
+            sentences.append(sentence)
+        last_end = end_pos
+
+    # 添加最后一句
+    if last_end < len(text):
+        sentence = text[last_end:]
+        if sentence:
+            sentences.append(sentence)
+
+    return sentences
+
+def split_chinese_sentences(text: str) -> List[str]:
+    """
+    将中文文本按句子切分（基于split_chinese_sentences_simple，增加Markdown特殊处理）
+
+    特殊处理：
+    1. Markdown标题作为一句，不切分
+    2. Markdown列表中每一项作为一句，不切分
+    3. 其他文本使用split_chinese_sentences_simple进行切分
+    4. 保留所有空白字符（包括首尾换行符），任何时候都保持原文不变
+
+    Args:
+        text (str): 要切分的文本
+
+    Returns:
+        List[str]: 切分后的句子列表（保留所有空白字符）
     """
     if not text.strip():
         return []
 
-    # 如果保留格式，先按行处理；否则统一处理
-    if preserve_formatting:
-        return _split_sentences_with_formatting(text)
-    else:
-        return _split_sentences_plain(text)
+    # 按行分割，保留换行符
+    lines = text.splitlines(keepends=True)
+    sentences = []
+    current_text = []  # 收集普通文本（非标题、非列表项）
+
+    for line in lines:
+        is_title = _is_markdown_title(line)
+        is_list_item = _is_list_item(line)
+
+        # 处理Markdown标题：作为完整句子
+        if is_title:
+            # 先处理之前收集的普通文本
+            if current_text:
+                text_chunk = ''.join(current_text)
+                chunk_sentences = split_chinese_sentences_simple(text_chunk)
+                sentences.extend(chunk_sentences)
+                current_text = []
+            # 标题本身作为一句（保留换行符）
+            sentences.append(line)
+            continue
+
+        # 处理Markdown列表项：每一项作为完整句子
+        if is_list_item:
+            # 先处理之前收集的普通文本
+            if current_text:
+                text_chunk = ''.join(current_text)
+                chunk_sentences = split_chinese_sentences_simple(text_chunk)
+                sentences.extend(chunk_sentences)
+                current_text = []
+            # 列表项本身作为一句（保留换行符）
+            sentences.append(line)
+            continue
+
+        # 普通文本：收集起来，稍后统一处理
+        current_text.append(line)
+
+    # 处理剩余的普通文本
+    if current_text:
+        text_chunk = ''.join(current_text)
+        chunk_sentences = split_chinese_sentences_simple(text_chunk)
+        sentences.extend(chunk_sentences)
+
+    # 过滤空句子（但保留只包含空白字符的句子）
+    return [s for s in sentences if s]
 
 
-def split_chinese_sentences_with_line_numbers(text: str, preserve_formatting: bool = True) -> List[Tuple[str, int, int]]:
+def split_chinese_sentences_with_line_numbers(text: str, use_simple: bool = False) -> List[Tuple[str, int, int]]:
     """
     将中文文本按句子切分，并跟踪每个句子在原始文本中的行号
 
+    基于 split_chinese_sentences 或 split_chinese_sentences_simple 的结果，
+    然后在原文中查找每个句子的位置并计算行号。
+
     Args:
         text (str): 要切分的文本
-        preserve_formatting (bool): 是否保留原始格式（换行、空格等），默认True
+        use_simple (bool): 是否使用 split_chinese_sentences_simple，默认False
 
     Returns:
         List[Tuple[str, int, int]]: 切分后的句子列表，每个元素为 (sentence, start_line, end_line)
@@ -236,63 +321,33 @@ def split_chinese_sentences_with_line_numbers(text: str, preserve_formatting: bo
     if not text.strip():
         return []
 
-    # 如果保留格式，先按行处理；否则统一处理
-    if preserve_formatting:
-        return _split_sentences_with_formatting_with_lines(text)
+    # 先获取句子列表
+    if use_simple:
+        sentences = split_chinese_sentences_simple(text)
     else:
-        return _split_sentences_plain_with_lines(text)
+        sentences = split_chinese_sentences(text)
+
+    if not sentences:
+        return []
+
+    # 在原文中查找每个句子的位置并计算行号
+    return _find_sentence_positions(text, sentences)
 
 
-def _split_sentences_plain(text: str) -> List[str]:
-    """纯文本句子切分（不保留格式）"""
-    sentences = []
-    current_sentence = []
-    in_quote = False
-    quote_char = None
-    i = 0
-
-    while i < len(text):
-        char = text[i]
-        current_sentence.append(char)
-
-        # 处理引号状态
-        if char in ['“', '”', '‘', '’', '「', '」', '『', '』']:
-            if not in_quote:
-                in_quote = True
-                quote_char = char
-            elif char == quote_char or (char in ['“', '”'] and quote_char in ['“', '”']):
-                in_quote = False
-                quote_char = None
-
-        # 检查是否是句子结尾（不在引号内）
-        if not in_quote:
-            end_pos = _get_sentence_end_pos(text, i)
-            if end_pos > i:
-                # 收集从当前位置+1到句子结尾的所有字符（当前位置已添加）
-                for j in range(i + 1, end_pos):
-                    if j < len(text):
-                        current_sentence.append(text[j])
-                sentence = ''.join(current_sentence).strip()
-                if sentence:
-                    sentences.append(sentence)
-                current_sentence = []
-                i = end_pos
-                continue
-
-        i += 1
-
-    # 处理最后一句
-    if current_sentence:
-        sentence = ''.join(current_sentence).strip()
-        if sentence:
-            sentences.append(sentence)
-
-    return sentences
 
 
-def _split_sentences_plain_with_lines(text: str) -> List[Tuple[str, int, int]]:
-    """纯文本句子切分（不保留格式），带行号跟踪"""
-    # 先按行分割，记录每行的起始位置
+def _find_sentence_positions(text: str, sentences: List[str]) -> List[Tuple[str, int, int]]:
+    """
+    在原文中查找每个句子的位置并计算行号
+
+    Args:
+        text (str): 原始文本
+        sentences (List[str]): 句子列表（按顺序）
+
+    Returns:
+        List[Tuple[str, int, int]]: (sentence, start_line, end_line) 列表
+    """
+    # 预先计算每行的起始字符位置
     lines = text.split('\n')
     line_starts = []  # 每行在原始文本中的起始字符位置
     current_pos = 0
@@ -300,60 +355,45 @@ def _split_sentences_plain_with_lines(text: str) -> List[Tuple[str, int, int]]:
         line_starts.append(current_pos)
         current_pos += len(line) + 1  # +1 for the newline character
 
-    sentences = []
-    current_sentence = []
-    sentence_start_pos = 0  # 当前句子在文本中的起始位置
-    in_quote = False
-    quote_char = None
-    i = 0
+    result = []
+    search_start = 0  # 从上次找到的位置之后开始搜索
 
-    while i < len(text):
-        char = text[i]
+    for sentence in sentences:
+        if not sentence:
+            continue
 
-        # 记录句子起始位置
-        if not current_sentence:
-            sentence_start_pos = i
+        # 在原文中查找句子（从search_start位置开始）
+        pos = text.find(sentence, search_start)
 
-        current_sentence.append(char)
+        if pos == -1:
+            # 如果找不到，尝试去掉首尾空白字符再找
+            sentence_stripped = sentence.strip()
+            if sentence_stripped:
+                pos = text.find(sentence_stripped, search_start)
+                if pos != -1:
+                    # 找到了，但需要调整位置以匹配原始句子（包含空白字符）
+                    # 这里简化处理：使用找到的位置
+                    pass
 
-        # 处理引号状态
-        if char in ['“', '”', '‘', '’', '「', '」', '『', '』']:
-            if not in_quote:
-                in_quote = True
-                quote_char = char
-            elif char == quote_char or (char in ['“', '”'] and quote_char in ['“', '”']):
-                in_quote = False
-                quote_char = None
-
-        # 检查是否是句子结尾（不在引号内）
-        if not in_quote:
-            end_pos = _get_sentence_end_pos(text, i)
-            if end_pos > i:
-                # 收集从当前位置+1到句子结尾的所有字符（当前位置已添加）
-                for j in range(i + 1, end_pos):
-                    if j < len(text):
-                        current_sentence.append(text[j])
-                sentence = ''.join(current_sentence).strip()
-                if sentence:
-                    # 计算行号
-                    start_line = _get_line_number(sentence_start_pos, line_starts)
-                    end_line = _get_line_number(end_pos - 1, line_starts)
-                    sentences.append((sentence, start_line, end_line))
-                current_sentence = []
-                i = end_pos
+        if pos == -1:
+            # 仍然找不到，跳过这个句子（或使用默认值）
+            # 为了健壮性，尝试在整个文本中查找
+            pos = text.find(sentence)
+            if pos == -1:
+                # 如果还是找不到，跳过
                 continue
 
-        i += 1
+        # 计算行号
+        start_line = _get_line_number(pos, line_starts)
+        end_pos = pos + len(sentence) - 1
+        end_line = _get_line_number(end_pos, line_starts)
 
-    # 处理最后一句
-    if current_sentence:
-        sentence = ''.join(current_sentence).strip()
-        if sentence:
-            start_line = _get_line_number(sentence_start_pos, line_starts)
-            end_line = _get_line_number(len(text) - 1, line_starts)
-            sentences.append((sentence, start_line, end_line))
+        result.append((sentence, start_line, end_line))
 
-    return sentences
+        # 更新搜索起始位置（从当前句子结束位置之后开始）
+        search_start = pos + len(sentence)
+
+    return result
 
 
 def _get_line_number(pos: int, line_starts: List[int]) -> int:
@@ -374,402 +414,6 @@ def _get_line_number(pos: int, line_starts: List[int]) -> int:
             right = mid - 1
 
     return line_number
-
-
-def _split_sentences_with_formatting(text: str) -> List[str]:
-    """保留格式的句子切分（考虑Markdown格式）"""
-    lines = text.splitlines(keepends=True)
-    sentences = []
-    current_sentence = []
-    in_quote = False
-    quote_char = None
-
-    for line_idx, line in enumerate(lines):
-        # 检查是否是标题或列表项
-        is_title = _is_markdown_title(line)
-        is_list_item = _is_list_item(line)
-        is_empty_line = not line.strip()
-
-        # 如果遇到空行，且当前句子不为空，则切分
-        if is_empty_line and current_sentence:
-            sentence = ''.join(current_sentence).strip()
-            if sentence:
-                sentences.append(sentence)
-            current_sentence = []
-            continue
-
-        # 处理标题：标题本身作为一句，即使没有标点
-        if is_title:
-            if current_sentence:
-                sentence = ''.join(current_sentence).strip()
-                if sentence:
-                    sentences.append(sentence)
-                current_sentence = []
-            sentences.append(line.rstrip())
-            continue
-
-        # 处理列表项：列表项末尾可能没有标点，但遇到空行或新列表项时切分
-        if is_list_item:
-            # 如果当前句子不为空，先保存
-            if current_sentence:
-                sentence = ''.join(current_sentence).strip()
-                if sentence:
-                    sentences.append(sentence)
-                current_sentence = []
-
-            # 检查列表项内容是否以句末标点结尾
-            list_content = _extract_list_content(line)
-            if list_content and _ends_with_sentence_punct(list_content):
-                sentences.append(line.rstrip())
-            else:
-                # 列表项没有句末标点，先暂存，等待后续内容或空行
-                current_sentence.append(line)
-            continue
-
-        # 普通文本行：逐字符处理
-        i = 0
-        while i < len(line):
-            char = line[i]
-            current_sentence.append(char)
-
-            # 处理引号状态
-            if char in ['“', '”', '‘', '’', '「', '」', '『', '』']:
-                if not in_quote:
-                    in_quote = True
-                    quote_char = char
-                elif char == quote_char or (char in ['“', '”'] and quote_char in ['“', '”']):
-                    in_quote = False
-                    quote_char = None
-
-            # 检查是否是句子结尾（不在引号内）
-            if not in_quote:
-                end_pos = _get_sentence_end_pos_in_line(line, i)
-                if end_pos > i:
-                    # 收集从当前位置+1到句子结尾的所有字符（当前位置已添加）
-                    for j in range(i + 1, end_pos):
-                        if j < len(line):
-                            current_sentence.append(line[j])
-                    sentence = ''.join(current_sentence).strip()
-                    if sentence:
-                        sentences.append(sentence)
-                    current_sentence = []
-                    i = end_pos
-                    continue
-
-            i += 1
-
-        # 如果当前行以列表项或标题结尾，且下一行是空行或新列表项/标题，则切分
-        if current_sentence and line_idx < len(lines) - 1:
-            next_line = lines[line_idx + 1]
-            if (not next_line.strip() or
-                _is_markdown_title(next_line) or
-                _is_list_item(next_line)):
-                sentence = ''.join(current_sentence).strip()
-                if sentence:
-                    sentences.append(sentence)
-                current_sentence = []
-
-    # 处理最后一句
-    if current_sentence:
-        sentence = ''.join(current_sentence).strip()
-        if sentence:
-            sentences.append(sentence)
-
-    return sentences
-
-
-def _split_sentences_with_formatting_with_lines(text: str) -> List[Tuple[str, int, int]]:
-    """保留格式的句子切分（考虑Markdown格式），带行号跟踪"""
-    lines = text.splitlines(keepends=True)
-    sentences = []
-    current_sentence = []
-    sentence_start_line = 1  # 当前句子开始的行号（从1开始）
-    in_quote = False
-    quote_char = None
-
-    for line_idx, line in enumerate(lines):
-        current_line_number = line_idx + 1  # 当前行号（从1开始）
-
-        # 检查是否是标题或列表项
-        is_title = _is_markdown_title(line)
-        is_list_item = _is_list_item(line)
-        is_empty_line = not line.strip()
-
-        # 如果遇到空行，且当前句子不为空，则切分
-        if is_empty_line and current_sentence:
-            sentence = ''.join(current_sentence).strip()
-            if sentence:
-                # 句子结束行是上一行（空行之前）
-                end_line = current_line_number - 1 if current_line_number > 1 else 1
-                sentences.append((sentence, sentence_start_line, end_line))
-            current_sentence = []
-            continue
-
-        # 处理标题：标题本身作为一句，即使没有标点
-        if is_title:
-            if current_sentence:
-                sentence = ''.join(current_sentence).strip()
-                if sentence:
-                    # 句子结束行是上一行（标题之前）
-                    end_line = current_line_number - 1 if current_line_number > 1 else 1
-                    sentences.append((sentence, sentence_start_line, end_line))
-                current_sentence = []
-            # 标题本身作为一句
-            title_text = line.rstrip()
-            if title_text:
-                sentences.append((title_text, current_line_number, current_line_number))
-            continue
-
-        # 处理列表项：列表项末尾可能没有标点，但遇到空行或新列表项时切分
-        if is_list_item:
-            # 如果当前句子不为空，先保存
-            if current_sentence:
-                sentence = ''.join(current_sentence).strip()
-                if sentence:
-                    # 句子结束行是上一行（列表项之前）
-                    end_line = current_line_number - 1 if current_line_number > 1 else 1
-                    sentences.append((sentence, sentence_start_line, end_line))
-                current_sentence = []
-                sentence_start_line = current_line_number
-
-            # 检查列表项内容是否以句末标点结尾
-            list_content = _extract_list_content(line)
-            if list_content and _ends_with_sentence_punct(list_content):
-                list_text = line.rstrip()
-                if list_text:
-                    sentences.append((list_text, current_line_number, current_line_number))
-            else:
-                # 列表项没有句末标点，先暂存，等待后续内容或空行
-                if not current_sentence:
-                    sentence_start_line = current_line_number
-                current_sentence.append(line)
-            continue
-
-        # 普通文本行：逐字符处理
-        if not current_sentence:
-            sentence_start_line = current_line_number
-
-        i = 0
-        while i < len(line):
-            char = line[i]
-            current_sentence.append(char)
-
-            # 处理引号状态
-            if char in ['"', '"', ''', ''', '「', '」', '『', '』']:
-                if not in_quote:
-                    in_quote = True
-                    quote_char = char
-                elif char == quote_char or (char in ['"', '"'] and quote_char in ['"', '"']):
-                    in_quote = False
-                    quote_char = None
-
-            # 检查是否是句子结尾（引号内的句号也要切分，因为引号内可能包含多个句子）
-            # 注意：即使引号内，如果遇到句号，也应该切分
-            if True:  # 移除引号检查，允许引号内的句号也触发切分
-                end_pos = _get_sentence_end_pos_in_line(line, i)
-                if end_pos > i:
-                    # 收集从当前位置+1到句子结尾的所有字符（当前位置已添加）
-                    for j in range(i + 1, end_pos):
-                        if j < len(line):
-                            current_sentence.append(line[j])
-
-                    # 检查句号后面的内容
-                    # 注意：_get_sentence_end_pos_in_line已经跳过了句号后的引号/括号
-                    # 所以remaining_in_line不会包含这些引号/括号
-                    remaining_in_line = line[end_pos:]
-                    remaining_stripped = remaining_in_line.strip()
-
-                    # 判断是否应该切分
-                    should_split = False
-
-                    if not remaining_stripped:
-                        # 句号后面只有空格或换行，应该切分
-                        should_split = True
-                    else:
-                        # 句号后面有文本
-                        # 检查句号后是否有空格，或者后面是否是新句子（中文、大写字母等）
-                        if remaining_in_line.startswith((' ', '\t')):
-                            # 句号后面是空格，应该切分（新句子开始）
-                            should_split = True
-                        else:
-                            # 句号后面直接跟文本（无空格，且_get_sentence_end_pos_in_line已跳过引号）
-                            # 检查是否可能是新句子：中文、大写字母、数字等
-                            first_char = remaining_stripped[0] if remaining_stripped else ''
-                            # 如果是中文、大写字母、数字，可能是新句子，应该切分
-                            if (first_char and (
-                                '\u4e00' <= first_char <= '\u9fff' or  # 中文
-                                first_char.isupper() or  # 大写字母
-                                first_char.isdigit()  # 数字
-                            )):
-                                should_split = True
-                            else:
-                                # 其他情况（小写字母等），可能是同一句子，不切分
-                                should_split = False
-
-                    if should_split:
-                        sentence = ''.join(current_sentence).strip()
-                        if sentence:
-                            sentences.append((sentence, sentence_start_line, current_line_number))
-                        current_sentence = []
-                        i = end_pos
-                        continue
-                    # 如果不切分，继续处理剩余内容
-                    # 将剩余内容添加到current_sentence
-                    for j in range(end_pos, len(line)):
-                        current_sentence.append(line[j])
-                    i = len(line)
-                    break  # 跳出while循环，继续下一行
-
-            i += 1
-
-        # 检查行尾：如果当前行以句号结尾（后面只有空格），且下一行不是空行，应该切分
-        if current_sentence and line_idx < len(lines) - 1:
-            next_line = lines[line_idx + 1]
-
-            # 检查当前行是否以句号结尾（后面只有空格）
-            line_stripped = line.rstrip()
-            if line_stripped and line_stripped[-1] in ['。', '！', '？', '…']:
-                # 当前行以句号结尾，且下一行不是空行，应该切分
-                if next_line.strip() and not _is_markdown_title(next_line) and not _is_list_item(next_line):
-                    sentence = ''.join(current_sentence).strip()
-                    if sentence:
-                        sentences.append((sentence, sentence_start_line, current_line_number))
-                    current_sentence = []
-
-            # 如果当前行以列表项或标题结尾，且下一行是空行或新列表项/标题，则切分
-            elif (not next_line.strip() or
-                  _is_markdown_title(next_line) or
-                  _is_list_item(next_line)):
-                sentence = ''.join(current_sentence).strip()
-                if sentence:
-                    sentences.append((sentence, sentence_start_line, current_line_number))
-                current_sentence = []
-
-    # 处理最后一句
-    if current_sentence:
-        sentence = ''.join(current_sentence).strip()
-        if sentence:
-            # 最后一句结束行是最后一行
-            last_line_number = len(lines)
-            sentences.append((sentence, sentence_start_line, last_line_number))
-
-    return sentences
-
-
-def _get_sentence_end_pos(text: str, pos: int) -> int:
-    """获取句子结尾的完整结束位置（包括所有连续的句末标点和后续的引号/括号）
-
-    Returns:
-        int: 句子结尾的结束位置（不包含），如果不是句子结尾则返回pos
-    """
-    if pos >= len(text):
-        return pos
-
-    char = text[pos]
-
-    # 基本句末标点
-    if char in ['。', '！', '？', '…']:
-        # 先收集所有连续的句末标点（允许多个连用，如 ？！！、……………………）
-        end_pos = pos + 1
-        while end_pos < len(text) and text[end_pos] in ['。', '！', '？', '…']:
-            end_pos += 1
-
-        # 然后检查后面是否跟引号、括号等
-        while end_pos < len(text) and text[end_pos] in ['"', '”', "'", '’', '）', ']', '】', '》', '」', '』']:
-            end_pos += 1
-
-        return end_pos
-
-    # 英文句号（需要判断上下文）
-    if char == '.':
-        # 如果前后都是数字，可能是小数点
-        if pos > 0 and pos < len(text) - 1:
-            if text[pos - 1].isdigit() and text[pos + 1].isdigit():
-                return pos  # 不是句子结尾
-        # 如果后面跟的是小写字母或数字，可能不是句子结尾
-        if pos < len(text) - 1:
-            next_char = text[pos + 1]
-            if next_char.islower() or next_char.isdigit():
-                return pos  # 不是句子结尾
-        # 在中文文本中，英文句号也可能是句子结尾
-        if pos > 0:
-            prev_char = text[pos - 1]
-            if '\u4e00' <= prev_char <= '\u9fff':  # 前一个字符是中文
-                end_pos = pos + 1
-                # 检查后面是否跟引号、括号等
-                while end_pos < len(text) and text[end_pos] in ['"', '”', "'", '’', '）', ']', '】', '》', '」', '』']:
-                    end_pos += 1
-                return end_pos
-        # 检查是否是数字后的句号（可能是小数点）
-        if char == '.' and pos > 0:
-            prev_char = text[pos - 1]
-            if prev_char.isdigit() and end_pos < len(text) and text[end_pos].isdigit():
-                return pos  # 不是句子结尾
-
-    return pos  # 不是句子结尾
-
-
-def _get_sentence_end_pos_in_line(line: str, pos: int) -> int:
-    """获取行内句子结尾的完整结束位置（包括所有连续的句末标点和后续的引号/括号）
-
-    Returns:
-        int: 句子结尾的结束位置（不包含），如果不是句子结尾则返回pos
-    """
-    if pos >= len(line):
-        return pos
-
-    char = line[pos]
-
-    # 基本句末标点
-    if char in ['。', '！', '？', '…']:
-        # 先收集所有连续的句末标点（允许多个连用，如 ？！！、……………………）
-        end_pos = pos + 1
-        while end_pos < len(line) and line[end_pos] in ['。', '！', '？', '…']:
-            end_pos += 1
-
-        # 然后检查后面是否跟引号、括号等
-        while end_pos < len(line) and line[end_pos] in ['"', '”', "'", '’', '）', ']', '】', '》', '」', '』']:
-            end_pos += 1
-
-        # 检查是否是数字后的句号
-        if char == '。' and pos > 0:
-            prev_char = line[pos - 1]
-            if prev_char.isdigit() and end_pos < len(line) and line[end_pos].isdigit():
-                return pos  # 不是句子结尾
-
-        return end_pos
-
-    # 英文句号
-    if char == '.':
-        if pos > 0 and pos < len(line) - 1:
-            if line[pos - 1].isdigit() and line[pos + 1].isdigit():
-                return pos  # 不是句子结尾
-        if pos < len(line) - 1:
-            next_char = line[pos + 1]
-            if next_char.islower() or next_char.isdigit():
-                return pos  # 不是句子结尾
-        if pos > 0:
-            prev_char = line[pos - 1]
-            if '\u4e00' <= prev_char <= '\u9fff':
-                end_pos = pos + 1
-                # 检查后面是否跟引号、括号等
-                while end_pos < len(line) and line[end_pos] in ['"', '”', "'", '’', '）', ']', '】', '》', '」', '』']:
-                    end_pos += 1
-                return end_pos
-
-    return pos  # 不是句子结尾
-
-
-def _is_sentence_end(text: str, pos: int) -> bool:
-    """判断位置pos是否是句子结尾"""
-    end_pos = _get_sentence_end_pos(text, pos)
-    return end_pos > pos
-
-
-def _is_sentence_end_in_line(line: str, pos: int) -> bool:
-    """判断行内位置是否是句子结尾（考虑行尾情况）"""
-    end_pos = _get_sentence_end_pos_in_line(line, pos)
-    return end_pos > pos
 
 
 def _is_markdown_title(line: str) -> bool:
@@ -818,51 +462,6 @@ def _ends_with_sentence_punct(text: str) -> bool:
         return False
     return text[-1] in ['。', '！', '？', '…', '.', '!', '?']
 
-
-def split_chinese_sentences_simple(text: str) -> List[str]:
-    """
-    简化版中文句子切分（仅按句末标点切分，不考虑格式）
-
-    适用于纯文本，不考虑Markdown格式、列表项等特殊情况。
-
-    Args:
-        text (str): 要切分的文本
-
-    Returns:
-        List[str]: 切分后的句子列表
-    """
-    # 句子结尾模式：[。！？…]+ 后面可能跟引号、括号等
-    # 也考虑英文句号（但需要排除小数点等情况）
-    pattern = r'([。！？…]+["\'”’）\]】》」』]*)|([.!?]+["\'”’）\]】》」』]*)'
-
-    sentences = []
-    last_end = 0
-
-    for match in re.finditer(pattern, text):
-        end_pos = match.end()
-
-        # 检查是否是小数点或缩写
-        if match.group(2):  # 英文标点
-            # 检查前后是否是数字
-            if end_pos < len(text) and text[end_pos - 1] == '.':
-                prev_pos = match.start() - 1
-                if prev_pos >= 0 and text[prev_pos].isdigit():
-                    if end_pos < len(text) and text[end_pos].isdigit():
-                        continue  # 是小数点，跳过
-
-        # 提取句子
-        sentence = text[last_end:end_pos].strip()
-        if sentence:
-            sentences.append(sentence)
-        last_end = end_pos
-
-    # 添加最后一句
-    if last_end < len(text):
-        sentence = text[last_end:].strip()
-        if sentence:
-            sentences.append(sentence)
-
-    return sentences
 
 
 if __name__ == "__main__":
