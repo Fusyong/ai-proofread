@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>句子对齐报告（勘误表）</title>
+    <style>
+        body {
+            font-family: "SimSun", "宋体", serif;
+            font-size: 14px;
+            line-height: 1.6;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .alignment-results {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .alignment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .alignment-table th {
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #2980b9;
+        }
+        .alignment-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }
+        .alignment-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .alignment-table tr:hover {
+            background-color: #f0f0f0;
+        }
+        .alignment-table tr.match {
+            border-left: 4px solid #27ae60;
+        }
+        .alignment-table tr.match.partial-match {
+            border-left: 4px solid #f39c12;
+        }
+        .alignment-table tr.movein {
+            border-left: 4px solid #f39c12;
+        }
+        .alignment-table tr.moveout {
+            border-left: 4px solid #f39c12;
+        }
+        .alignment-table tr.delete {
+            border-left: 4px solid #e74c3c;
+        }
+        .alignment-table tr.insert {
+            border-left: 4px solid #3498db;
+        }
+        .col-index {
+            width: 5%;
+            text-align: center;
+            font-weight: bold;
+        }
+        .col-type {
+            width: 5%;
+            font-weight: bold;
+        }
+        .col-similarity {
+            width: 5%;
+            text-align: center;
+        }
+        .col-sentence-a {
+            width: 42.5%;
+        }
+        .col-sentence-b {
+            width: 42.5%;
+        }
+        .item-header {
+            font-weight: bold;
+        }
+        .similarity {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        .sentence-a {
+            color: black;
+        }
+        .sentence-b {
+            color: black;
+        }
+        .index {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-right: 8px;
+            font-weight: normal;
+        }
+        .filter-controls {
+            background-color: #ecf0f1;
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #bdc3c7;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        .filter-label {
+            font-weight: bold;
+            margin: 0;
+            display: inline-block;
+            color: #2c3e50;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .filter-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+        }
+        .filter-btn {
+            padding: 5px 10px;
+            border: 2px solid #3498db;
+            background-color: white;
+            color: #3498db;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .filter-btn:hover {
+            background-color: #e8f4f8;
+        }
+        .filter-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .filter-input-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            white-space: nowrap;
+        }
+        .filter-input {
+            padding: 5px 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 70px;
+        }
+        .filter-search {
+            padding: 5px 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 180px;
+        }
+        .filter-reset {
+            padding: 5px 12px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .filter-reset:hover {
+            background-color: #c0392b;
+        }
+        .filter-stats {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .alignment-table tr.hidden {
+            display: none;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>句子对齐（勘误表）</h1>
+        <p>对齐文件 a1.md 和 b1.md</p>
+        <p style="font-size: 13px; margin-top: 10px; opacity: 0.9;">
+            相似度算法: 锚点算法 | 阈值: 0.60 | N-gram大小: 2 | 运行时间: 0.00秒
+        </p>
+    </div>
+    <div class="alignment-results">
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label class="filter-label">类型筛选：</label>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-type="all" onclick="filterByType('all')">全部</button>
+                    <button class="filter-btn active" data-type="match" onclick="filterByType('match')">MATCH</button>
+                    <button class="filter-btn active" data-type="movein" onclick="filterByType('movein')">MOVEIN</button>
+                    <button class="filter-btn active" data-type="moveout" onclick="filterByType('moveout')">MOVEOUT</button>
+                    <button class="filter-btn active" data-type="delete" onclick="filterByType('delete')">DELETE</button>
+                    <button class="filter-btn active" data-type="insert" onclick="filterByType('insert')">INSERT</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">相似度范围：</label>
+                <div class="filter-input-group">
+                    <input type="number" class="filter-input" id="minSimilarity" placeholder="最小值" min="0" max="1" step="0.01" oninput="applyFilters()">
+                    <span>至</span>
+                    <input type="number" class="filter-input" id="maxSimilarity" placeholder="最大值" min="0" max="1" step="0.01" oninput="applyFilters()">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">文本搜索：</label>
+                <div class="filter-input-group">
+                    <input type="text" class="filter-search" id="searchText" placeholder="在左右文本中搜索..." oninput="applyFilters()">
+                    <button class="filter-reset" onclick="resetFilters()">重置筛选</button>
+                </div>
+            </div>
+        </div>
+        <div class="filter-stats" id="filterStats"></div>
+        <table class="alignment-table">
+            <thead>
+                <tr>
+                    <th class="col-index">序号</th>
+                    <th class="col-type">类型</th>
+                    <th class="col-similarity">相似度</th>
+                    <th class="col-sentence-a">[句ID, 行ID]a1.md</th>
+                    <th class="col-sentence-b">[句ID, 行ID]b1.md</th>
+                </tr>
+            </thead>
+            <tbody>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="朱陆异同在中国古代后期理学发展历程中一直争论不断，当然也有弥合两家之隙的学者， 如吴澄、袁桷、郑玉等人，但这并没能消除两者的分歧。" data-text-b="朱陆异同在中国古代后期理学发展历程中一直争论不断，当然也有弥合两家之隙的学者， 如吴澄、袁桷、郑玉等人，但这并没能消除两者的分歧。" data-row-idx="1" data-diff-mode="false" >
+                <td class="col-index">1</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[1, 1]</span><span class="sentence-a">朱陆异同在中国古代后期理学发展历程中一直争论不断，当然也有弥合两家之隙的学者， 如吴澄、袁桷、郑玉等人，但这并没能消除两者的分歧。</span></td>
+                <td class="col-sentence-b"><span class="index">[1, 1]</span><span class="sentence-b">朱陆异同在中国古代后期理学发展历程中一直争论不断，当然也有弥合两家之隙的学者， 如吴澄、袁桷、郑玉等人，但这并没能消除两者的分歧。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="2就两者的归宿而言，其目的都 是同宗孔孟，注重道德，希望通过道德修身实现社会政治秩序的重建，这就如黄宗羲所云： “二先生同植纲常，同扶名教，同宗孔、孟。”3即使是朱陆二人本人都自认为是孔孟之道 的正宗传人，4并相互争论，从本体到工夫，一直不休，彼此既不相让，也不能统一。" data-text-b="2就两者的归宿而言，其目的都 是同宗孔孟，注重道德，希望通过道德修身实现社会政治秩序的重建，这就如黄宗羲所云： “二先生同植纲常，同扶名教，同宗孔、孟。”3即使是朱陆二人本人都自认为是孔孟之道 的正宗传人，4并相互争论，从本体到工夫，一直不休，彼此既不相让，也不能统一。" data-row-idx="2" data-diff-mode="false" >
+                <td class="col-index">2</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[2, 1]</span><span class="sentence-a">2就两者的归宿而言，其目的都 是同宗孔孟，注重道德，希望通过道德修身实现社会政治秩序的重建，这就如黄宗羲所云： “二先生同植纲常，同扶名教，同宗孔、孟。”3即使是朱陆二人本人都自认为是孔孟之道 的正宗传人，4并相互争论，从本体到工夫，一直不休，彼此既不相让，也不能统一。</span></td>
+                <td class="col-sentence-b"><span class="index">[2, 1]</span><span class="sentence-b">2就两者的归宿而言，其目的都 是同宗孔孟，注重道德，希望通过道德修身实现社会政治秩序的重建，这就如黄宗羲所云： “二先生同植纲常，同扶名教，同宗孔、孟。”3即使是朱陆二人本人都自认为是孔孟之道 的正宗传人，4并相互争论，从本体到工夫，一直不休，彼此既不相让，也不能统一。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="这 种争论尽管没有休止，但对于彼此学理的完善、儒家人伦道德的宣扬，以及宋明理学的 发展都有积极的贡献。" data-text-b="这 种争论尽管没有休止，但对于彼此学理的完善、儒家人伦道德的宣扬，以及宋明理学的 发展都有积极的贡献。" data-row-idx="3" data-diff-mode="false" >
+                <td class="col-index">3</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[3, 1]</span><span class="sentence-a">这 种争论尽管没有休止，但对于彼此学理的完善、儒家人伦道德的宣扬，以及宋明理学的 发展都有积极的贡献。</span></td>
+                <td class="col-sentence-b"><span class="index">[3, 1]</span><span class="sentence-b">这 种争论尽管没有休止，但对于彼此学理的完善、儒家人伦道德的宣扬，以及宋明理学的 发展都有积极的贡献。</span></td>
+            </tr>
+            <tr class="insert" data-type="insert" data-similarity="0.0000" data-text-a="" data-text-b="1〔清〕谢旻修：《江西通志》卷22 引，影印文渊阁《四库全书》本（第513 册），台湾商务印书馆2008 年版，第717 页。" data-row-idx="4" data-diff-mode="false" >
+                <td class="col-index">4</td>
+                <td class="col-type"><span class="item-header">INSERT</span></td>
+                <td class="col-similarity"><span class="similarity"></span></td>
+                <td class="col-sentence-a"></td>
+                <td class="col-sentence-b"><span class="index">[4, 3]</span><span class="sentence-b">1〔清〕谢旻修：《江西通志》卷22 引，影印文渊阁《四库全书》本（第513 册），台湾商务印书馆2008 年版，第717 页。</span></td>
+            </tr>
+            <tr class="insert" data-type="insert" data-similarity="0.0000" data-text-a="" data-text-b="2邢舒绪：《陆九渊研究》，人民出版社2008 年版，第140 页。" data-row-idx="5" data-diff-mode="false" >
+                <td class="col-index">5</td>
+                <td class="col-type"><span class="item-header">INSERT</span></td>
+                <td class="col-similarity"><span class="similarity"></span></td>
+                <td class="col-sentence-a"></td>
+                <td class="col-sentence-b"><span class="index">[5, 5]</span><span class="sentence-b">2邢舒绪：《陆九渊研究》，人民出版社2008 年版，第140 页。</span></td>
+            </tr>
+            <tr class="insert" data-type="insert" data-similarity="0.0000" data-text-a="" data-text-b="3〔清〕黄宗羲撰，〔清〕全祖望补修：《宋元学案》卷58《象山学案》，中华书局1986 年版，第1887 页。" data-row-idx="6" data-diff-mode="false" >
+                <td class="col-index">6</td>
+                <td class="col-type"><span class="item-header">INSERT</span></td>
+                <td class="col-similarity"><span class="similarity"></span></td>
+                <td class="col-sentence-a"></td>
+                <td class="col-sentence-b"><span class="index">[6, 7]</span><span class="sentence-b">3〔清〕黄宗羲撰，〔清〕全祖望补修：《宋元学案》卷58《象山学案》，中华书局1986 年版，第1887 页。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.8043" data-text-a="其实，陆九渊与朱熹一样，都将所自己建构的心学或理学看成放之四海而皆准的价 值判断体系。" data-text-b="其实，陆九渊与朱熹一样，都将自己所建构的心学或理学看成放之四海而皆准的价值判断体系。" data-row-idx="7" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">7</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.80</span></td>
+                <td class="col-sentence-a"><span class="index">[4, 3]</span><span class="sentence-a">其实，陆九渊与朱熹一样，都将所自己建构的心学或理学看成放之四海而皆准的价 值判断体系。</span></td>
+                <td class="col-sentence-b"><span class="index">[11, 16]</span><span class="sentence-b">其实，陆九渊与朱熹一样，都将自己所建构的心学或理学看成放之四海而皆准的价值判断体系。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.8966" data-text-a="虽然两人在对心、理本体地位的认识上有交叉，但非决然对立。" data-text-b="虽然两人在对心、理本体地位的认识上有交叉，但并非决然对立。" data-row-idx="8" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">8</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.90</span></td>
+                <td class="col-sentence-a"><span class="index">[5, 3]</span><span class="sentence-a">虽然两人在对心、理本体地位的认识上有交叉，但非决然对立。</span></td>
+                <td class="col-sentence-b"><span class="index">[12, 16]</span><span class="sentence-b">虽然两人在对心、理本体地位的认识上有交叉，但并非决然对立。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.8500" data-text-a="可以说， 陆九渊也言“理”，朱熹也言“心”。" data-text-b="可以说，陆九渊也言“理”，朱熹也言“心”。" data-row-idx="9" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">9</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.85</span></td>
+                <td class="col-sentence-a"><span class="index">[6, 3]</span><span class="sentence-a">可以说， 陆九渊也言“理”，朱熹也言“心”。</span></td>
+                <td class="col-sentence-b"><span class="index">[13, 16]</span><span class="sentence-b">可以说，陆九渊也言“理”，朱熹也言“心”。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="如陆九渊所云：" data-text-b="如陆九渊所云：" data-row-idx="10" data-diff-mode="false" >
+                <td class="col-index">10</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[7, 3]</span><span class="sentence-a">如陆九渊所云：</span></td>
+                <td class="col-sentence-b"><span class="index">[14, 16]</span><span class="sentence-b">如陆九渊所云：</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="古之圣贤，惟理是视，尧舜之圣，而询于刍荛，曾子之易箦，盖得于 执烛之童子。" data-text-b="古之圣贤，惟理是视，尧舜之圣，而询于刍荛，曾子之易箦，盖得于 执烛之童子。" data-row-idx="11" data-diff-mode="false" >
+                <td class="col-index">11</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[8, 5]</span><span class="sentence-a">古之圣贤，惟理是视，尧舜之圣，而询于刍荛，曾子之易箦，盖得于 执烛之童子。</span></td>
+                <td class="col-sentence-b"><span class="index">[15, 18]</span><span class="sentence-b">古之圣贤，惟理是视，尧舜之圣，而询于刍荛，曾子之易箦，盖得于 执烛之童子。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="《蒙》九二曰：“纳妇吉。”苟当于理，虽妇人孺子之言所不弃也。" data-text-b="《蒙》九二曰：“纳妇吉。”苟当于理，虽妇人孺子之言所不弃也。" data-row-idx="12" data-diff-mode="false" >
+                <td class="col-index">12</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[9, 5]</span><span class="sentence-a">《蒙》九二曰：“纳妇吉。”苟当于理，虽妇人孺子之言所不弃也。</span></td>
+                <td class="col-sentence-b"><span class="index">[16, 18]</span><span class="sentence-b">《蒙》九二曰：“纳妇吉。”苟当于理，虽妇人孺子之言所不弃也。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="孟子曰：“尽信书，不如无书。吾于《武成》，取二三策而已矣。”或乖理致， 虽出古书，不敢尽信也。" data-text-b="孟子曰：“尽信书，不如无书。吾于《武成》，取二三策而已矣。”或乖理致， 虽出古书，不敢尽信也。" data-row-idx="13" data-diff-mode="false" >
+                <td class="col-index">13</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[10, 7]</span><span class="sentence-a">孟子曰：“尽信书，不如无书。吾于《武成》，取二三策而已矣。”或乖理致， 虽出古书，不敢尽信也。</span></td>
+                <td class="col-sentence-b"><span class="index">[17, 20]</span><span class="sentence-b">孟子曰：“尽信书，不如无书。吾于《武成》，取二三策而已矣。”或乖理致， 虽出古书，不敢尽信也。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="5" data-text-b="5" data-row-idx="14" data-diff-mode="false" >
+                <td class="col-index">14</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[11, 7]</span><span class="sentence-a">5</span></td>
+                <td class="col-sentence-b"><span class="index">[18, 20]</span><span class="sentence-b">5</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.9388" data-text-a="陆九渊认为古代的圣贤都是根据是否合乎“理”来判断人的言行，只要合理，即使妇女、 小孩的话也不放弃。" data-text-b="陆九渊认为古代的圣贤都是根据是否合乎“理”来判断人的言行，只要合理，即使妇女、小孩的话也不放弃。" data-row-idx="15" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">15</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.94</span></td>
+                <td class="col-sentence-a"><span class="index">[12, 9]</span><span class="sentence-a">陆九渊认为古代的圣贤都是根据是否合乎“理”来判断人的言行，只要合理，即使妇女、 小孩的话也不放弃。</span></td>
+                <td class="col-sentence-b"><span class="index">[19, 22]</span><span class="sentence-b">陆九渊认为古代的圣贤都是根据是否合乎“理”来判断人的言行，只要合理，即使妇女、小孩的话也不放弃。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7838" data-text-a="他援引《孟子》对于经典的态度，也认为如果有悖于“理”，即使出" data-text-b="他援引《孟子》对于经典的态度，也认为如果有悖于“理”，即使出自经典，也不能相信。" data-row-idx="16" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">16</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.78</span></td>
+                <td class="col-sentence-a"><span class="index">[13, 9]</span><span class="sentence-a">他援引《孟子》对于经典的态度，也认为如果有悖于“理”，即使出</span></td>
+                <td class="col-sentence-b"><span class="index">[20, 22]</span><span class="sentence-b">他援引《孟子》对于经典的态度，也认为如果有悖于“理”，即使出自经典，也不能相信。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="1〔清〕谢旻修：《江西通志》卷22 引，影印文渊阁《四库全书》本（第513 册），台湾商务印书馆2008 年版，第717 页。" data-text-b="1〔清〕谢旻修：《江西通志》卷22 引，影印文渊阁《四库全书》本（第513 册），台湾商务印书馆2008 年版，第717 页。" data-row-idx="17" data-diff-mode="false" >
+                <td class="col-index">17</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[14, 11]</span><span class="sentence-a">1〔清〕谢旻修：《江西通志》卷22 引，影印文渊阁《四库全书》本（第513 册），台湾商务印书馆2008 年版，第717 页。</span></td>
+                <td class="col-sentence-b"><span class="index">[21, 25]</span><span class="sentence-b">1〔清〕谢旻修：《江西通志》卷22 引，影印文渊阁《四库全书》本（第513 册），台湾商务印书馆2008 年版，第717 页。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="2邢舒绪：《陆九渊研究》，人民出版社2008 年版，第140 页。" data-text-b="2邢舒绪：《陆九渊研究》，人民出版社2008 年版，第140 页。" data-row-idx="18" data-diff-mode="false" >
+                <td class="col-index">18</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[15, 11]</span><span class="sentence-a">2邢舒绪：《陆九渊研究》，人民出版社2008 年版，第140 页。</span></td>
+                <td class="col-sentence-b"><span class="index">[22, 25]</span><span class="sentence-b">2邢舒绪：《陆九渊研究》，人民出版社2008 年版，第140 页。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="3〔清〕黄宗羲撰，〔清〕全祖望补修：《宋元学案》卷58《象山学案》，中华书局1986 年版，第1887 页。" data-text-b="3〔清〕黄宗羲撰，〔清〕全祖望补修：《宋元学案》卷58《象山学案》，中华书局1986 年版，第1887 页。" data-row-idx="19" data-diff-mode="false" >
+                <td class="col-index">19</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[16, 13]</span><span class="sentence-a">3〔清〕黄宗羲撰，〔清〕全祖望补修：《宋元学案》卷58《象山学案》，中华书局1986 年版，第1887 页。</span></td>
+                <td class="col-sentence-b"><span class="index">[23, 27]</span><span class="sentence-b">3〔清〕黄宗羲撰，〔清〕全祖望补修：《宋元学案》卷58《象山学案》，中华书局1986 年版，第1887 页。</span></td>
+            </tr>
+            <tr class="insert" data-type="insert" data-similarity="0.0000" data-text-a="" data-text-b="4如朱熹六十岁时在其所作的《大学章句序》中云：“河南程氏两夫子出，而有以接乎孟氏之传……虽以熹之不敏，亦幸私淑而与有闻焉。”（载于〔宋〕朱熹：《朱子全书》（第24 册）《晦庵先生朱文公文集》卷76，上海古籍出版社、安徽教育出版社2010 年版，第3673 页。）" data-row-idx="20" data-diff-mode="false" >
+                <td class="col-index">20</td>
+                <td class="col-type"><span class="item-header">INSERT</span></td>
+                <td class="col-similarity"><span class="similarity"></span></td>
+                <td class="col-sentence-a"></td>
+                <td class="col-sentence-b"><span class="index">[24, 27]</span><span class="sentence-b">4如朱熹六十岁时在其所作的《大学章句序》中云：“河南程氏两夫子出，而有以接乎孟氏之传……虽以熹之不敏，亦幸私淑而与有闻焉。”（载于〔宋〕朱熹：《朱子全书》（第24 册）《晦庵先生朱文公文集》卷76，上海古籍出版社、安徽教育出版社2010 年版，第3673 页。）</span></td>
+            </tr>
+            <tr class="insert" data-type="insert" data-similarity="0.0000" data-text-a="" data-text-b="陆九渊在与友人信中写道：“窃不自揆，区区之学自谓孟子之后，至是而始一明也。”（〔宋〕陆九渊撰，王武子点校：《象山先生全集》卷10《与路彦彬》，《儒藏》精华编第237 册，北京大学出版社2014 年版，第170 页。）" data-row-idx="21" data-diff-mode="false" >
+                <td class="col-index">21</td>
+                <td class="col-type"><span class="item-header">INSERT</span></td>
+                <td class="col-similarity"><span class="similarity"></span></td>
+                <td class="col-sentence-a"></td>
+                <td class="col-sentence-b"><span class="index">[25, 27]</span><span class="sentence-b">陆九渊在与友人信中写道：“窃不自揆，区区之学自谓孟子之后，至是而始一明也。”（〔宋〕陆九渊撰，王武子点校：《象山先生全集》卷10《与路彦彬》，《儒藏》精华编第237 册，北京大学出版社2014 年版，第170 页。）</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="4如朱熹六十岁时在其所作的《大学章句序》中云：“河南程氏两夫子出，而有以接乎孟氏之传……虽以熹之不敏，亦幸私" data-text-b="4如朱熹六十岁时在其所作的《大学章句序》中云：“河南程氏两夫子出，而有以接乎孟氏之传……虽以熹之不敏，亦幸私" data-row-idx="22" data-diff-mode="false" >
+                <td class="col-index">22</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[17, 13]</span><span class="sentence-a">4如朱熹六十岁时在其所作的《大学章句序》中云：“河南程氏两夫子出，而有以接乎孟氏之传……虽以熹之不敏，亦幸私</span></td>
+                <td class="col-sentence-b"><span class="index">[7, 9]</span><span class="sentence-b">4如朱熹六十岁时在其所作的《大学章句序》中云：“河南程氏两夫子出，而有以接乎孟氏之传……虽以熹之不敏，亦幸私</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="淑而与有闻焉。”（载于〔宋〕朱熹：《朱子全书》（第24 册）《晦庵先生朱文公文集》卷76，上海古籍出版社、安徽教育出版社2010 年版，第3673 页。）" data-text-b="淑而与有闻焉。”（载于〔宋〕朱熹：《朱子全书》（第24 册）《晦庵先生朱文公文集》卷76，上海古籍出版社、安徽教育出版社2010 年版，第3673 页。）" data-row-idx="23" data-diff-mode="false" >
+                <td class="col-index">23</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[18, 15]</span><span class="sentence-a">淑而与有闻焉。”（载于〔宋〕朱熹：《朱子全书》（第24 册）《晦庵先生朱文公文集》卷76，上海古籍出版社、安徽教育出版社2010 年版，第3673 页。）</span></td>
+                <td class="col-sentence-b"><span class="index">[8, 11]</span><span class="sentence-b">淑而与有闻焉。”（载于〔宋〕朱熹：《朱子全书》（第24 册）《晦庵先生朱文公文集》卷76，上海古籍出版社、安徽教育出版社2010 年版，第3673 页。）</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="陆九渊在与友人信中写道：“窃不自揆，区区之学自谓孟子之后，至是而始一明也。”（〔宋〕" data-text-b="陆九渊在与友人信中写道：“窃不自揆，区区之学自谓孟子之后，至是而始一明也。”（〔宋〕" data-row-idx="24" data-diff-mode="false" >
+                <td class="col-index">24</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[19, 15]</span><span class="sentence-a">陆九渊在与友人信中写道：“窃不自揆，区区之学自谓孟子之后，至是而始一明也。”（〔宋〕</span></td>
+                <td class="col-sentence-b"><span class="index">[9, 11]</span><span class="sentence-b">陆九渊在与友人信中写道：“窃不自揆，区区之学自谓孟子之后，至是而始一明也。”（〔宋〕</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="陆九渊撰，王武子点校：《象山先生全集》卷10《与路彦彬》，《儒藏》精华编第237 册，北京大学出版社2014 年版，第170 页。）" data-text-b="陆九渊撰，王武子点校：《象山先生全集》卷10《与路彦彬》，《儒藏》精华编第237 册，北京大学出版社2014 年版，第170 页。）" data-row-idx="25" data-diff-mode="false" >
+                <td class="col-index">25</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[20, 17]</span><span class="sentence-a">陆九渊撰，王武子点校：《象山先生全集》卷10《与路彦彬》，《儒藏》精华编第237 册，北京大学出版社2014 年版，第170 页。）</span></td>
+                <td class="col-sentence-b"><span class="index">[10, 13]</span><span class="sentence-b">陆九渊撰，王武子点校：《象山先生全集》卷10《与路彦彬》，《儒藏》精华编第237 册，北京大学出版社2014 年版，第170 页。）</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.9420" data-text-a="5〔宋〕陆九渊撰，王武子点校：第57 页。《象山先生全集》卷2《与朱元晦》，《儒藏》精华编（第237 册），北京大学出版社2014 年版，" data-text-b="5〔宋〕陆九渊撰，王武子点校：《象山先生全集》卷2《与朱元晦》，《儒藏》精华编（第237 册），北京大学出版社2014 年版，第57 页。" data-row-idx="26" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">26</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.94</span></td>
+                <td class="col-sentence-a"><span class="index">[21-22, 19]</span><span class="sentence-a">5〔宋〕陆九渊撰，王武子点校：第57 页。《象山先生全集》卷2《与朱元晦》，《儒藏》精华编（第237 册），北京大学出版社2014 年版，</span></td>
+                <td class="col-sentence-b"><span class="index">[26, 29]</span><span class="sentence-b">5〔宋〕陆九渊撰，王武子点校：《象山先生全集》卷2《与朱元晦》，《儒藏》精华编（第237 册），北京大学出版社2014 年版，第57 页。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="&lt;!-- ---page--- --&gt;" data-text-b="&lt;!-- ---page--- --&gt;" data-row-idx="27" data-diff-mode="false" >
+                <td class="col-index">27</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[23, 21]</span><span class="sentence-a">&lt;!-- ---page--- --&gt;</span></td>
+                <td class="col-sentence-b"><span class="index">[27, 32]</span><span class="sentence-b">&lt;!-- ---page--- --&gt;</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="自经典，也不能相信。" data-text-b="自经典，也不能相信。" data-row-idx="28" data-diff-mode="false" >
+                <td class="col-index">28</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[24, 23]</span><span class="sentence-a">自经典，也不能相信。</span></td>
+                <td class="col-sentence-b"><span class="index">[28, 34]</span><span class="sentence-b">自经典，也不能相信。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="陆九渊这种将“理”的本体性与唯一性置于经典权威之上，更加 反映了陆九渊心学的本质与其“《六经》注我”的思想精髓。" data-text-b="陆九渊这种将“理”的本体性与唯一性置于经典权威之上，更加 反映了陆九渊心学的本质与其“《六经》注我”的思想精髓。" data-row-idx="29" data-diff-mode="false" >
+                <td class="col-index">29</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[25, 23]</span><span class="sentence-a">陆九渊这种将“理”的本体性与唯一性置于经典权威之上，更加 反映了陆九渊心学的本质与其“《六经》注我”的思想精髓。</span></td>
+                <td class="col-sentence-b"><span class="index">[29, 34]</span><span class="sentence-b">陆九渊这种将“理”的本体性与唯一性置于经典权威之上，更加 反映了陆九渊心学的本质与其“《六经》注我”的思想精髓。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="陆九渊根据“理”来判断正 误的观点，赢得了朱熹的认同，朱熹说：" data-text-b="陆九渊根据“理”来判断正 误的观点，赢得了朱熹的认同，朱熹说：" data-row-idx="30" data-diff-mode="false" >
+                <td class="col-index">30</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[26, 23]</span><span class="sentence-a">陆九渊根据“理”来判断正 误的观点，赢得了朱熹的认同，朱熹说：</span></td>
+                <td class="col-sentence-b"><span class="index">[30, 34]</span><span class="sentence-b">陆九渊根据“理”来判断正 误的观点，赢得了朱熹的认同，朱熹说：</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="所谓“古之圣贤惟理是视，言当于理，虽妇人孺子有所不弃；或乖理致， 虽出古书，不敢尽信。”此论甚当，非世儒浅见所及也。" data-text-b="所谓“古之圣贤惟理是视，言当于理，虽妇人孺子有所不弃；或乖理致， 虽出古书，不敢尽信。”此论甚当，非世儒浅见所及也。" data-row-idx="31" data-diff-mode="false" >
+                <td class="col-index">31</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[27, 25]</span><span class="sentence-a">所谓“古之圣贤惟理是视，言当于理，虽妇人孺子有所不弃；或乖理致， 虽出古书，不敢尽信。”此论甚当，非世儒浅见所及也。</span></td>
+                <td class="col-sentence-b"><span class="index">[31, 36]</span><span class="sentence-b">所谓“古之圣贤惟理是视，言当于理，虽妇人孺子有所不弃；或乖理致， 虽出古书，不敢尽信。”此论甚当，非世儒浅见所及也。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="1" data-text-b="1" data-row-idx="32" data-diff-mode="false" >
+                <td class="col-index">32</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[28, 25]</span><span class="sentence-a">1</span></td>
+                <td class="col-sentence-b"><span class="index">[32, 36]</span><span class="sentence-b">1</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="朱熹认同陆九渊将“理”或“天理”看成判定文献正确与否的标准，只是陆九渊与朱熹所 言的理的内涵有所不同，陆九渊所言的“理”是内在的“心”，而朱熹则是外在的“天理”。" data-text-b="朱熹认同陆九渊将“理”或“天理”看成判定文献正确与否的标准，只是陆九渊与朱熹所 言的理的内涵有所不同，陆九渊所言的“理”是内在的“心”，而朱熹则是外在的“天理”。" data-row-idx="33" data-diff-mode="false" >
+                <td class="col-index">33</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[29, 27]</span><span class="sentence-a">朱熹认同陆九渊将“理”或“天理”看成判定文献正确与否的标准，只是陆九渊与朱熹所 言的理的内涵有所不同，陆九渊所言的“理”是内在的“心”，而朱熹则是外在的“天理”。</span></td>
+                <td class="col-sentence-b"><span class="index">[33, 38]</span><span class="sentence-b">朱熹认同陆九渊将“理”或“天理”看成判定文献正确与否的标准，只是陆九渊与朱熹所 言的理的内涵有所不同，陆九渊所言的“理”是内在的“心”，而朱熹则是外在的“天理”。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="在经学研究方法上，朱、陆之间也有很大的不同，朱熹主张“格物致知”“主敬穷理”，而 陆九渊主张“以意逆志”“体悟本心”。" data-text-b="在经学研究方法上，朱、陆之间也有很大的不同，朱熹主张“格物致知”“主敬穷理”，而 陆九渊主张“以意逆志”“体悟本心”。" data-row-idx="34" data-diff-mode="false" >
+                <td class="col-index">34</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[30, 27]</span><span class="sentence-a">在经学研究方法上，朱、陆之间也有很大的不同，朱熹主张“格物致知”“主敬穷理”，而 陆九渊主张“以意逆志”“体悟本心”。</span></td>
+                <td class="col-sentence-b"><span class="index">[34, 38]</span><span class="sentence-b">在经学研究方法上，朱、陆之间也有很大的不同，朱熹主张“格物致知”“主敬穷理”，而 陆九渊主张“以意逆志”“体悟本心”。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="尽管朱陆有所分歧，但是他们在为学宗旨上是一致的， 即都是要成就圣人之学。" data-text-b="尽管朱陆有所分歧，但是他们在为学宗旨上是一致的， 即都是要成就圣人之学。" data-row-idx="35" data-diff-mode="false" >
+                <td class="col-index">35</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[31, 27]</span><span class="sentence-a">尽管朱陆有所分歧，但是他们在为学宗旨上是一致的， 即都是要成就圣人之学。</span></td>
+                <td class="col-sentence-b"><span class="index">[35, 38]</span><span class="sentence-b">尽管朱陆有所分歧，但是他们在为学宗旨上是一致的， 即都是要成就圣人之学。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.9870" data-text-a="这一点朱熹也曾说：“陆氏之学虽是偏，尚是要去做个人。若永 嘉永康之说，大不成学问！”2朱熹将自己和陆九渊看成一类，而将他们与当时注重事功 的永嘉、永康之学对立起来。" data-text-b="这一点朱熹也曾说：“陆氏之学虽是偏，尚是要去做个人。若永 嘉、永康之说，大不成学问！”2朱熹将自己和陆九渊看成一类，而将他们与当时注重事功 的永嘉、永康之学对立起来。" data-row-idx="36" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">36</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.99</span></td>
+                <td class="col-sentence-a"><span class="index">[32, 27]</span><span class="sentence-a">这一点朱熹也曾说：“陆氏之学虽是偏，尚是要去做个人。若永 嘉永康之说，大不成学问！”2朱熹将自己和陆九渊看成一类，而将他们与当时注重事功 的永嘉、永康之学对立起来。</span></td>
+                <td class="col-sentence-b"><span class="index">[36, 38]</span><span class="sentence-b">这一点朱熹也曾说：“陆氏之学虽是偏，尚是要去做个人。若永 嘉、永康之说，大不成学问！”2朱熹将自己和陆九渊看成一类，而将他们与当时注重事功 的永嘉、永康之学对立起来。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="这也说明朱陆之间的分别主要是在为学工夫上，但朱陆与 当时的永康、永嘉两派在思想性质上是不同的，这也是为什么后世将他们称为理学的理由。" data-text-b="这也说明朱陆之间的分别主要是在为学工夫上，但朱陆与 当时的永康、永嘉两派在思想性质上是不同的，这也是为什么后世将他们称为理学的理由。" data-row-idx="37" data-diff-mode="false" >
+                <td class="col-index">37</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[33, 27]</span><span class="sentence-a">这也说明朱陆之间的分别主要是在为学工夫上，但朱陆与 当时的永康、永嘉两派在思想性质上是不同的，这也是为什么后世将他们称为理学的理由。</span></td>
+                <td class="col-sentence-b"><span class="index">[37, 38]</span><span class="sentence-b">这也说明朱陆之间的分别主要是在为学工夫上，但朱陆与 当时的永康、永嘉两派在思想性质上是不同的，这也是为什么后世将他们称为理学的理由。</span></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 类型筛选状态
+        const typeFilters = {
+            'all': true,
+            'match': true,
+            'movein': true,
+            'moveout': true,
+            'delete': true,
+            'insert': true
+        };
+
+        // 类型筛选函数
+        function filterByType(type) {
+            const btn = document.querySelector(`[data-type="${type}"]`);
+            typeFilters[type] = !typeFilters[type];
+
+            if (type === 'all') {
+                const allActive = !typeFilters['all'];
+                typeFilters['match'] = allActive;
+                typeFilters['movein'] = allActive;
+                typeFilters['moveout'] = allActive;
+                typeFilters['delete'] = allActive;
+                typeFilters['insert'] = allActive;
+
+                document.querySelectorAll('.filter-btn[data-type]').forEach(b => {
+                    b.classList.toggle('active', allActive);
+                });
+            } else {
+                btn.classList.toggle('active', typeFilters[type]);
+
+                const allActive = typeFilters['match'] && typeFilters['movein'] && typeFilters['moveout'] && typeFilters['delete'] && typeFilters['insert'];
+                const allBtn = document.querySelector('[data-type="all"]');
+                allBtn.classList.toggle('active', allActive);
+                typeFilters['all'] = allActive;
+            }
+
+            applyFilters();
+        }
+
+        // 应用所有筛选条件
+        function applyFilters() {
+            const rows = document.querySelectorAll('.alignment-table tbody tr');
+            const minSimilarity = parseFloat(document.getElementById('minSimilarity').value) || 0;
+            const maxSimilarity = parseFloat(document.getElementById('maxSimilarity').value) || 1;
+            const searchText = document.getElementById('searchText').value.toLowerCase().trim();
+
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const rowType = row.dataset.type;
+                const typeMatch = typeFilters[rowType];
+
+                const similarity = parseFloat(row.dataset.similarity) || 0;
+                const similarityMatch = similarity >= minSimilarity && similarity <= maxSimilarity;
+
+                const textA = (row.dataset.textA || '').toLowerCase();
+                const textB = (row.dataset.textB || '').toLowerCase();
+                const textMatch = !searchText || textA.includes(searchText) || textB.includes(searchText);
+
+                const shouldShow = typeMatch && similarityMatch && textMatch;
+
+                if (shouldShow) {
+                    row.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+
+            updateFilterStats(visibleCount, rows.length);
+            renderedRows.clear();
+            updateRenderQueue();
+            initialRender();
+        }
+
+        // 更新筛选统计信息
+        function updateFilterStats(visible, total) {
+            const statsEl = document.getElementById('filterStats');
+            if (visible === total) {
+                statsEl.textContent = `显示全部 ${total} 条结果`;
+            } else {
+                statsEl.textContent = `显示 ${visible} / ${total} 条结果`;
+            }
+        }
+
+        // 重置所有筛选
+        function resetFilters() {
+            typeFilters['all'] = true;
+            typeFilters['match'] = true;
+            typeFilters['movein'] = true;
+            typeFilters['moveout'] = true;
+            typeFilters['delete'] = true;
+            typeFilters['insert'] = true;
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.add('active');
+            });
+
+            document.getElementById('minSimilarity').value = '';
+            document.getElementById('maxSimilarity').value = '';
+            document.getElementById('searchText').value = '';
+
+            applyFilters();
+        }
+
+        // 懒加载渲染配置
+        const RENDER_BATCH_SIZE = 10;
+        const VIEWPORT_BUFFER = 100;
+        const INITIAL_RENDER_BUFFER = 2000;
+
+        let renderQueue = [];
+        let isRendering = false;
+        let renderedRows = new Set();
+
+        function isInViewportWithBuffer(element, buffer = VIEWPORT_BUFFER) {
+            const rect = element.getBoundingClientRect();
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            return rect.top >= -buffer && rect.bottom <= viewportHeight + buffer;
+        }
+
+        function getDistanceToViewport(row) {
+            const rect = row.getBoundingClientRect();
+            const viewportTop = window.pageYOffset || document.documentElement.scrollTop;
+            const viewportBottom = viewportTop + (window.innerHeight || document.documentElement.clientHeight);
+            const rowTop = viewportTop + rect.top;
+            const rowBottom = viewportTop + rect.bottom;
+
+            if (rowBottom < viewportTop) {
+                return viewportTop - rowBottom;
+            } else if (rowTop > viewportBottom) {
+                return rowTop - viewportBottom;
+            } else {
+                return 0;
+            }
+        }
+
+        function updateRenderQueue() {
+            const allRows = document.querySelectorAll('.alignment-table tbody tr[data-needs-diff="true"]:not(.hidden)');
+            renderQueue = [];
+
+            allRows.forEach(row => {
+                if (!renderedRows.has(row)) {
+                    const distance = getDistanceToViewport(row);
+                    renderQueue.push({ row: row, distance: distance });
+                }
+            });
+
+            renderQueue.sort((a, b) => a.distance - b.distance);
+        }
+
+        function renderDiffForRow(row) {
+            const textA = row.dataset.textA || '';
+            const textB = row.dataset.textB || '';
+            const cellA = row.querySelector('.col-sentence-a');
+            const cellB = row.querySelector('.col-sentence-b');
+
+            if (!cellA || !cellB) return false;
+
+            if (row._originalA === undefined || row._originalB === undefined) {
+                row._originalA = cellA.innerHTML;
+                row._originalB = cellB.innerHTML;
+            }
+
+            if (typeof Diff !== 'undefined') {
+                let segmenter = null;
+                if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+                    try {
+                        segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
+                    } catch (e) {
+                    }
+                }
+
+                const diff = segmenter
+                    ? Diff.diffWordsWithSpace(textA, textB, segmenter)
+                    : Diff.diffWords(textA, textB);
+
+                let originalHtml = '';
+                let modifiedHtml = '';
+
+                diff.forEach(part => {
+                    const escapedValue = escapeHtml(part.value);
+
+                    if (part.removed) {
+                        originalHtml += '<span style="color: red; text-decoration: dotted underline 2px;">' + escapedValue + '</span>';
+                    } else if (!part.added) {
+                        originalHtml += '<span style="color: black;">' + escapedValue + '</span>';
+                    }
+
+                    if (part.added) {
+                        modifiedHtml += '<span style="color: green; text-decoration: underline 2px;">' + escapedValue + '</span>';
+                    } else if (!part.removed) {
+                        modifiedHtml += '<span style="color: black;">' + escapedValue + '</span>';
+                    }
+                });
+
+                const indexA = cellA.querySelector('.index');
+                const indexB = cellB.querySelector('.index');
+                const indexAHtml = indexA ? indexA.outerHTML : '';
+                const indexBHtml = indexB ? indexB.outerHTML : '';
+
+                cellA.innerHTML = indexAHtml + (originalHtml || '');
+                cellB.innerHTML = indexBHtml + (modifiedHtml || '');
+            } else {
+                const indexA = cellA.querySelector('.index');
+                const indexB = cellB.querySelector('.index');
+                const indexAHtml = indexA ? indexA.outerHTML : '';
+                const indexBHtml = indexB ? indexB.outerHTML : '';
+                cellA.innerHTML = indexAHtml + escapeHtml(textA);
+                cellB.innerHTML = indexBHtml + escapeHtml(textB);
+            }
+
+            row.dataset.diffMode = 'true';
+            return true;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderBatch() {
+            if (isRendering || renderQueue.length === 0) {
+                return;
+            }
+
+            isRendering = true;
+
+            const viewportRows = renderQueue.filter(item =>
+                isInViewportWithBuffer(item.row, VIEWPORT_BUFFER)
+            );
+
+            const rowsToRender = viewportRows.length > 0
+                ? viewportRows.slice(0, RENDER_BATCH_SIZE)
+                : renderQueue.slice(0, RENDER_BATCH_SIZE);
+
+            rowsToRender.forEach(item => {
+                if (renderDiffForRow(item.row)) {
+                    renderedRows.add(item.row);
+                }
+            });
+
+            renderQueue = renderQueue.filter(item => !renderedRows.has(item.row));
+
+            isRendering = false;
+
+            if (renderQueue.length > 0) {
+                requestAnimationFrame(() => {
+                    setTimeout(renderBatch, 0);
+                });
+            }
+        }
+
+        function initialRender() {
+            updateRenderQueue();
+
+            const viewportRows = renderQueue.filter(item =>
+                isInViewportWithBuffer(item.row, INITIAL_RENDER_BUFFER)
+            );
+
+            viewportRows.forEach(item => {
+                if (renderDiffForRow(item.row)) {
+                    renderedRows.add(item.row);
+                }
+            });
+
+            renderQueue = renderQueue.filter(item => !renderedRows.has(item.row));
+
+            if (renderQueue.length > 0) {
+                requestAnimationFrame(() => {
+                    setTimeout(renderBatch, 100);
+                });
+            }
+        }
+
+        let scrollTimer = null;
+        function handleScroll() {
+            if (scrollTimer) {
+                return;
+            }
+
+            scrollTimer = setTimeout(() => {
+                updateRenderQueue();
+                renderBatch();
+                scrollTimer = null;
+            }, 150);
+        }
+
+        let intersectionObserver = null;
+        function setupIntersectionObserver() {
+            if (!('IntersectionObserver' in window)) {
+                return;
+            }
+
+            intersectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const row = entry.target;
+                        if (row.dataset.needsDiff === 'true' && !renderedRows.has(row)) {
+                            updateRenderQueue();
+                            renderBatch();
+                        }
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: `${VIEWPORT_BUFFER}px`,
+                threshold: 0
+            });
+
+            document.querySelectorAll('.alignment-table tbody tr[data-needs-diff="true"]').forEach(row => {
+                intersectionObserver.observe(row);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            applyFilters();
+            initialRender();
+            setupIntersectionObserver();
+            window.addEventListener('scroll', handleScroll, { passive: true });
+        });
+    </script>
+</body>
+</html>

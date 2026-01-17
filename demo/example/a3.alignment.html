@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>句子对齐报告（勘误表）</title>
+    <style>
+        body {
+            font-family: "SimSun", "宋体", serif;
+            font-size: 14px;
+            line-height: 1.6;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .alignment-results {
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .alignment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .alignment-table th {
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #2980b9;
+        }
+        .alignment-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+        }
+        .alignment-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .alignment-table tr:hover {
+            background-color: #f0f0f0;
+        }
+        .alignment-table tr.match {
+            border-left: 4px solid #27ae60;
+        }
+        .alignment-table tr.match.partial-match {
+            border-left: 4px solid #f39c12;
+        }
+        .alignment-table tr.movein {
+            border-left: 4px solid #f39c12;
+        }
+        .alignment-table tr.moveout {
+            border-left: 4px solid #f39c12;
+        }
+        .alignment-table tr.delete {
+            border-left: 4px solid #e74c3c;
+        }
+        .alignment-table tr.insert {
+            border-left: 4px solid #3498db;
+        }
+        .col-index {
+            width: 5%;
+            text-align: center;
+            font-weight: bold;
+        }
+        .col-type {
+            width: 5%;
+            font-weight: bold;
+        }
+        .col-similarity {
+            width: 5%;
+            text-align: center;
+        }
+        .col-sentence-a {
+            width: 42.5%;
+        }
+        .col-sentence-b {
+            width: 42.5%;
+        }
+        .item-header {
+            font-weight: bold;
+        }
+        .similarity {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        .sentence-a {
+            color: black;
+        }
+        .sentence-b {
+            color: black;
+        }
+        .index {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-right: 8px;
+            font-weight: normal;
+        }
+        .filter-controls {
+            background-color: #ecf0f1;
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #bdc3c7;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        .filter-label {
+            font-weight: bold;
+            margin: 0;
+            display: inline-block;
+            color: #2c3e50;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .filter-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: nowrap;
+        }
+        .filter-btn {
+            padding: 5px 10px;
+            border: 2px solid #3498db;
+            background-color: white;
+            color: #3498db;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .filter-btn:hover {
+            background-color: #e8f4f8;
+        }
+        .filter-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .filter-input-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            white-space: nowrap;
+        }
+        .filter-input {
+            padding: 5px 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 70px;
+        }
+        .filter-search {
+            padding: 5px 10px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 180px;
+        }
+        .filter-reset {
+            padding: 5px 12px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        .filter-reset:hover {
+            background-color: #c0392b;
+        }
+        .filter-stats {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .alignment-table tr.hidden {
+            display: none;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/diff@7.0.0/dist/diff.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>句子对齐（勘误表）</h1>
+        <p>对齐文件 a3.md 和 b3.md</p>
+        <p style="font-size: 13px; margin-top: 10px; opacity: 0.9;">
+            相似度算法: 锚点算法 | 阈值: 0.60 | N-gram大小: 2 | 运行时间: 0.00秒
+        </p>
+    </div>
+    <div class="alignment-results">
+        <div class="filter-controls">
+            <div class="filter-group">
+                <label class="filter-label">类型筛选：</label>
+                <div class="filter-buttons">
+                    <button class="filter-btn active" data-type="all" onclick="filterByType('all')">全部</button>
+                    <button class="filter-btn active" data-type="match" onclick="filterByType('match')">MATCH</button>
+                    <button class="filter-btn active" data-type="movein" onclick="filterByType('movein')">MOVEIN</button>
+                    <button class="filter-btn active" data-type="moveout" onclick="filterByType('moveout')">MOVEOUT</button>
+                    <button class="filter-btn active" data-type="delete" onclick="filterByType('delete')">DELETE</button>
+                    <button class="filter-btn active" data-type="insert" onclick="filterByType('insert')">INSERT</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">相似度范围：</label>
+                <div class="filter-input-group">
+                    <input type="number" class="filter-input" id="minSimilarity" placeholder="最小值" min="0" max="1" step="0.01" oninput="applyFilters()">
+                    <span>至</span>
+                    <input type="number" class="filter-input" id="maxSimilarity" placeholder="最大值" min="0" max="1" step="0.01" oninput="applyFilters()">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">文本搜索：</label>
+                <div class="filter-input-group">
+                    <input type="text" class="filter-search" id="searchText" placeholder="在左右文本中搜索..." oninput="applyFilters()">
+                    <button class="filter-reset" onclick="resetFilters()">重置筛选</button>
+                </div>
+            </div>
+        </div>
+        <div class="filter-stats" id="filterStats"></div>
+        <table class="alignment-table">
+            <thead>
+                <tr>
+                    <th class="col-index">序号</th>
+                    <th class="col-type">类型</th>
+                    <th class="col-similarity">相似度</th>
+                    <th class="col-sentence-a">[句ID, 行ID]a3.md</th>
+                    <th class="col-sentence-b">[句ID, 行ID]b3.md</th>
+                </tr>
+            </thead>
+            <tbody>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7222" data-text-a="所谓练习，首先是指阅读课上的练习。" data-text-b="所谓练习, 首先是指阅读课上的练习。" data-row-idx="1" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">1</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.72</span></td>
+                <td class="col-sentence-a"><span class="index">[1, 1]</span><span class="sentence-a">所谓练习，首先是指阅读课上的练习。</span></td>
+                <td class="col-sentence-b"><span class="index">[1, 1]</span><span class="sentence-b">所谓练习, 首先是指阅读课上的练习。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.8214" data-text-a="伴随着阅读单元进行书写
+练习，是首要的应采取的方法。" data-text-b="伴随着阅读单元进行书写
+练习, 是首要的应采取的方法。" data-row-idx="2" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">2</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.82</span></td>
+                <td class="col-sentence-a"><span class="index">[2, 1]</span><span class="sentence-a">伴随着阅读单元进行书写
+练习，是首要的应采取的方法。</span></td>
+                <td class="col-sentence-b"><span class="index">[2, 1]</span><span class="sentence-b">伴随着阅读单元进行书写
+练习, 是首要的应采取的方法。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7188" data-text-a="作为具体的方法，一是要求学生记笔
+记，二是要求写读后感想文。" data-text-b="作为具体的方法, 一是要求学生记笔
+记, 二是要求写读后感想文。" data-row-idx="3" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">3</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.72</span></td>
+                <td class="col-sentence-a"><span class="index">[3, 1]</span><span class="sentence-a">作为具体的方法，一是要求学生记笔
+记，二是要求写读后感想文。</span></td>
+                <td class="col-sentence-b"><span class="index">[3, 1]</span><span class="sentence-b">作为具体的方法, 一是要求学生记笔
+记, 二是要求写读后感想文。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="这里应强调不能在阅读中没有笔记本。" data-text-b="这里应强调不能在阅读中没有笔记本。" data-row-idx="4" data-diff-mode="false" >
+                <td class="col-index">4</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[4, 1]</span><span class="sentence-a">这里应强调不能在阅读中没有笔记本。</span></td>
+                <td class="col-sentence-b"><span class="index">[4, 1]</span><span class="sentence-b">这里应强调不能在阅读中没有笔记本。</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="没有笔记本的阅读教学可说是没有语文特征的教学。" data-text-b="没有笔记本的阅读教学可说是没有语文特征的教学。" data-row-idx="5" data-diff-mode="false" >
+                <td class="col-index">5</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[5, 1]</span><span class="sentence-a">没有笔记本的阅读教学可说是没有语文特征的教学。</span></td>
+                <td class="col-sentence-b"><span class="index">[5, 1]</span><span class="sentence-b">没有笔记本的阅读教学可说是没有语文特征的教学。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.8136" data-text-a="在阅读课中，教
+师布置的课业、 提出的问题等，学生都要把答案记在笔记本上，教师
+讲授的要点和增补的内容也要记在笔记本上。" data-text-b="在阅读课中, 教
+师布置的课业、 提出的问题等, 学生都要把答案记在笔记本上, 教师
+讲授的要点和增补的内容也要记在笔记本上。" data-row-idx="6" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">6</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.81</span></td>
+                <td class="col-sentence-a"><span class="index">[6, 1]</span><span class="sentence-a">在阅读课中，教
+师布置的课业、 提出的问题等，学生都要把答案记在笔记本上，教师
+讲授的要点和增补的内容也要记在笔记本上。</span></td>
+                <td class="col-sentence-b"><span class="index">[6, 1]</span><span class="sentence-b">在阅读课中, 教
+师布置的课业、 提出的问题等, 学生都要把答案记在笔记本上, 教师
+讲授的要点和增补的内容也要记在笔记本上。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7429" data-text-a="此外，为了使读促进
+写、 读写结合，则应要求学生经常写读后感。" data-text-b="此外, 为了使读促进
+写、 读写结合, 则应要求学生经常写读后感。" data-row-idx="7" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">7</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.74</span></td>
+                <td class="col-sentence-a"><span class="index">[7, 1]</span><span class="sentence-a">此外，为了使读促进
+写、 读写结合，则应要求学生经常写读后感。</span></td>
+                <td class="col-sentence-b"><span class="index">[7, 1]</span><span class="sentence-b">此外, 为了使读促进
+写、 读写结合, 则应要求学生经常写读后感。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.6800" data-text-a="指导学生经常写课文读后感，是作好文的基础。" data-text-b="指导学生经常写课文读
+后感, 是作好文的基础。" data-row-idx="8" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">8</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.68</span></td>
+                <td class="col-sentence-a"><span class="index">[8-9, 1]</span><span class="sentence-a">指导学生经常写课文读后感，是作好文的基础。</span></td>
+                <td class="col-sentence-b"><span class="index">[8, 1]</span><span class="sentence-b">指导学生经常写课文读
+后感, 是作好文的基础。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7755" data-text-a="为了能在短时间内写出读后感，有必要强调
+要多写短文，即不要求多写综合性的作文，特别是在初中。" data-text-b="为了能在短时间内写出读后感, 有必要强调
+要多写短文, 即不要求多写综合性的作文, 特别是在初中。" data-row-idx="9" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">9</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.78</span></td>
+                <td class="col-sentence-a"><span class="index">[10, 8]</span><span class="sentence-a">为了能在短时间内写出读后感，有必要强调
+要多写短文，即不要求多写综合性的作文，特别是在初中。</span></td>
+                <td class="col-sentence-b"><span class="index">[9, 1]</span><span class="sentence-b">为了能在短时间内写出读后感, 有必要强调
+要多写短文, 即不要求多写综合性的作文, 特别是在初中。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7766" data-text-a="除了记笔
+记和写读后感之外，当然还有其他伴随阅读的写作练习，但这两种练
+习却是最自然而又最有力的，如能持之以恒，不仅会显著地提高学生
+在校时的写作水平，而且会使学生受益终生。" data-text-b="除了记笔
+记和写读后感之外, 当然还有其他伴随阅读的写作练习, 但这两种练
+习却是最自然而又最有力的, 如能持之以恒, 不仅会显著地提高学生
+在校时的写作水平, 而且会使学生受益终生。" data-row-idx="10" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">10</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.78</span></td>
+                <td class="col-sentence-a"><span class="index">[11, 8]</span><span class="sentence-a">除了记笔
+记和写读后感之外，当然还有其他伴随阅读的写作练习，但这两种练
+习却是最自然而又最有力的，如能持之以恒，不仅会显著地提高学生
+在校时的写作水平，而且会使学生受益终生。</span></td>
+                <td class="col-sentence-b"><span class="index">[10, 1]</span><span class="sentence-b">除了记笔
+记和写读后感之外, 当然还有其他伴随阅读的写作练习, 但这两种练
+习却是最自然而又最有力的, 如能持之以恒, 不仅会显著地提高学生
+在校时的写作水平, 而且会使学生受益终生。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.9180" data-text-a="(选自 《中文科课程教材教法研讨集》 香港文化教育出版社 1989
+年版，据 《朱绍禹文存》 吉林人民出版社 2002 年版校录)" data-text-b="(选自 《中文科课程教材教法研讨集》 香港文化教育出版社 1989
+年版, 据 《朱绍禹文存》 吉林人民出版社 2002 年版校录)" data-row-idx="11" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">11</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.92</span></td>
+                <td class="col-sentence-a"><span class="index">[12, 14]</span><span class="sentence-a">(选自 《中文科课程教材教法研讨集》 香港文化教育出版社 1989
+年版，据 《朱绍禹文存》 吉林人民出版社 2002 年版校录)</span></td>
+                <td class="col-sentence-b"><span class="index">[11, 13]</span><span class="sentence-b">(选自 《中文科课程教材教法研讨集》 香港文化教育出版社 1989
+年版, 据 《朱绍禹文存》 吉林人民出版社 2002 年版校录)</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7917" data-text-a="我和中学语文教学结缘，算来已达三十五个春秋。" data-text-b="我和中学语文教学结缘, 算来已达三十五个春秋。" data-row-idx="12" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">12</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.79</span></td>
+                <td class="col-sentence-a"><span class="index">[13, 17]</span><span class="sentence-a">我和中学语文教学结缘，算来已达三十五个春秋。</span></td>
+                <td class="col-sentence-b"><span class="index">[12, 16]</span><span class="sentence-b">我和中学语文教学结缘, 算来已达三十五个春秋。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.6818" data-text-a="这期间，我从事中学语文教学研究，虽然时断时续，毕
+竟断时短续时长，人家始终称我为语文教学法教师，大
+概就是基于这个缘故。" data-text-b="这期间, 我从事中学语文教学研究, 虽然时断时续, 毕
+竟断时短续时长, 人家始终称我为语文教学法教师, 大
+概就是基于这个缘故。" data-row-idx="13" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">13</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.68</span></td>
+                <td class="col-sentence-a"><span class="index">[14, 17]</span><span class="sentence-a">这期间，我从事中学语文教学研究，虽然时断时续，毕
+竟断时短续时长，人家始终称我为语文教学法教师，大
+概就是基于这个缘故。</span></td>
+                <td class="col-sentence-b"><span class="index">[13, 16]</span><span class="sentence-b">这期间, 我从事中学语文教学研究, 虽然时断时续, 毕
+竟断时短续时长, 人家始终称我为语文教学法教师, 大
+概就是基于这个缘故。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.8312" data-text-a="《语文教学通讯》 主编嘱我执笔
+为文，和广大中学教师谈心，这里我就以 《读书·教书
+·写书》 为题，并循着这个意思来完成这篇 命 题 作
+文吧。" data-text-b="《语文教学通讯》 主编嘱我执笔
+为文, 和广大中学教师谈心, 这里我就以 《读书·教书
+·写书》 为题, 并循着这个意思来完成这篇 命 题 作
+文吧。" data-row-idx="14" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">14</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.83</span></td>
+                <td class="col-sentence-a"><span class="index">[15, 17]</span><span class="sentence-a">《语文教学通讯》 主编嘱我执笔
+为文，和广大中学教师谈心，这里我就以 《读书·教书
+·写书》 为题，并循着这个意思来完成这篇 命 题 作
+文吧。</span></td>
+                <td class="col-sentence-b"><span class="index">[14, 16]</span><span class="sentence-b">《语文教学通讯》 主编嘱我执笔
+为文, 和广大中学教师谈心, 这里我就以 《读书·教书
+·写书》 为题, 并循着这个意思来完成这篇 命 题 作
+文吧。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.6857" data-text-a="读书
+为了充实自己，任何人都需要读书，为了教书，做
+教师的尤其需要读书。" data-text-b="读书
+为了充实自己, 任何人都需要读书, 为了教书, 做
+教师的尤其需要读书。" data-row-idx="15" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">15</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.69</span></td>
+                <td class="col-sentence-a"><span class="index">[16, 17]</span><span class="sentence-a">读书
+为了充实自己，任何人都需要读书，为了教书，做
+教师的尤其需要读书。</span></td>
+                <td class="col-sentence-b"><span class="index">[15, 16]</span><span class="sentence-b">读书
+为了充实自己, 任何人都需要读书, 为了教书, 做
+教师的尤其需要读书。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7258" data-text-a="基于这双重需要，迄今我本该读
+了数量可观的书，即使不包括学生时代，仅由从教时算起，我读过的
+书也理应够多的。" data-text-b="基于这双重需要, 迄今我本该读
+了数量可观的书, 即使不包括学生时代, 仅由从教时算起, 我读过的
+书也理应够多的。" data-row-idx="16" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">16</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.73</span></td>
+                <td class="col-sentence-a"><span class="index">[17, 17]</span><span class="sentence-a">基于这双重需要，迄今我本该读
+了数量可观的书，即使不包括学生时代，仅由从教时算起，我读过的
+书也理应够多的。</span></td>
+                <td class="col-sentence-b"><span class="index">[16, 16]</span><span class="sentence-b">基于这双重需要, 迄今我本该读
+了数量可观的书, 即使不包括学生时代, 仅由从教时算起, 我读过的
+书也理应够多的。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7429" data-text-a="可实际上不然，我读书的数量和读书的时间并未成
+正比例，劳多而效少。" data-text-b="可实际上不然, 我读书的数量和读书的时间并未成
+正比例, 劳多而效少。" data-row-idx="17" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">17</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.74</span></td>
+                <td class="col-sentence-a"><span class="index">[18, 17]</span><span class="sentence-a">可实际上不然，我读书的数量和读书的时间并未成
+正比例，劳多而效少。</span></td>
+                <td class="col-sentence-b"><span class="index">[17, 16]</span><span class="sentence-b">可实际上不然, 我读书的数量和读书的时间并未成
+正比例, 劳多而效少。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.8101" data-text-a="而这对既需要读书又乐意读书的读书者来说，
+实在是件极不称心的事! 原因在哪里? 回顾起来，其原因固然不止一
+端，其中没有较早掌握读书技巧，实为重要的一端。" data-text-b="而这对既需要读书又乐意读书的读书者来说,
+实在是件极不称心的事! 原因在哪里? 回顾起来, 其原因固然不止一
+端, 其中没有较早掌握读书技巧, 实为重要的一端。" data-row-idx="18" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">18</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.81</span></td>
+                <td class="col-sentence-a"><span class="index">[19, 17]</span><span class="sentence-a">而这对既需要读书又乐意读书的读书者来说，
+实在是件极不称心的事! 原因在哪里? 回顾起来，其原因固然不止一
+端，其中没有较早掌握读书技巧，实为重要的一端。</span></td>
+                <td class="col-sentence-b"><span class="index">[18, 16]</span><span class="sentence-b">而这对既需要读书又乐意读书的读书者来说,
+实在是件极不称心的事! 原因在哪里? 回顾起来, 其原因固然不止一
+端, 其中没有较早掌握读书技巧, 实为重要的一端。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7097" data-text-a="许多不同的书，
+往往用相似的方法去读，岂能不事倍功半!" data-text-b="许多不同的书,
+往往用相似的方法去读, 岂能不事倍功半!" data-row-idx="19" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">19</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.71</span></td>
+                <td class="col-sentence-a"><span class="index">[20, 17]</span><span class="sentence-a">许多不同的书，
+往往用相似的方法去读，岂能不事倍功半!</span></td>
+                <td class="col-sentence-b"><span class="index">[19, 16]</span><span class="sentence-b">许多不同的书,
+往往用相似的方法去读, 岂能不事倍功半!</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.6885" data-text-a="本来，早在十六世纪，深谙读书之道的大哲学家培根就说过，有
+的书可以一尝，有的书可以吞下，只有很少的书应该仔细咀嚼。" data-text-b="本来, 早在十六世纪, 深谙读书之道的大哲学家培根就说过, 有
+的书可以一尝, 有的书可以吞下, 只有很少的书应该仔细咀嚼。" data-row-idx="20" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">20</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.69</span></td>
+                <td class="col-sentence-a"><span class="index">[21, 34]</span><span class="sentence-a">本来，早在十六世纪，深谙读书之道的大哲学家培根就说过，有
+的书可以一尝，有的书可以吞下，只有很少的书应该仔细咀嚼。</span></td>
+                <td class="col-sentence-b"><span class="index">[20, 33]</span><span class="sentence-b">本来, 早在十六世纪, 深谙读书之道的大哲学家培根就说过, 有
+的书可以一尝, 有的书可以吞下, 只有很少的书应该仔细咀嚼。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7045" data-text-a="这就
+是说，读不同的书应有不同的方法，有的书宜于浏览，有的书宜于先
+记忆后求领会，有的书则须精读。" data-text-b="这就
+是说, 读不同的书应有不同的方法, 有的书宜于浏览, 有的书宜于先
+记忆后求领会, 有的书则须精读。" data-row-idx="21" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">21</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.70</span></td>
+                <td class="col-sentence-a"><span class="index">[22, 34]</span><span class="sentence-a">这就
+是说，读不同的书应有不同的方法，有的书宜于浏览，有的书宜于先
+记忆后求领会，有的书则须精读。</span></td>
+                <td class="col-sentence-b"><span class="index">[21, 33]</span><span class="sentence-b">这就
+是说, 读不同的书应有不同的方法, 有的书宜于浏览, 有的书宜于先
+记忆后求领会, 有的书则须精读。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.6441" data-text-a="而在我，精读虽然也不足，倒是学
+生时代老师指导过的，而于泛读，长时期内既少有效运用，又很少研
+究。" data-text-b="而在我, 精读虽然也不足, 倒是学
+生时代老师指导过的, 而于泛读, 长时期内既少有效运用, 又很少研
+究。" data-row-idx="22" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">22</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.64</span></td>
+                <td class="col-sentence-a"><span class="index">[23, 34]</span><span class="sentence-a">而在我，精读虽然也不足，倒是学
+生时代老师指导过的，而于泛读，长时期内既少有效运用，又很少研
+究。</span></td>
+                <td class="col-sentence-b"><span class="index">[22, 33]</span><span class="sentence-b">而在我, 精读虽然也不足, 倒是学
+生时代老师指导过的, 而于泛读, 长时期内既少有效运用, 又很少研
+究。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7115" data-text-a="不过不需细想，就谁都能意识到，在现代信息社会里，在绝大多
+数情况下，要的并不是精读而是泛读。" data-text-b="不过不需细想, 就谁都能意识到, 在现代信息社会里, 在绝大多
+数情况下, 要的并不是精读而是泛读。" data-row-idx="23" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">23</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.71</span></td>
+                <td class="col-sentence-a"><span class="index">[24, 34]</span><span class="sentence-a">不过不需细想，就谁都能意识到，在现代信息社会里，在绝大多
+数情况下，要的并不是精读而是泛读。</span></td>
+                <td class="col-sentence-b"><span class="index">[23, 33]</span><span class="sentence-b">不过不需细想, 就谁都能意识到, 在现代信息社会里, 在绝大多
+数情况下, 要的并不是精读而是泛读。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7500" data-text-a="在精读生活中，其实只有以研
+究为目的的精读，才能算作是真正的阅读。" data-text-b="在精读生活中, 其实只有以研
+究为目的的精读, 才能算作是真正的阅读。" data-row-idx="24" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">24</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.75</span></td>
+                <td class="col-sentence-a"><span class="index">[25, 34]</span><span class="sentence-a">在精读生活中，其实只有以研
+究为目的的精读，才能算作是真正的阅读。</span></td>
+                <td class="col-sentence-b"><span class="index">[24, 33]</span><span class="sentence-b">在精读生活中, 其实只有以研
+究为目的的精读, 才能算作是真正的阅读。</span></td>
+            </tr>
+            <tr class="match partial-match" data-type="match" data-similarity="0.7292" data-text-a="在通常情况下，包括学生
+的精读，都是为阅读进行准备的一种训练方式，而泛读才是真正意义" data-text-b="在通常情况下, 包括学生
+的精读, 都是为阅读进行准备的一种训练方式, 而泛读才是真正意义" data-row-idx="25" data-diff-mode="false" data-needs-diff="true">
+                <td class="col-index">25</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">0.73</span></td>
+                <td class="col-sentence-a"><span class="index">[26, 34]</span><span class="sentence-a">在通常情况下，包括学生
+的精读，都是为阅读进行准备的一种训练方式，而泛读才是真正意义</span></td>
+                <td class="col-sentence-b"><span class="index">[25, 33]</span><span class="sentence-b">在通常情况下, 包括学生
+的精读, 都是为阅读进行准备的一种训练方式, 而泛读才是真正意义</span></td>
+            </tr>
+            <tr class="match" data-type="match" data-similarity="1.0000" data-text-a="读
+书
+·
+教
+书
+·
+写
+书" data-text-b="读
+书
+·
+教
+书
+·
+写
+书" data-row-idx="26" data-diff-mode="false" >
+                <td class="col-index">26</td>
+                <td class="col-type"><span class="item-header">MATCH</span></td>
+                <td class="col-similarity"><span class="similarity">1.00</span></td>
+                <td class="col-sentence-a"><span class="index">[27, 44]</span><span class="sentence-a">读
+书
+·
+教
+书
+·
+写
+书</span></td>
+                <td class="col-sentence-b"><span class="index">[26, 43]</span><span class="sentence-b">读
+书
+·
+教
+书
+·
+写
+书</span></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 类型筛选状态
+        const typeFilters = {
+            'all': true,
+            'match': true,
+            'movein': true,
+            'moveout': true,
+            'delete': true,
+            'insert': true
+        };
+
+        // 类型筛选函数
+        function filterByType(type) {
+            const btn = document.querySelector(`[data-type="${type}"]`);
+            typeFilters[type] = !typeFilters[type];
+
+            if (type === 'all') {
+                const allActive = !typeFilters['all'];
+                typeFilters['match'] = allActive;
+                typeFilters['movein'] = allActive;
+                typeFilters['moveout'] = allActive;
+                typeFilters['delete'] = allActive;
+                typeFilters['insert'] = allActive;
+
+                document.querySelectorAll('.filter-btn[data-type]').forEach(b => {
+                    b.classList.toggle('active', allActive);
+                });
+            } else {
+                btn.classList.toggle('active', typeFilters[type]);
+
+                const allActive = typeFilters['match'] && typeFilters['movein'] && typeFilters['moveout'] && typeFilters['delete'] && typeFilters['insert'];
+                const allBtn = document.querySelector('[data-type="all"]');
+                allBtn.classList.toggle('active', allActive);
+                typeFilters['all'] = allActive;
+            }
+
+            applyFilters();
+        }
+
+        // 应用所有筛选条件
+        function applyFilters() {
+            const rows = document.querySelectorAll('.alignment-table tbody tr');
+            const minSimilarity = parseFloat(document.getElementById('minSimilarity').value) || 0;
+            const maxSimilarity = parseFloat(document.getElementById('maxSimilarity').value) || 1;
+            const searchText = document.getElementById('searchText').value.toLowerCase().trim();
+
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const rowType = row.dataset.type;
+                const typeMatch = typeFilters[rowType];
+
+                const similarity = parseFloat(row.dataset.similarity) || 0;
+                const similarityMatch = similarity >= minSimilarity && similarity <= maxSimilarity;
+
+                const textA = (row.dataset.textA || '').toLowerCase();
+                const textB = (row.dataset.textB || '').toLowerCase();
+                const textMatch = !searchText || textA.includes(searchText) || textB.includes(searchText);
+
+                const shouldShow = typeMatch && similarityMatch && textMatch;
+
+                if (shouldShow) {
+                    row.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+
+            updateFilterStats(visibleCount, rows.length);
+            renderedRows.clear();
+            updateRenderQueue();
+            initialRender();
+        }
+
+        // 更新筛选统计信息
+        function updateFilterStats(visible, total) {
+            const statsEl = document.getElementById('filterStats');
+            if (visible === total) {
+                statsEl.textContent = `显示全部 ${total} 条结果`;
+            } else {
+                statsEl.textContent = `显示 ${visible} / ${total} 条结果`;
+            }
+        }
+
+        // 重置所有筛选
+        function resetFilters() {
+            typeFilters['all'] = true;
+            typeFilters['match'] = true;
+            typeFilters['movein'] = true;
+            typeFilters['moveout'] = true;
+            typeFilters['delete'] = true;
+            typeFilters['insert'] = true;
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.add('active');
+            });
+
+            document.getElementById('minSimilarity').value = '';
+            document.getElementById('maxSimilarity').value = '';
+            document.getElementById('searchText').value = '';
+
+            applyFilters();
+        }
+
+        // 懒加载渲染配置
+        const RENDER_BATCH_SIZE = 10;
+        const VIEWPORT_BUFFER = 100;
+        const INITIAL_RENDER_BUFFER = 2000;
+
+        let renderQueue = [];
+        let isRendering = false;
+        let renderedRows = new Set();
+
+        function isInViewportWithBuffer(element, buffer = VIEWPORT_BUFFER) {
+            const rect = element.getBoundingClientRect();
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+            return rect.top >= -buffer && rect.bottom <= viewportHeight + buffer;
+        }
+
+        function getDistanceToViewport(row) {
+            const rect = row.getBoundingClientRect();
+            const viewportTop = window.pageYOffset || document.documentElement.scrollTop;
+            const viewportBottom = viewportTop + (window.innerHeight || document.documentElement.clientHeight);
+            const rowTop = viewportTop + rect.top;
+            const rowBottom = viewportTop + rect.bottom;
+
+            if (rowBottom < viewportTop) {
+                return viewportTop - rowBottom;
+            } else if (rowTop > viewportBottom) {
+                return rowTop - viewportBottom;
+            } else {
+                return 0;
+            }
+        }
+
+        function updateRenderQueue() {
+            const allRows = document.querySelectorAll('.alignment-table tbody tr[data-needs-diff="true"]:not(.hidden)');
+            renderQueue = [];
+
+            allRows.forEach(row => {
+                if (!renderedRows.has(row)) {
+                    const distance = getDistanceToViewport(row);
+                    renderQueue.push({ row: row, distance: distance });
+                }
+            });
+
+            renderQueue.sort((a, b) => a.distance - b.distance);
+        }
+
+        function renderDiffForRow(row) {
+            const textA = row.dataset.textA || '';
+            const textB = row.dataset.textB || '';
+            const cellA = row.querySelector('.col-sentence-a');
+            const cellB = row.querySelector('.col-sentence-b');
+
+            if (!cellA || !cellB) return false;
+
+            if (row._originalA === undefined || row._originalB === undefined) {
+                row._originalA = cellA.innerHTML;
+                row._originalB = cellB.innerHTML;
+            }
+
+            if (typeof Diff !== 'undefined') {
+                let segmenter = null;
+                if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+                    try {
+                        segmenter = new Intl.Segmenter('zh', { granularity: 'word' });
+                    } catch (e) {
+                    }
+                }
+
+                const diff = segmenter
+                    ? Diff.diffWordsWithSpace(textA, textB, segmenter)
+                    : Diff.diffWords(textA, textB);
+
+                let originalHtml = '';
+                let modifiedHtml = '';
+
+                diff.forEach(part => {
+                    const escapedValue = escapeHtml(part.value);
+
+                    if (part.removed) {
+                        originalHtml += '<span style="color: red; text-decoration: dotted underline 2px;">' + escapedValue + '</span>';
+                    } else if (!part.added) {
+                        originalHtml += '<span style="color: black;">' + escapedValue + '</span>';
+                    }
+
+                    if (part.added) {
+                        modifiedHtml += '<span style="color: green; text-decoration: underline 2px;">' + escapedValue + '</span>';
+                    } else if (!part.removed) {
+                        modifiedHtml += '<span style="color: black;">' + escapedValue + '</span>';
+                    }
+                });
+
+                const indexA = cellA.querySelector('.index');
+                const indexB = cellB.querySelector('.index');
+                const indexAHtml = indexA ? indexA.outerHTML : '';
+                const indexBHtml = indexB ? indexB.outerHTML : '';
+
+                cellA.innerHTML = indexAHtml + (originalHtml || '');
+                cellB.innerHTML = indexBHtml + (modifiedHtml || '');
+            } else {
+                const indexA = cellA.querySelector('.index');
+                const indexB = cellB.querySelector('.index');
+                const indexAHtml = indexA ? indexA.outerHTML : '';
+                const indexBHtml = indexB ? indexB.outerHTML : '';
+                cellA.innerHTML = indexAHtml + escapeHtml(textA);
+                cellB.innerHTML = indexBHtml + escapeHtml(textB);
+            }
+
+            row.dataset.diffMode = 'true';
+            return true;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderBatch() {
+            if (isRendering || renderQueue.length === 0) {
+                return;
+            }
+
+            isRendering = true;
+
+            const viewportRows = renderQueue.filter(item =>
+                isInViewportWithBuffer(item.row, VIEWPORT_BUFFER)
+            );
+
+            const rowsToRender = viewportRows.length > 0
+                ? viewportRows.slice(0, RENDER_BATCH_SIZE)
+                : renderQueue.slice(0, RENDER_BATCH_SIZE);
+
+            rowsToRender.forEach(item => {
+                if (renderDiffForRow(item.row)) {
+                    renderedRows.add(item.row);
+                }
+            });
+
+            renderQueue = renderQueue.filter(item => !renderedRows.has(item.row));
+
+            isRendering = false;
+
+            if (renderQueue.length > 0) {
+                requestAnimationFrame(() => {
+                    setTimeout(renderBatch, 0);
+                });
+            }
+        }
+
+        function initialRender() {
+            updateRenderQueue();
+
+            const viewportRows = renderQueue.filter(item =>
+                isInViewportWithBuffer(item.row, INITIAL_RENDER_BUFFER)
+            );
+
+            viewportRows.forEach(item => {
+                if (renderDiffForRow(item.row)) {
+                    renderedRows.add(item.row);
+                }
+            });
+
+            renderQueue = renderQueue.filter(item => !renderedRows.has(item.row));
+
+            if (renderQueue.length > 0) {
+                requestAnimationFrame(() => {
+                    setTimeout(renderBatch, 100);
+                });
+            }
+        }
+
+        let scrollTimer = null;
+        function handleScroll() {
+            if (scrollTimer) {
+                return;
+            }
+
+            scrollTimer = setTimeout(() => {
+                updateRenderQueue();
+                renderBatch();
+                scrollTimer = null;
+            }, 150);
+        }
+
+        let intersectionObserver = null;
+        function setupIntersectionObserver() {
+            if (!('IntersectionObserver' in window)) {
+                return;
+            }
+
+            intersectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const row = entry.target;
+                        if (row.dataset.needsDiff === 'true' && !renderedRows.has(row)) {
+                            updateRenderQueue();
+                            renderBatch();
+                        }
+                    }
+                });
+            }, {
+                root: null,
+                rootMargin: `${VIEWPORT_BUFFER}px`,
+                threshold: 0
+            });
+
+            document.querySelectorAll('.alignment-table tbody tr[data-needs-diff="true"]').forEach(row => {
+                intersectionObserver.observe(row);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            applyFilters();
+            initialRender();
+            setupIntersectionObserver();
+            window.addEventListener('scroll', handleScroll, { passive: true });
+        });
+    </script>
+</body>
+</html>

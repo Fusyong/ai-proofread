@@ -809,18 +809,17 @@ def detect_and_handle_movements(
     movement_threshold: int = 2
 ) -> List[Dict]:
     """
-    检测和处理句子移动，创建movein和moveout条目
+    检测和处理句子移动，创建movein和moveout条目（基于b侧id连续性分组）
 
     算法：
-    1. 扫描对齐结果，找到移动的match项（a_index和b_index差值超过阈值）
-    2. 对于移动的句子，创建两个条目：
-       - movein：在原位置（按A的顺序），显示原文句子，右侧显示占位
-       - moveout：在新位置（按B的顺序），左侧显示占位，显示校对后句子
-    3. 替换原来的match项
+    1. 只检查b侧id（b_index）的连续性
+    2. 把所有连续条目构成的块区分出来
+    3. 把条目最少的块移动到大块之间，看是否能拼接为更大的块
+    4. 如此循环，直到无法再合并
 
     Args:
         alignment: 对齐结果
-        movement_threshold: 移动阈值，a_index和b_index差值超过此值认为是移动（默认2）
+        movement_threshold: 保留参数以兼容旧代码，但不再使用
 
     Returns:
         处理后的对齐结果，包含movein和moveout条目
@@ -828,133 +827,270 @@ def detect_and_handle_movements(
     if not alignment:
         return alignment
 
-    result = []
-    movements = []  # 存储检测到的移动项：[(原match项, movein项, moveout项), ...]
+    def get_b_index(item: Dict) -> Optional[int]:
+        """获取条目的b_index"""
+        if item.get('b_indices') and len(item['b_indices']) == 1:
+            return item['b_indices'][0]
+        elif item.get('b_index') is not None:
+            return item['b_index']
+        return None
 
-    # 第一步：收集所有match项的索引信息，用于上下文判断
-    match_items = []  # [(item, a_idx, b_idx, position_in_alignment), ...]
+    def get_a_index(item: Dict) -> Optional[int]:
+        """获取条目的a_index"""
+        if item.get('a_indices') and len(item['a_indices']) == 1:
+            return item['a_indices'][0]
+        elif item.get('a_index') is not None:
+            return item['a_index']
+        return None
+
+    # 第一步：收集所有match项，只关注b侧id的连续性
+    match_items = []  # [(item, pos, b_idx), ...]
     for pos, item in enumerate(alignment):
-        if item['type'] == 'match':
-            # 获取a_index和b_index
-            a_idx = None
-            b_idx = None
+        if item.get('type') == 'match':
+            b_idx = get_b_index(item)
+            if b_idx is not None:
+                match_items.append((item, pos, b_idx))
 
-            if item.get('a_indices') and len(item['a_indices']) == 1:
-                a_idx = item['a_indices'][0]
-            elif item.get('a_index') is not None:
-                a_idx = item['a_index']
+    if len(match_items) < 2:
+        # 少于2个match项，无法判断移动
+        return alignment
 
-            if item.get('b_indices') and len(item['b_indices']) == 1:
-                b_idx = item['b_indices'][0]
-            elif item.get('b_index') is not None:
-                b_idx = item['b_index']
+    # 第二步：根据b_index的连续性分组为块
+    def group_into_blocks(match_items):
+        """根据b_index的连续性将match项分组为块"""
+        if not match_items:
+            return []
 
-            if a_idx is not None and b_idx is not None:
-                match_items.append((item, a_idx, b_idx, pos))
+        # 按位置排序
+        sorted_items = sorted(match_items, key=lambda x: x[1])  # 按pos排序
 
-    # 第二步：检测移动的match项（考虑相邻关系）
-    for idx, (item, a_idx, b_idx, pos) in enumerate(match_items):
-        movement_distance = abs(b_idx - a_idx)
+        blocks = []
+        current_block = [sorted_items[0]]
 
-        # 基本条件：索引差值必须超过阈值
-        if movement_distance <= movement_threshold:
-            continue
+        for i in range(1, len(sorted_items)):
+            prev_item, prev_pos, prev_b_idx = sorted_items[i-1]
+            curr_item, curr_pos, curr_b_idx = sorted_items[i]
 
-        # 关键修复：检查相邻的match项，避免将相邻条目误判为移动
-        # 如果当前项在结果列表中与相邻的match项接近，且索引是连续的，则不是真正的移动
-        is_real_movement = True
-
-        # 检查前一个match项
-        if idx > 0:
-            prev_item, prev_a_idx, prev_b_idx, prev_pos = match_items[idx - 1]
-            # 检查在结果列表中的位置是否相邻或接近（中间最多间隔2个非match项）
-            if pos - prev_pos <= 3:
-                # 检查a_index和b_index是否连续或接近连续
-                a_idx_diff = abs(a_idx - prev_a_idx)
-                b_idx_diff = abs(b_idx - prev_b_idx)
-                # 如果a_index和b_index的差值都较小（<=2），说明是连续的，不应该判断为移动
-                # 即使索引绝对值差值很大，只要相对于前一项是连续的，就不是移动
-                if a_idx_diff <= 2 and b_idx_diff <= 2:
-                    is_real_movement = False
-
-        # 检查后一个match项（如果前一个检查已经判断不是移动，则跳过）
-        if is_real_movement and idx < len(match_items) - 1:
-            next_item, next_a_idx, next_b_idx, next_pos = match_items[idx + 1]
-            # 检查在结果列表中的位置是否相邻或接近
-            if next_pos - pos <= 3:
-                # 检查a_index和b_index是否连续或接近连续
-                a_idx_diff = abs(next_a_idx - a_idx)
-                b_idx_diff = abs(next_b_idx - b_idx)
-                # 如果a_index和b_index的差值都较小（<=2），说明是连续的，不应该判断为移动
-                if a_idx_diff <= 2 and b_idx_diff <= 2:
-                    is_real_movement = False
-
-        # 只有当确实是真正的移动时才创建movein和moveout条目
-        if is_real_movement:
-            # 检测到移动，创建movein和moveout条目
-            # 获取原始相似度值，确保正确传递
-            original_similarity = item.get('similarity')
-            # 确保相似度值存在且有效
-            if original_similarity is None:
-                original_similarity = 0.0
+            # 检查b_index是否连续（差值=1）
+            if curr_b_idx == prev_b_idx + 1:
+                # 连续，加入当前块
+                current_block.append((curr_item, curr_pos, curr_b_idx))
             else:
-                # 确保是数值类型
-                original_similarity = float(original_similarity)
+                # 不连续，开始新块
+                blocks.append(current_block)
+                current_block = [(curr_item, curr_pos, curr_b_idx)]
 
-            # moveout：在原位置（a_idx），显示原文和校对后（表示从这里移出）
-            moveout_item = {
-                'type': 'moveout',
-                'a': item['a'],
-                'b': item['b'],  # 保留对侧句子
-                'similarity': original_similarity,  # 使用原始相似度
-                'a_index': a_idx,
-                'b_index': b_idx,  # 保留b_index用于显示
-                'original_b_index': b_idx,  # 保存原始b_index用于排序
-            }
+        # 添加最后一个块
+        if current_block:
+            blocks.append(current_block)
 
-            # movein：在新位置（b_idx），显示原文和校对后（表示移入到这里）
-            movein_item = {
-                'type': 'movein',
-                'a': item['a'],  # 保留对侧句子
-                'b': item['b'],
-                'similarity': original_similarity,  # 使用原始相似度
-                'a_index': a_idx,  # 保留a_index用于显示
-                'b_index': b_idx,
-                'original_a_index': a_idx,  # 保存原始a_index用于排序
-            }
+        return blocks
 
-            movements.append((item, moveout_item, movein_item))
+    # 迭代优化：尝试移动小块来合并成更大的块，直到只剩下一个块
+    movements = []  # [(原match项, moveout项, movein项, 插入位置信息), ...]
+    max_iterations = 100  # 最多迭代100次，避免无限循环
+
+    for iteration in range(max_iterations):
+        blocks = group_into_blocks(match_items)
+
+        if len(blocks) <= 1:
+            # 只有一个块或没有块，所有条目已连贯
+            break
+
+        # 找出所有最小的块（条目数最少），可能有多个相同大小的最小块
+        min_block_size = min(len(block) for block in blocks)
+        smallest_blocks = [(idx, block) for idx, block in enumerate(blocks) if len(block) == min_block_size]
+
+        # 尝试处理每个最小块，找到一个可以合并的
+        merged = False
+        for smallest_block_idx, smallest_block in smallest_blocks:
+            # 收集所有可以合并的目标块，选择最优的（能形成最大连续块的）
+            smallest_b_indices = [b_idx for _, _, b_idx in smallest_block]
+            smallest_min_b = min(smallest_b_indices)
+            smallest_max_b = max(smallest_b_indices)
+
+            best_insert_pos = None
+            best_merged_size = 0  # 合并后形成的连续块大小
+
+            # 首先检查是否可以插入到两个块之间（形成更大的连续块）
+            for prev_block_idx, prev_block in enumerate(blocks):
+                if prev_block_idx == smallest_block_idx:
+                    continue
+                prev_b_indices = [b_idx for _, _, b_idx in prev_block]
+                prev_max_b = max(prev_b_indices)
+
+                for next_block_idx, next_block in enumerate(blocks):
+                    if next_block_idx == smallest_block_idx or next_block_idx == prev_block_idx:
+                        continue
+                    next_b_indices = [b_idx for _, _, b_idx in next_block]
+                    next_min_b = min(next_b_indices)
+
+                    # 检查是否可以插入到prev_block和next_block之间
+                    if prev_max_b + 1 == smallest_min_b and smallest_max_b + 1 == next_min_b:
+                        # 可以插入到两个块之间，形成更大的连续块
+                        # 找到next_block第一个item在alignment中的位置
+                        insert_pos = next_block[0][1]
+                        merged_size = len(prev_block) + len(smallest_block) + len(next_block)
+                        if merged_size > best_merged_size:
+                            best_insert_pos = insert_pos
+                            best_merged_size = merged_size
+
+            # 如果没有找到可以插入到两个块之间的位置，检查是否可以与单个块合并
+            if best_insert_pos is None:
+                for target_block_idx, target_block in enumerate(blocks):
+                    if target_block_idx == smallest_block_idx:
+                        continue
+
+                    target_b_indices = [b_idx for _, _, b_idx in target_block]
+                    target_min_b = min(target_b_indices)
+                    target_max_b = max(target_b_indices)
+
+                    # 检查是否可以合并（最小块的b_index范围与目标块的b_index范围相邻）
+                    can_merge = False
+                    insert_pos = None
+                    merged_size = 0
+
+                    if smallest_max_b + 1 == target_min_b:
+                        # 最小块在目标块之前，可以合并
+                        can_merge = True
+                        # 找到目标块第一个item在alignment中的位置
+                        insert_pos = target_block[0][1]  # 第一个item的pos
+                        merged_size = len(smallest_block) + len(target_block)
+                    elif target_max_b + 1 == smallest_min_b:
+                        # 最小块在目标块之后，可以合并
+                        can_merge = True
+                        # 找到目标块最后一个item在alignment中的位置之后
+                        insert_pos = target_block[-1][1] + 1  # 最后一个item的pos + 1
+                        merged_size = len(smallest_block) + len(target_block)
+
+                    if can_merge and merged_size > best_merged_size:
+                        best_insert_pos = insert_pos
+                        best_merged_size = merged_size
+
+            # 如果找到了最佳插入位置，创建movein/moveout
+            if best_insert_pos is not None:
+                for item, pos, b_idx in smallest_block:
+                    a_idx = get_a_index(item)
+                    if a_idx is None:
+                        continue
+
+                    original_similarity = item.get('similarity')
+                    if original_similarity is None:
+                        original_similarity = 0.0
+                    else:
+                        original_similarity = float(original_similarity)
+
+                    # 创建moveout和movein
+                    moveout_item = item.copy()
+                    moveout_item.update({
+                        'type': 'moveout',
+                        'similarity': original_similarity,
+                        'a_index': a_idx,
+                        'b_index': b_idx,
+                        'original_b_index': b_idx,
+                    })
+                    # 保留所有字段
+                    for field in ['a_indices', 'b_indices', 'a_line_number', 'b_line_number',
+                                 'a_line_numbers', 'b_line_numbers', 'id', 'group_id', 'offset']:
+                        if field in item:
+                            moveout_item[field] = item[field]
+
+                    movein_item = item.copy()
+                    movein_item.update({
+                        'type': 'movein',
+                        'similarity': original_similarity,
+                        'a_index': a_idx,
+                        'b_index': b_idx,
+                        'original_a_index': a_idx,
+                    })
+                    # 保留所有字段
+                    for field in ['a_indices', 'b_indices', 'a_line_number', 'b_line_number',
+                                 'a_line_numbers', 'b_line_numbers', 'id', 'group_id', 'offset']:
+                        if field in item:
+                            movein_item[field] = item[field]
+
+                    movements.append((item, moveout_item, movein_item, {
+                        'moveout_insert_at_a': a_idx,  # moveout在原位置
+                        'movein_insert_pos': best_insert_pos,  # movein插入到目标位置
+                    }))
+
+                merged = True
+                # 从match_items中移除已处理的项，以便下次迭代时不再处理
+                smallest_item_ids = {id(item) for item, _, _ in smallest_block}
+                match_items = [(item, pos, b_idx) for item, pos, b_idx in match_items
+                              if id(item) not in smallest_item_ids]
+                # 找到一个可以合并的块后，跳出循环，继续下一次迭代
+                break
+
+        if not merged:
+            # 无法再合并，退出循环
+            break
 
     # 如果没有检测到移动，直接返回原结果
     if not movements:
         return alignment
 
-    # 第二步：构建新的结果列表
-    # 对于移动的match项，替换为movein和moveout
-    # movein保持A的顺序（在原位置），moveout保持B的顺序（在新位置）
-
+    # 第三步：构建新的结果列表
     # 创建移动项的映射
     match_to_movements = {}
-    for original, moveout, movein in movements:
-        match_to_movements[id(original)] = (moveout, movein)
+    for original, moveout, movein, insert_info in movements:
+        match_to_movements[id(original)] = (moveout, movein, insert_info)
 
-    # 第一遍：处理A的顺序（创建moveout项，在原位置）
+    # 第一遍：处理A的顺序（替换match项，并插入需要额外插入的moveout）
+    # 收集需要额外插入的moveout项（基于位置）
+    moveout_insertions = {}  # {position: [moveout_items]}
+    for original, moveout, movein, insert_info in movements:
+        if 'moveout_insert_pos' in insert_info:
+            # 需要额外插入的moveout（基于位置）
+            pos = insert_info['moveout_insert_pos']
+            if pos not in moveout_insertions:
+                moveout_insertions[pos] = []
+            moveout_insertions[pos].append(moveout)
+
     result_a_order = []
-    for item in alignment:
+    for pos, item in enumerate(alignment):
+        # 先插入需要在此位置插入的moveout项
+        if pos in moveout_insertions:
+            result_a_order.extend(moveout_insertions[pos])
+
+        # 然后处理当前项
         if id(item) in match_to_movements:
-            # 这是移动的match项，替换为moveout（在原位置）
-            moveout, movein = match_to_movements[id(item)]
-            result_a_order.append(moveout)
+            # 这是移动的match项，根据情况替换为moveout或movein
+            moveout, movein, insert_info = match_to_movements[id(item)]
+            # 判断应该替换为什么：
+            # - 如果moveout_insert_pos存在，说明moveout需要插入到后面，当前位置应该替换为movein（a异常、b正常的情况）
+            # - 如果movein_insert_pos存在，说明movein需要插入到后面，当前位置应该替换为moveout（a正常、b异常的情况）
+            # - 如果都不存在，说明是双侧异常的情况，需要根据具体情况处理
+            if 'moveout_insert_pos' in insert_info:
+                # a异常、b正常：当前位置替换为movein
+                result_a_order.append(movein)
+            elif 'movein_insert_pos' in insert_info:
+                # a正常、b异常：当前位置替换为moveout
+                result_a_order.append(moveout)
+            else:
+                # 双侧异常的情况，默认替换为moveout（这种情况应该很少）
+                result_a_order.append(moveout)
         else:
             result_a_order.append(item)
 
-    # 第二遍：处理B的顺序（插入movein项）
-    # 需要找到每个movein应该插入的位置（按b_index排序）
-    movein_items = []
-    for original, moveout, movein in movements:
-        movein_items.append((movein['b_index'], movein))
+    # 处理末尾插入的moveout
+    if len(alignment) in moveout_insertions:
+        result_a_order.extend(moveout_insertions[len(alignment)])
 
-    # 按b_index排序movein项
+    # 第二遍：处理B的顺序（插入movein项）
+    # 收集所有需要额外插入的movein项（已经在当前位置的movein不需要再插入）
+    movein_items = []  # [(insert_pos或b_index, movein, is_position_based), ...]
+    for original, moveout, movein, insert_info in movements:
+        if 'movein_insert_pos' in insert_info:
+            # 基于位置的插入（a正常、b异常的情况，movein需要插入到后面）
+            movein_items.append((insert_info['movein_insert_pos'], movein, True))
+        elif 'movein_insert_at_b' in insert_info:
+            # 基于b_index的插入（这种情况应该很少，因为movein_insert_at_b通常意味着movein已经在当前位置）
+            # 但为了兼容性，仍然处理
+            movein_items.append((insert_info['movein_insert_at_b'], movein, False))
+        # 如果只有moveout_insert_pos，说明movein已经在当前位置替换了，不需要再插入
+
+    # 按插入位置或b_index排序
     movein_items.sort(key=lambda x: x[0])
 
     # 创建b_index到结果位置的映射
@@ -966,35 +1102,38 @@ def detect_and_handle_movements(
         elif item.get('b_index') is not None:
             b_idx_to_pos[item['b_index']] = pos
 
-    # 优化：预先计算所有movein项应该插入的位置
-    # 使用字典存储：位置 -> [movein项列表]
+    # 预先计算所有movein项应该插入的位置
     insertions = {}  # {position: [movein_items]}
 
-    for b_idx, movein in movein_items:
-        # 找到movein应该插入的位置
-        insert_pos = len(result_a_order)  # 默认插入到末尾
+    for insert_key, movein, is_position_based in movein_items:
+        if is_position_based:
+            # 基于位置的插入（直接使用位置）
+            insert_pos = insert_key
+        else:
+            # 基于b_index的插入（需要查找位置）
+            b_idx = insert_key
+            insert_pos = len(result_a_order)  # 默认插入到末尾
 
-        if b_idx > 0:
-            prev_b_idx = b_idx - 1
-            if prev_b_idx in b_idx_to_pos:
-                insert_pos = b_idx_to_pos[prev_b_idx] + 1
-            else:
-                # 前一句也是新增的，继续往前找（最多查找10次，避免无限循环）
-                for p_idx in range(prev_b_idx, max(-1, prev_b_idx - 10), -1):
-                    if p_idx in b_idx_to_pos:
-                        insert_pos = b_idx_to_pos[p_idx] + 1
-                        break
+            if b_idx > 0:
+                prev_b_idx = b_idx - 1
+                if prev_b_idx in b_idx_to_pos:
+                    insert_pos = b_idx_to_pos[prev_b_idx] + 1
+                else:
+                    # 前一句也是新增的，继续往前找（最多查找10次，避免无限循环）
+                    for p_idx in range(prev_b_idx, max(-1, prev_b_idx - 10), -1):
+                        if p_idx in b_idx_to_pos:
+                            insert_pos = b_idx_to_pos[p_idx] + 1
+                            break
 
         # 将movein项添加到对应位置的列表中
         if insert_pos not in insertions:
             insertions[insert_pos] = []
         insertions[insert_pos].append(movein)
 
-    # 优化：一次性构建结果，避免频繁insert
-    # 创建一个包含所有位置的列表，然后填充
+    # 一次性构建结果，避免频繁insert
     result = []
     for pos in range(len(result_a_order) + 1):  # +1 用于处理末尾插入
-        # 先添加当前位置的moveout项（如果有）
+        # 先添加当前位置的movein项（如果有）
         if pos in insertions:
             result.extend(insertions[pos])
 
