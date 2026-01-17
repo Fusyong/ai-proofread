@@ -28,7 +28,7 @@ from src.sentence_aligner import (
     normalize_sentence,
     jaccard_similarity
 )
-from src.splitter import split_chinese_sentences
+from src.splitter import split_chinese_sentences, split_chinese_sentences_with_line_numbers
 from src.html_report_v2 import save_html_report_stage1
 
 
@@ -249,13 +249,51 @@ def main():
     title_b = Path(args.text_b).name
     output_base = args.output
 
-    # 切分句子
+    # 切分句子并获取行号
     print("\n切分句子...")
-    sentences_a = [s.strip() for s in split_chinese_sentences(text_a) if s.strip()]
-    sentences_b = [s.strip() for s in split_chinese_sentences(text_b) if s.strip()]
+    sentences_a_with_lines = split_chinese_sentences_with_line_numbers(text_a)
+    sentences_b_with_lines = split_chinese_sentences_with_line_numbers(text_b)
+
+    # 提取句子列表
+    sentences_a = [s.strip() for s, _, _ in sentences_a_with_lines if s.strip()]
+    sentences_b = [s.strip() for s, _, _ in sentences_b_with_lines if s.strip()]
+
+    # 创建行号映射（使用start_line作为行号）
+    line_numbers_a = [start_line for _, start_line, _ in sentences_a_with_lines]
+    line_numbers_b = [start_line for _, start_line, _ in sentences_b_with_lines]
 
     print(f"原文句子数: {len(sentences_a)}")
     print(f"校对后句子数: {len(sentences_b)}")
+
+    def add_line_numbers_to_alignment(alignment):
+        """为对齐结果添加行号信息"""
+        for item in alignment:
+            # 处理原文行号
+            if 'a_indices' in item:
+                a_indices = item['a_indices']
+                if a_indices:
+                    item['a_line_numbers'] = [line_numbers_a[i] for i in a_indices if i < len(line_numbers_a)]
+                    if item['a_line_numbers']:
+                        item['a_line_number'] = item['a_line_numbers'][0]  # 首行
+            elif 'a_index' in item and item['a_index'] is not None:
+                a_idx = item['a_index']
+                if a_idx < len(line_numbers_a):
+                    item['a_line_number'] = line_numbers_a[a_idx]
+                    item['a_line_numbers'] = [line_numbers_a[a_idx]]
+
+            # 处理校对后行号
+            if 'b_indices' in item:
+                b_indices = item['b_indices']
+                if b_indices:
+                    item['b_line_numbers'] = [line_numbers_b[i] for i in b_indices if i < len(line_numbers_b)]
+                    if item['b_line_numbers']:
+                        item['b_line_number'] = item['b_line_numbers'][0]  # 首行
+            elif 'b_index' in item and item['b_index'] is not None:
+                b_idx = item['b_index']
+                if b_idx < len(line_numbers_b):
+                    item['b_line_number'] = line_numbers_b[b_idx]
+                    item['b_line_numbers'] = [line_numbers_b[b_idx]]
+        return alignment
 
     # 阶段0: 初始对齐（不包含后处理）
     print("\n" + "="*60)
@@ -269,6 +307,9 @@ def main():
         similarity_threshold=args.threshold,
         ngram_size=args.ngram
     )
+
+    # 为阶段0添加行号信息
+    alignment_stage0 = add_line_numbers_to_alignment(alignment_stage0)
 
     html_path_stage0 = f"{output_base}_stage0_initial.html"
     print(f"保存HTML: {html_path_stage0}")
@@ -298,6 +339,8 @@ def main():
         title_a=title_a,
         title_b=title_b
     )
+    # 确保行号信息保留（rematch可能会创建新项，需要重新添加行号）
+    alignment_stage1 = add_line_numbers_to_alignment(alignment_stage1)
     stats_stage1 = get_alignment_statistics(alignment_stage1)
     print(f"统计: 总计={stats_stage1['total']}, 匹配={stats_stage1['match']}, "
           f"删除={stats_stage1['delete']}, 新增={stats_stage1['insert']}")
@@ -317,6 +360,8 @@ def main():
         title_a=title_a,
         title_b=title_b
     )
+    # 确保行号信息保留
+    alignment_stage2 = add_line_numbers_to_alignment(alignment_stage2)
     stats_stage2 = get_alignment_statistics(alignment_stage2)
     print(f"统计: 总计={stats_stage2['total']}, 匹配={stats_stage2['match']}, "
           f"删除={stats_stage2['delete']}, 新增={stats_stage2['insert']}")
@@ -330,6 +375,9 @@ def main():
         alignment_stage2,
         ngram_size=args.ngram
     )
+
+    # 确保行号信息保留
+    alignment_stage3 = add_line_numbers_to_alignment(alignment_stage3)
 
     html_path_stage3 = f"{output_base}_stage3_merge_delete.html"
     print(f"保存HTML: {html_path_stage3}")
@@ -354,6 +402,9 @@ def main():
         alignment_stage3,
         movement_threshold=2
     )
+
+    # 确保行号信息保留（detect_and_handle_movements已经保留了行号，但为了保险再添加一次）
+    alignment_final = add_line_numbers_to_alignment(alignment_final)
 
     html_path_final = f"{output_base}_stage4_final.html"
     print(f"保存HTML: {html_path_final}")

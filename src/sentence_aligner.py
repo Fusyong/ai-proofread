@@ -572,6 +572,47 @@ def rematch_adjacent_delete_insert(
                         'a_indices': a_indices,
                         'b_indices': b_indices
                     }
+                    # 保留行号信息（从原始项中收集）
+                    a_line_numbers = []
+                    b_line_numbers = []
+
+                    # 处理A侧行号
+                    if 'original_items' in d_candidate:
+                        for orig_item in d_candidate['original_items']:
+                            if orig_item:
+                                if 'a_line_numbers' in orig_item:
+                                    a_line_numbers.extend(orig_item['a_line_numbers'])
+                                elif 'a_line_number' in orig_item and orig_item['a_line_number'] is not None:
+                                    a_line_numbers.append(orig_item['a_line_number'])
+                    elif 'original_item' in d_candidate and d_candidate['original_item']:
+                        orig_item = d_candidate['original_item']
+                        if 'a_line_numbers' in orig_item:
+                            a_line_numbers.extend(orig_item['a_line_numbers'])
+                        elif 'a_line_number' in orig_item and orig_item['a_line_number'] is not None:
+                            a_line_numbers.append(orig_item['a_line_number'])
+
+                    # 处理B侧行号
+                    if 'original_items' in ins_candidate:
+                        for orig_item in ins_candidate['original_items']:
+                            if orig_item:
+                                if 'b_line_numbers' in orig_item:
+                                    b_line_numbers.extend(orig_item['b_line_numbers'])
+                                elif 'b_line_number' in orig_item and orig_item['b_line_number'] is not None:
+                                    b_line_numbers.append(orig_item['b_line_number'])
+                    elif 'original_item' in ins_candidate and ins_candidate['original_item']:
+                        orig_item = ins_candidate['original_item']
+                        if 'b_line_numbers' in orig_item:
+                            b_line_numbers.extend(orig_item['b_line_numbers'])
+                        elif 'b_line_number' in orig_item and orig_item['b_line_number'] is not None:
+                            b_line_numbers.append(orig_item['b_line_number'])
+
+                    if a_line_numbers:
+                        match_item['a_line_numbers'] = a_line_numbers
+                        match_item['a_line_number'] = a_line_numbers[0]
+                    if b_line_numbers:
+                        match_item['b_line_numbers'] = b_line_numbers
+                        match_item['b_line_number'] = b_line_numbers[0]
+
                     # 使用第一个DELETE索引作为键
                     match_items.append((d_candidate['indices'][0], match_item))
 
@@ -774,6 +815,23 @@ def rematch_non_adjacent_delete_insert(
             'a_indices': a_indices,
             'b_indices': b_indices
         }
+        # 保留行号信息
+        if 'a_line_numbers' in d_item:
+            match_item['a_line_numbers'] = d_item['a_line_numbers']
+            if match_item['a_line_numbers']:
+                match_item['a_line_number'] = match_item['a_line_numbers'][0]
+        elif 'a_line_number' in d_item and d_item['a_line_number'] is not None:
+            match_item['a_line_number'] = d_item['a_line_number']
+            match_item['a_line_numbers'] = [d_item['a_line_number']]
+
+        if 'b_line_numbers' in ins_item:
+            match_item['b_line_numbers'] = ins_item['b_line_numbers']
+            if match_item['b_line_numbers']:
+                match_item['b_line_number'] = match_item['b_line_numbers'][0]
+        elif 'b_line_number' in ins_item and ins_item['b_line_number'] is not None:
+            match_item['b_line_number'] = ins_item['b_line_number']
+            match_item['b_line_numbers'] = [ins_item['b_line_number']]
+
         match_items_by_delete_pos[d_pos] = match_item
 
     # 构建结果：按照原始顺序，将匹配的项替换为MATCH
