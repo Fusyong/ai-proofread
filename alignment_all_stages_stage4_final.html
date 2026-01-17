@@ -68,6 +68,12 @@
         .alignment-table tr.insert {
             border-left: 4px solid #3498db;
         }
+        .alignment-table tr.movein {
+            border-left: 4px solid #9b59b6;
+        }
+        .alignment-table tr.moveout {
+            border-left: 4px solid #f39c12;
+        }
         .col-index {
             width: 5%;
             text-align: center;
@@ -278,6 +284,8 @@
                     <button class="filter-btn active" data-type="match" onclick="filterByType('match')">MATCH</button>
                     <button class="filter-btn active" data-type="delete" onclick="filterByType('delete')">DELETE</button>
                     <button class="filter-btn active" data-type="insert" onclick="filterByType('insert')">INSERT</button>
+                    <button class="filter-btn active" data-type="movein" onclick="filterByType('movein')">MOVEIN</button>
+                    <button class="filter-btn active" data-type="moveout" onclick="filterByType('moveout')">MOVEOUT</button>
                 </div>
             </div>
             <div class="filter-group">
@@ -707,7 +715,9 @@
             'all': true,
             'match': true,
             'delete': true,
-            'insert': true
+            'insert': true,
+            'movein': true,
+            'moveout': true
         };
 
         // 类型筛选函数
@@ -720,6 +730,8 @@
                 typeFilters['match'] = allActive;
                 typeFilters['delete'] = allActive;
                 typeFilters['insert'] = allActive;
+                typeFilters['movein'] = allActive;
+                typeFilters['moveout'] = allActive;
 
                 document.querySelectorAll('.filter-btn[data-type]').forEach(b => {
                     b.classList.toggle('active', allActive);
@@ -727,7 +739,8 @@
             } else {
                 btn.classList.toggle('active', typeFilters[type]);
 
-                const allActive = typeFilters['match'] && typeFilters['delete'] && typeFilters['insert'];
+                const allActive = typeFilters['match'] && typeFilters['delete'] && typeFilters['insert']
+                    && typeFilters['movein'] && typeFilters['moveout'];
                 const allBtn = document.querySelector('[data-type="all"]');
                 allBtn.classList.toggle('active', allActive);
                 typeFilters['all'] = allActive;
@@ -802,6 +815,8 @@
             typeFilters['match'] = true;
             typeFilters['delete'] = true;
             typeFilters['insert'] = true;
+            typeFilters['movein'] = true;
+            typeFilters['moveout'] = true;
 
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.add('active');
@@ -868,7 +883,22 @@
             }
 
             // 显示差异（检查Diff是否已加载）
-            if (typeof Diff !== 'undefined' && Diff && Diff.diffWords) {
+            if (typeof Diff !== 'undefined' && Diff) {
+                // 检查是否有diffWords方法（v7.0.0可能使用不同的导出方式）
+                const diffWordsFunc = Diff.diffWords || (Diff.default && Diff.default.diffWords);
+                const diffWordsWithSpaceFunc = Diff.diffWordsWithSpace || (Diff.default && Diff.default.diffWordsWithSpace);
+                
+                if (!diffWordsFunc) {
+                    // 如果jsdiff不可用，显示原始文本
+                    const indexA = cellA.querySelector('.index');
+                    const indexB = cellB.querySelector('.index');
+                    const indexAHtml = indexA ? indexA.outerHTML : '';
+                    const indexBHtml = indexB ? indexB.outerHTML : '';
+                    cellA.innerHTML = indexAHtml + escapeHtml(textA);
+                    cellB.innerHTML = indexBHtml + escapeHtml(textB);
+                    row.dataset.diffMode = 'true';
+                    return true;
+                }
                 let segmenter = null;
                 if (typeof Intl !== 'undefined' && Intl.Segmenter) {
                     try {
@@ -878,9 +908,27 @@
                     }
                 }
 
-                const diff = segmenter
-                    ? Diff.diffWordsWithSpace(textA, textB, segmenter)
-                    : Diff.diffWords(textA, textB);
+                // 使用兼容的方式调用diff函数
+                // 根据diff@7.0.0文档，diffWordsWithSpace的第三个参数应该是options对象
+                let diff;
+                if (segmenter && diffWordsWithSpaceFunc) {
+                    // 使用intlSegmenter选项（v7.0.0的正确用法）
+                    try {
+                        diff = diffWordsWithSpaceFunc(textA, textB, { intlSegmenter: segmenter });
+                    } catch (e) {
+                        // 如果失败，尝试直接传递segmenter（兼容旧版本）
+                        try {
+                            diff = diffWordsWithSpaceFunc(textA, textB, segmenter);
+                        } catch (e2) {
+                            // 如果都失败，使用普通的diffWordsWithSpace
+                            diff = diffWordsWithSpaceFunc(textA, textB);
+                        }
+                    }
+                } else if (diffWordsWithSpaceFunc) {
+                    diff = diffWordsWithSpaceFunc(textA, textB);
+                } else {
+                    diff = diffWordsFunc(textA, textB);
+                }
 
                 let originalHtml = '';
                 let modifiedHtml = '';

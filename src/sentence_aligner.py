@@ -913,16 +913,17 @@ def detect_and_handle_movements(
         # 少于2个match项，无法判断移动
         return alignment
 
-    # 第二步：根据b_index的连续性分组为块
-    def group_into_blocks(match_items):
-        """根据b_index的连续性将match项分组为块"""
+    # 第二步：根据b_index的连续性分组为块，并预先计算每个块的min/max b_index
+    def group_into_blocks_with_metadata(match_items):
+        """根据b_index的连续性将match项分组为块，并返回块的元数据"""
         if not match_items:
-            return []
+            return [], []
 
-        # 按位置排序
+        # 按位置排序（只排序一次）
         sorted_items = sorted(match_items, key=lambda x: x[1])  # 按pos排序
 
         blocks = []
+        block_metadata = []  # [(min_b, max_b, first_pos, last_pos), ...]
         current_block = [sorted_items[0]]
 
         for i in range(1, len(sorted_items)):
@@ -934,22 +935,41 @@ def detect_and_handle_movements(
                 # 连续，加入当前块
                 current_block.append((curr_item, curr_pos, curr_b_idx))
             else:
-                # 不连续，开始新块
-                blocks.append(current_block)
+                # 不连续，保存当前块并开始新块
+                if current_block:
+                    # 由于块内b_index连续，min就是第一个，max就是最后一个
+                    first_b_idx = current_block[0][2]
+                    last_b_idx = current_block[-1][2]
+                    blocks.append(current_block)
+                    block_metadata.append((
+                        first_b_idx,  # min_b（第一个b_index）
+                        last_b_idx,   # max_b（最后一个b_index）
+                        current_block[0][1],  # first_pos
+                        current_block[-1][1]  # last_pos
+                    ))
                 current_block = [(curr_item, curr_pos, curr_b_idx)]
 
         # 添加最后一个块
         if current_block:
+            # 由于块内b_index连续，min就是第一个，max就是最后一个
+            first_b_idx = current_block[0][2]
+            last_b_idx = current_block[-1][2]
             blocks.append(current_block)
+            block_metadata.append((
+                first_b_idx,  # min_b（第一个b_index）
+                last_b_idx,   # max_b（最后一个b_index）
+                current_block[0][1],  # first_pos
+                current_block[-1][1]  # last_pos
+            ))
 
-        return blocks
+        return blocks, block_metadata
 
     # 迭代优化：尝试移动小块来合并成更大的块，直到只剩下一个块
     movements = []  # [(原match项, moveout项, movein项, 插入位置信息), ...]
     max_iterations = 100  # 最多迭代100次，避免无限循环
 
     for iteration in range(max_iterations):
-        blocks = group_into_blocks(match_items)
+        blocks, block_metadata = group_into_blocks_with_metadata(match_items)
 
         if len(blocks) <= 1:
             # 只有一个块或没有块，所有条目已连贯
@@ -962,66 +982,56 @@ def detect_and_handle_movements(
         # 尝试处理每个最小块，找到一个可以合并的
         merged = False
         for smallest_block_idx, smallest_block in smallest_blocks:
-            # 收集所有可以合并的目标块，选择最优的（能形成最大连续块的）
-            smallest_b_indices = [b_idx for _, _, b_idx in smallest_block]
-            smallest_min_b = min(smallest_b_indices)
-            smallest_max_b = max(smallest_b_indices)
+            # 使用预先计算的元数据
+            smallest_min_b, smallest_max_b, smallest_first_pos, smallest_last_pos = block_metadata[smallest_block_idx]
 
             best_insert_pos = None
             best_merged_size = 0  # 合并后形成的连续块大小
 
             # 首先检查是否可以插入到两个块之间（形成更大的连续块）
-            for prev_block_idx, prev_block in enumerate(blocks):
+            # 优化：使用预先计算的元数据，避免重复计算min/max
+            for prev_block_idx, (prev_min_b, prev_max_b, prev_first_pos, prev_last_pos) in enumerate(block_metadata):
                 if prev_block_idx == smallest_block_idx:
                     continue
-                prev_b_indices = [b_idx for _, _, b_idx in prev_block]
-                prev_max_b = max(prev_b_indices)
 
-                for next_block_idx, next_block in enumerate(blocks):
+                # 检查prev_block是否可以接在smallest之前
+                if prev_max_b + 1 != smallest_min_b:
+                    continue
+
+                # 查找可以接在smallest之后的块
+                for next_block_idx, (next_min_b, next_max_b, next_first_pos, next_last_pos) in enumerate(block_metadata):
                     if next_block_idx == smallest_block_idx or next_block_idx == prev_block_idx:
                         continue
-                    next_b_indices = [b_idx for _, _, b_idx in next_block]
-                    next_min_b = min(next_b_indices)
 
                     # 检查是否可以插入到prev_block和next_block之间
-                    if prev_max_b + 1 == smallest_min_b and smallest_max_b + 1 == next_min_b:
+                    if smallest_max_b + 1 == next_min_b:
                         # 可以插入到两个块之间，形成更大的连续块
-                        # 找到next_block第一个item在alignment中的位置
-                        insert_pos = next_block[0][1]
-                        merged_size = len(prev_block) + len(smallest_block) + len(next_block)
+                        insert_pos = next_first_pos
+                        merged_size = len(blocks[prev_block_idx]) + len(smallest_block) + len(blocks[next_block_idx])
                         if merged_size > best_merged_size:
                             best_insert_pos = insert_pos
                             best_merged_size = merged_size
 
             # 如果没有找到可以插入到两个块之间的位置，检查是否可以与单个块合并
             if best_insert_pos is None:
-                for target_block_idx, target_block in enumerate(blocks):
+                for target_block_idx, (target_min_b, target_max_b, target_first_pos, target_last_pos) in enumerate(block_metadata):
                     if target_block_idx == smallest_block_idx:
                         continue
 
-                    target_b_indices = [b_idx for _, _, b_idx in target_block]
-                    target_min_b = min(target_b_indices)
-                    target_max_b = max(target_b_indices)
-
                     # 检查是否可以合并（最小块的b_index范围与目标块的b_index范围相邻）
-                    can_merge = False
-                    insert_pos = None
                     merged_size = 0
+                    insert_pos = None
 
                     if smallest_max_b + 1 == target_min_b:
                         # 最小块在目标块之前，可以合并
-                        can_merge = True
-                        # 找到目标块第一个item在alignment中的位置
-                        insert_pos = target_block[0][1]  # 第一个item的pos
-                        merged_size = len(smallest_block) + len(target_block)
+                        insert_pos = target_first_pos
+                        merged_size = len(smallest_block) + len(blocks[target_block_idx])
                     elif target_max_b + 1 == smallest_min_b:
                         # 最小块在目标块之后，可以合并
-                        can_merge = True
-                        # 找到目标块最后一个item在alignment中的位置之后
-                        insert_pos = target_block[-1][1] + 1  # 最后一个item的pos + 1
-                        merged_size = len(smallest_block) + len(target_block)
+                        insert_pos = target_last_pos + 1
+                        merged_size = len(smallest_block) + len(blocks[target_block_idx])
 
-                    if can_merge and merged_size > best_merged_size:
+                    if insert_pos is not None and merged_size > best_merged_size:
                         best_insert_pos = insert_pos
                         best_merged_size = merged_size
 
@@ -1074,9 +1084,10 @@ def detect_and_handle_movements(
 
                 merged = True
                 # 从match_items中移除已处理的项，以便下次迭代时不再处理
-                smallest_item_ids = {id(item) for item, _, _ in smallest_block}
+                # 使用位置集合来快速查找和移除
+                smallest_positions = {pos for _, pos, _ in smallest_block}
                 match_items = [(item, pos, b_idx) for item, pos, b_idx in match_items
-                              if id(item) not in smallest_item_ids]
+                              if pos not in smallest_positions]
                 # 找到一个可以合并的块后，跳出循环，继续下一次迭代
                 break
 
