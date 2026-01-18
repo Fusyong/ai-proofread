@@ -338,6 +338,233 @@ def align_sentences_anchor(
     return result
 
 
+def align_sentences_anchor_initial(
+    sentences_a: List[str],
+    sentences_b: List[str],
+    window_size: int = 10,
+    similarity_threshold: float = 0.6,
+    ngram_size: int = 2,
+    offset: int = 1,
+    max_window_expansion: int = 3,
+    consecutive_fail_threshold: int = 3
+) -> List[Dict]:
+    """
+    使用锚点机制对齐句子（初始对齐，不包含后处理）
+
+    这是 align_sentences_anchor 的简化版本，只进行初始对齐，不进行后处理。
+    用于需要获取各阶段中间结果的场景。
+
+    Args:
+        sentences_a: 原文句子列表
+        sentences_b: 校对后句子列表
+        window_size: 搜索窗口大小（锚点左右各window_size个句子）
+        similarity_threshold: 相似度阈值，超过此值才认为匹配
+        ngram_size: n-gram大小，用于Jaccard相似度计算
+        offset: 下一个句子的锚点偏移量（默认1，即下一个位置）
+        max_window_expansion: 最大窗口扩展倍数（默认3，即最多扩大到3倍）
+        consecutive_fail_threshold: 连续失败阈值，超过此值触发窗口扩展（默认3）
+
+    Returns:
+        初始对齐结果列表（不包含后处理），每个元素包含：
+        - type: 'match' | 'delete' | 'insert'
+        - a: 原文句子（delete/match时存在）
+        - b: 校对后句子（insert/match时存在）
+        - similarity: 相似度值（match时存在）
+        - a_index/a_indices: 原文句子索引
+        - b_index/b_indices: 校对后句子索引
+    """
+    n = len(sentences_a)
+    m = len(sentences_b)
+
+    if n == 0 and m == 0:
+        return []
+
+    result = []
+    anchor = 0  # 当前锚点位置（在B中的索引）
+    a_idx = 0   # 当前处理的A中句子索引
+    b_used = set()  # 记录B中已匹配的句子索引
+    b_to_result = {}  # 记录B中每个句子对应的结果项（用于插入新增句子）
+
+    # 用于跟踪连续失败次数和动态窗口
+    consecutive_fails = 0
+    current_window = window_size
+
+    # 按照A文件的顺序处理
+    while a_idx < n:
+        sent_a = normalize_sentence(sentences_a[a_idx])
+
+        # 动态调整搜索窗口：如果连续失败，逐步扩大窗口
+        if consecutive_fails >= consecutive_fail_threshold:
+            # 扩大搜索窗口（最多扩大到max_window_expansion倍）
+            expansion_factor = min(
+                max_window_expansion,
+                1 + (consecutive_fails - consecutive_fail_threshold) // 2
+            )
+            current_window = window_size * expansion_factor
+        else:
+            # 重置窗口大小
+            current_window = window_size
+
+        # 确定搜索窗口
+        window_start = max(0, anchor - current_window)
+        window_end = min(m, anchor + current_window + 1)
+
+        # 在窗口内搜索最相似的句子
+        best_match_idx = None
+        best_similarity = 0.0
+        best_b_idx_in_window = None  # 窗口内最佳匹配位置（即使相似度不够）
+
+        for b_idx in range(window_start, window_end):
+            # 跳过已匹配的句子
+            if b_idx in b_used:
+                continue
+
+            sent_b = normalize_sentence(sentences_b[b_idx])
+            similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
+
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_match_idx = b_idx if similarity >= similarity_threshold else None
+                best_b_idx_in_window = b_idx
+
+        # 如果窗口内没找到匹配，进行全局搜索
+        # 触发条件：
+        # 1. 连续失败次数达到阈值
+        # 2. 或者窗口已经扩大到一定程度（说明可能有大段落变化）
+        # 3. 或者窗口内找到的相似度较高（>0.5）但不够阈值（可能是段落重排）
+        should_global_search = (
+            best_match_idx is None and consecutive_fails >= consecutive_fail_threshold
+        ) or (
+            best_match_idx is None and current_window >= window_size * 2
+        ) or (
+            best_match_idx is None and best_similarity > 0.5 and consecutive_fails >= 1
+        )
+
+        if should_global_search:
+            # 全局搜索：在整个B文本中搜索（跳过已匹配的）
+            for b_idx in range(m):
+                if b_idx in b_used:
+                    continue
+
+                sent_b = normalize_sentence(sentences_b[b_idx])
+                similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
+
+                if similarity > best_similarity:
+                    best_similarity = similarity
+                    if similarity >= similarity_threshold:
+                        best_match_idx = b_idx
+                    best_b_idx_in_window = b_idx
+
+        # 判断是否匹配
+        if best_match_idx is not None and best_similarity >= similarity_threshold:
+            # 匹配成功
+            item = {
+                'type': 'match',
+                'a': sentences_a[a_idx],
+                'b': sentences_b[best_match_idx],
+                'similarity': best_similarity,
+                'a_indices': [a_idx],
+                'b_indices': [best_match_idx]
+            }
+            result.append(item)
+            b_to_result[best_match_idx] = item
+
+            # 更新锚点和标记
+            anchor = best_match_idx + offset
+            b_used.add(best_match_idx)
+            consecutive_fails = 0  # 重置连续失败计数
+        else:
+            # 未找到匹配，视为删除
+            result.append({
+                'type': 'delete',
+                'a': sentences_a[a_idx],
+                'b': None,
+                'similarity': None,
+                'a_index': a_idx,
+                'b_index': None
+            })
+
+            # 即使没有匹配，如果找到了相似度较高的句子，也适当更新锚点
+            # 这有助于在段落重排时重新定位
+            if best_b_idx_in_window is not None and best_similarity > 0.3:
+                # 如果相似度超过0.3，说明可能是同一内容但改动较大
+                # 更新锚点到该位置，但保持较小偏移
+                anchor = max(anchor, best_b_idx_in_window)
+
+            consecutive_fails += 1
+
+        a_idx += 1
+
+    # 处理B中剩余的未匹配句子（视为新增）
+    # 按照B的原始顺序，紧跟在它上一句（在B中的前一句）的后面
+
+    # 创建B索引到结果位置的映射（包括匹配项和已插入的新增项）
+    b_idx_to_result_pos = {}
+    for pos, item in enumerate(result):
+        if item.get('b_indices'):
+            # 对于MATCH项，使用b_indices数组
+            for b_idx in item['b_indices']:
+                b_idx_to_result_pos[b_idx] = pos
+        elif item.get('b_index') is not None:
+            # 对于INSERT项，使用b_index
+            b_idx_to_result_pos[item['b_index']] = pos
+
+    # 按B的原始顺序处理未匹配的句子
+    for b_idx in range(m):
+        if b_idx in b_used:
+            continue  # 已匹配，跳过
+
+        # 找到B中b_idx的前一句（b_idx-1）在结果中的位置
+        insert_pos = len(result)  # 默认插入到末尾
+
+        if b_idx > 0:
+            # 查找前一句（b_idx-1）在结果中的位置
+            prev_b_idx = b_idx - 1
+            if prev_b_idx in b_idx_to_result_pos:
+                # 前一句在结果中的位置
+                prev_pos = b_idx_to_result_pos[prev_b_idx]
+                # 插入到前一句之后
+                insert_pos = prev_pos + 1
+            else:
+                # 前一句也是新增的，继续往前找
+                for p_idx in range(prev_b_idx, -1, -1):
+                    if p_idx in b_idx_to_result_pos:
+                        insert_pos = b_idx_to_result_pos[p_idx] + 1
+                        break
+
+        # 创建新增项
+        item = {
+            'type': 'insert',
+            'a': None,
+            'b': sentences_b[b_idx],
+            'similarity': None,
+            'a_index': None,
+            'b_index': b_idx
+        }
+
+        # 插入到结果中
+        result.insert(insert_pos, item)
+
+        # 更新映射（因为插入了新项，后面的位置都变了）
+        # 重新构建映射
+        b_idx_to_result_pos = {}
+        for pos, item in enumerate(result):
+            if item.get('b_indices'):
+                # 对于MATCH项，使用b_indices数组
+                for b_idx in item['b_indices']:
+                    b_idx_to_result_pos[b_idx] = pos
+            elif item.get('b_index') is not None:
+                # 对于INSERT项，使用b_index
+                b_idx_to_result_pos[item['b_index']] = pos
+
+    # 结果已经按照A、B文件的原始顺序排列
+    # - 匹配和删除按A的顺序
+    # - 新增按B的原始顺序插入到合适位置
+    # 注意：此函数不进行后处理，返回初始对齐结果
+
+    return result
+
+
 def _generate_merged_candidates(items: List[Dict], text_key: str, merge: bool = True) -> List[Dict]:
     """
     生成合并后的候选句子

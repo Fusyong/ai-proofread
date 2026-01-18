@@ -20,6 +20,7 @@ import time
 
 from src.sentence_aligner import (
     align_sentences_anchor,
+    align_sentences_anchor_initial,
     rematch_adjacent_delete_insert,
     rematch_non_adjacent_delete_insert,
     merge_delete_into_match,
@@ -32,166 +33,6 @@ from src.splitter import split_chinese_sentences, split_chinese_sentences_with_l
 from src.html_report_v2 import save_html_report_stage1
 
 
-def align_sentences_anchor_with_stages(
-    sentences_a,
-    sentences_b,
-    window_size=10,
-    similarity_threshold=0.6,
-    ngram_size=2,
-    offset=1,
-    max_window_expansion=3,
-    consecutive_fail_threshold=3
-):
-    """
-    对齐句子并返回初始结果（不包含后处理）
-    这是align_sentences_anchor的修改版本，不进行后处理
-    """
-    n = len(sentences_a)
-    m = len(sentences_b)
-
-    if n == 0 and m == 0:
-        return []
-
-    result = []
-    anchor = 0
-    a_idx = 0
-    b_used = set()
-    b_to_result = {}
-    consecutive_fails = 0
-    current_window = window_size
-
-    # 按照A文件的顺序处理
-    while a_idx < n:
-        sent_a = normalize_sentence(sentences_a[a_idx])
-
-        # 动态调整搜索窗口
-        if consecutive_fails >= consecutive_fail_threshold:
-            expansion_factor = min(
-                max_window_expansion,
-                1 + (consecutive_fails - consecutive_fail_threshold) // 2
-            )
-            current_window = window_size * expansion_factor
-        else:
-            current_window = window_size
-
-        window_start = max(0, anchor - current_window)
-        window_end = min(m, anchor + current_window + 1)
-
-        best_match_idx = None
-        best_similarity = 0.0
-        best_b_idx_in_window = None
-
-        for b_idx in range(window_start, window_end):
-            if b_idx in b_used:
-                continue
-
-            sent_b = normalize_sentence(sentences_b[b_idx])
-            similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
-
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_match_idx = b_idx if similarity >= similarity_threshold else None
-                best_b_idx_in_window = b_idx
-
-        should_global_search = (
-            best_match_idx is None and consecutive_fails >= consecutive_fail_threshold
-        ) or (
-            best_match_idx is None and current_window >= window_size * 2
-        ) or (
-            best_match_idx is None and best_similarity > 0.5 and consecutive_fails >= 1
-        )
-
-        if should_global_search:
-            for b_idx in range(m):
-                if b_idx in b_used:
-                    continue
-
-                sent_b = normalize_sentence(sentences_b[b_idx])
-                similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
-
-                if similarity > best_similarity:
-                    best_similarity = similarity
-                    if similarity >= similarity_threshold:
-                        best_match_idx = b_idx
-                    best_b_idx_in_window = b_idx
-
-        if best_match_idx is not None and best_similarity >= similarity_threshold:
-            item = {
-                'type': 'match',
-                'a': sentences_a[a_idx],
-                'b': sentences_b[best_match_idx],
-                'similarity': best_similarity,
-                'a_indices': [a_idx],
-                'b_indices': [best_match_idx]
-            }
-            result.append(item)
-            b_to_result[best_match_idx] = item
-            anchor = best_match_idx + offset
-            b_used.add(best_match_idx)
-            consecutive_fails = 0
-        else:
-            result.append({
-                'type': 'delete',
-                'a': sentences_a[a_idx],
-                'b': None,
-                'similarity': None,
-                'a_index': a_idx,
-                'b_index': None
-            })
-
-            if best_b_idx_in_window is not None and best_similarity > 0.3:
-                anchor = max(anchor, best_b_idx_in_window)
-
-            consecutive_fails += 1
-
-        a_idx += 1
-
-    # 处理B中剩余的未匹配句子（视为新增）
-    b_idx_to_result_pos = {}
-    for pos, item in enumerate(result):
-        if item.get('b_indices'):
-            for b_idx in item['b_indices']:
-                b_idx_to_result_pos[b_idx] = pos
-        elif item.get('b_index') is not None:
-            b_idx_to_result_pos[item['b_index']] = pos
-
-    for b_idx in range(m):
-        if b_idx in b_used:
-            continue
-
-        insert_pos = len(result)
-
-        if b_idx > 0:
-            prev_b_idx = b_idx - 1
-            if prev_b_idx in b_idx_to_result_pos:
-                prev_pos = b_idx_to_result_pos[prev_b_idx]
-                insert_pos = prev_pos + 1
-            else:
-                for p_idx in range(prev_b_idx, -1, -1):
-                    if p_idx in b_idx_to_result_pos:
-                        insert_pos = b_idx_to_result_pos[p_idx] + 1
-                        break
-
-        item = {
-            'type': 'insert',
-            'a': None,
-            'b': sentences_b[b_idx],
-            'similarity': None,
-            'a_index': None,
-            'b_index': b_idx
-        }
-
-        result.insert(insert_pos, item)
-
-        b_idx_to_result_pos = {}
-        for pos, item in enumerate(result):
-            if item.get('b_indices'):
-                for b_idx in item['b_indices']:
-                    b_idx_to_result_pos[b_idx] = pos
-            elif item.get('b_index') is not None:
-                b_idx_to_result_pos[item['b_index']] = pos
-
-    return result
 
 
 def main():
@@ -302,7 +143,7 @@ def main():
     print("阶段0: 初始对齐（锚点算法，不包含后处理）")
     print("="*60)
 
-    alignment_stage0 = align_sentences_anchor_with_stages(
+    alignment_stage0 = align_sentences_anchor_initial(
         sentences_a,
         sentences_b,
         window_size=args.window_size,

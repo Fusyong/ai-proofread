@@ -15,7 +15,10 @@ def save_html_report_stage1(
     title_a: str = "",
     title_b: str = "",
     runtime: float = 0.0,
-    stats: Dict = None
+    stats: Dict = None,
+    algorithm_name: str = "锚点算法",
+    threshold: float = 0.6,
+    ngram_size: int = 2
 ):
     """
     生成阶段一（全等匹配）的HTML报告
@@ -41,7 +44,7 @@ def save_html_report_stage1(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>句子对齐报告 - 阶段一（全等匹配）</title>
+    <title>句子对齐报告（勘误表）</title>
     <style>
         body {{
             font-family: "SimSun", "宋体", serif;
@@ -160,14 +163,20 @@ def save_html_report_stage1(
         }}
         .filter-controls {{
             background-color: #ecf0f1;
-            padding: 15px;
+            padding: 12px 15px;
             border-radius: 5px;
             margin-bottom: 15px;
             border: 1px solid #bdc3c7;
             display: flex;
-            gap: 20px;
+            flex-direction: column;
+            gap: 12px;
+        }}
+        .filter-row {{
+            display: flex;
+            gap: 15px;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
         }}
         .filter-group {{
             display: flex;
@@ -201,12 +210,28 @@ def save_html_report_stage1(
             background-color: #3498db;
             color: white;
         }}
+        .filter-input-group {{
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            white-space: nowrap;
+        }}
+        .filter-input {{
+            padding: 5px 8px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 12px;
+            width: 40px;
+        }}
         .filter-search {{
             padding: 6px 10px;
             border: 1px solid #bdc3c7;
             border-radius: 4px;
             font-size: 13px;
-            width: 200px;
+        }}
+        .filter-search.index-filter {{
+            flex: 1;
+            min-width: 200px;
         }}
         .filter-reset {{
             padding: 6px 15px;
@@ -226,6 +251,10 @@ def save_html_report_stage1(
             margin-top: 10px;
         }}
         .alignment-table tr.hidden {{
+            display: none;
+        }}
+        .alignment-table th.hidden,
+        .alignment-table td.hidden {{
             display: none;
         }}
         .stats-summary {{
@@ -296,58 +325,72 @@ def save_html_report_stage1(
         }})();
     </script>
 </head>
-<body>
-    <div class="header">
-        <div class="stage-badge">阶段一：全等匹配</div>
-        <h1>句子对齐报告</h1>
-        <p>对齐文件 {title_a} 和 {title_b}</p>
-        <p style="font-size: 13px; margin-top: 10px; opacity: 0.9;">
-            运行时间: {runtime:.2f}秒
-        </p>
-    </div>""")
+<body>""")
 
-    # 统计信息
+    # 构建统计信息字符串
+    stats_text = ""
     if stats:
-        html_lines.append("""    <div class="stats-summary">
-        <h3>统计信息</h3>
-        <div class="stats-grid">""")
-
+        stats_items = []
         for key, value in stats.items():
             if key != 'total':
-                html_lines.append(f"""            <div class="stat-item">
-                <div class="stat-value">{value}</div>
-                <div class="stat-label">{key.upper()}</div>
-            </div>""")
+                stats_items.append(f"{key.upper()} {value}")
+        stats_items.append(f"总计 {stats.get('total', 0)}")
+        stats_text = " | ".join(stats_items)
 
-        html_lines.append(f"""            <div class="stat-item">
-                <div class="stat-value">{stats.get('total', 0)}</div>
-                <div class="stat-label">总计</div>
-            </div>
-        </div>
+    html_lines.append(f"""    <div class="header">
+        <h1>句子对齐（勘误表）</h1>
+        <p>对齐文件 {html.escape(title_a)} 和 {html.escape(title_b)}</p>
+        <p style="font-size: 13px; margin-top: 10px; opacity: 0.9;">
+            相似度算法: {algorithm_name} | 阈值: {threshold:.2f} | N-gram大小: {ngram_size} | 运行时间: {runtime:.2f}秒
+        </p>
+        <p style="font-size: 13px; margin-top: 8px; opacity: 0.9;">
+            统计信息: {stats_text}
+        </p>
     </div>""")
 
     # 对齐结果
     html_lines.append(f"""    <div class="alignment-results">
         <div class="filter-controls">
-            <div class="filter-group">
-                <label class="filter-label">类型筛选：</label>
-                <div class="filter-buttons">
-                    <button class="filter-btn active" data-type="all" onclick="filterByType('all')">全部</button>
-                    <button class="filter-btn active" data-type="match" onclick="filterByType('match')">MATCH</button>
-                    <button class="filter-btn active" data-type="delete" onclick="filterByType('delete')">DELETE</button>
-                    <button class="filter-btn active" data-type="insert" onclick="filterByType('insert')">INSERT</button>
-                    <button class="filter-btn active" data-type="movein" onclick="filterByType('movein')">MOVEIN</button>
-                    <button class="filter-btn active" data-type="moveout" onclick="filterByType('moveout')">MOVEOUT</button>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label class="filter-label">类型筛选：</label>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-type="all" onclick="filterByType('all')">全部</button>
+                        <button class="filter-btn active" data-type="match" onclick="filterByType('match')">MATCH</button>
+                        <button class="filter-btn active" data-type="delete" onclick="filterByType('delete')">DELETE</button>
+                        <button class="filter-btn active" data-type="insert" onclick="filterByType('insert')">INSERT</button>
+                        <button class="filter-btn active" data-type="movein" onclick="filterByType('movein')">MOVEIN</button>
+                        <button class="filter-btn active" data-type="moveout" onclick="filterByType('moveout')">MOVEOUT</button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">列显示：</label>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-col="type" onclick="toggleColumn('type')">类型</button>
+                        <button class="filter-btn active" data-col="similarity" onclick="toggleColumn('similarity')">相似度</button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">相似度：</label>
+                    <div class="filter-input-group">
+                        <input type="number" class="filter-input" id="minSimilarity" placeholder="最小" min="0" max="1" step="0.01" oninput="applyFilters()" style="width: 40px;">
+                        <span>至</span>
+                        <input type="number" class="filter-input" id="maxSimilarity" placeholder="最大" min="0" max="1" step="0.01" oninput="applyFilters()" style="width: 40px;">
+                    </div>
                 </div>
             </div>
-            <div class="filter-group">
-                <label class="filter-label">序号筛选：</label>
-                <input type="text" class="filter-search" id="indexFilter" placeholder="如: 1,2,5-20,80-" oninput="applyFilters()" title="支持格式: 1,2,5-20,80- (注意：筛选条件无法保存)">
-            </div>
-            <div class="filter-group">
-                <label class="filter-label">文本搜索：</label>
-                <input type="text" class="filter-search" id="searchText" placeholder="在左右文本中搜索..." oninput="applyFilters()" title="注意：筛选条件无法保存">
-                <button class="filter-reset" onclick="resetFilters()">重置筛选</button>
+            <div class="filter-row">
+                <div class="filter-group" style="flex: 1;">
+                    <label class="filter-label">序号：</label>
+                    <input type="text" class="filter-search index-filter" id="indexFilter" placeholder="如: 1,2,5-20,80-" oninput="applyFilters()" title="支持格式: 1,2,5-20,80- (注意：筛选条件无法保存)">
+                </div>
+                <div class="filter-group" style="flex: 1;">
+                    <label class="filter-label">文本搜索：</label>
+                    <div class="filter-input-group" style="flex: 1;">
+                        <input type="text" class="filter-search" id="searchText" placeholder="在左右文本中搜索..." oninput="applyFilters()" title="注意：筛选条件无法保存" style="flex: 1;">
+                        <button class="filter-reset" onclick="resetFilters()">重置筛选</button>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="filter-stats" id="filterStats"></div>
@@ -436,8 +479,9 @@ def save_html_report_stage1(
         is_exact_match = (item_type == 'match' and similarity_value is not None and abs(similarity_value - 1.0) < 0.001)
         row_class = f"{item_type} match-exact" if is_exact_match else item_type
 
+        similarity_attr_value = f"{similarity_value:.4f}" if similarity_value is not None else "0.0000"
         html_lines.append(f"""
-            <tr class="{row_class}" data-type="{item_type}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}" data-diff-mode="false" {needs_diff_attr}>
+            <tr class="{row_class}" data-type="{item_type}" data-similarity="{similarity_attr_value}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}" data-diff-mode="false" {needs_diff_attr}>
                 <td class="col-index">{idx}</td>
                 <td class="col-type"><span class="item-header">{item_type.upper()}</span></td>
                 <td class="col-similarity"><span class="similarity">{similarity_text}</span></td>
@@ -459,6 +503,12 @@ def save_html_report_stage1(
             'insert': true,
             'movein': true,
             'moveout': true
+        };
+
+        // 列显示状态
+        const columnVisibility = {
+            'type': true,
+            'similarity': true
         };
 
         // 类型筛选函数
@@ -490,6 +540,33 @@ def save_html_report_stage1(
             applyFilters();
         }
 
+        // 切换列显示/隐藏
+        function toggleColumn(columnName) {
+            const btn = document.querySelector(`[data-col="${columnName}"]`);
+            columnVisibility[columnName] = !columnVisibility[columnName];
+            btn.classList.toggle('active', columnVisibility[columnName]);
+
+            // 切换表头
+            const headerCells = document.querySelectorAll(`.alignment-table thead th.col-${columnName}`);
+            headerCells.forEach(cell => {
+                if (columnVisibility[columnName]) {
+                    cell.classList.remove('hidden');
+                } else {
+                    cell.classList.add('hidden');
+                }
+            });
+
+            // 切换表格数据列
+            const dataCells = document.querySelectorAll(`.alignment-table tbody td.col-${columnName}`);
+            dataCells.forEach(cell => {
+                if (columnVisibility[columnName]) {
+                    cell.classList.remove('hidden');
+                } else {
+                    cell.classList.add('hidden');
+                }
+            });
+        }
+
         // 解析序号筛选字符串
         // 支持格式: 1,2,5-20,80- (单个数字、范围、起始范围)
         // 忽略空格，兼容中英文逗号
@@ -501,24 +578,24 @@ def save_html_report_stage1(
             const allowedIndices = new Set();
             // 替换中文逗号为英文逗号，去除所有空格
             const normalized = filterText.replace(/，/g, ',').replace(/\\s+/g, '');
-            
+
             if (!normalized) {
                 return null;
             }
 
             // 按逗号分割
             const parts = normalized.split(',');
-            
+
             for (const part of parts) {
                 if (!part) continue; // 跳过空部分
-                
+
                 if (part.includes('-')) {
                     // 处理范围
                     const rangeParts = part.split('-');
                     if (rangeParts.length === 2) {
                         const start = rangeParts[0] ? parseInt(rangeParts[0], 10) : null;
                         const end = rangeParts[1] ? parseInt(rangeParts[1], 10) : null;
-                        
+
                         if (start !== null && !isNaN(start)) {
                             if (end !== null && !isNaN(end)) {
                                 // 完整范围: 5-20
@@ -553,6 +630,8 @@ def save_html_report_stage1(
         function applyFilters() {
             const rows = document.querySelectorAll('.alignment-table tbody tr');
             const maxRowIndex = rows.length;
+            const minSimilarity = parseFloat(document.getElementById('minSimilarity').value) || 0;
+            const maxSimilarity = parseFloat(document.getElementById('maxSimilarity').value) || 1;
             const searchText = document.getElementById('searchText').value.toLowerCase().trim();
             const indexFilterText = document.getElementById('indexFilter').value.trim();
             const allowedIndices = parseIndexFilter(indexFilterText, maxRowIndex);
@@ -563,6 +642,9 @@ def save_html_report_stage1(
                 const rowType = row.dataset.type;
                 const typeMatch = typeFilters[rowType] || typeFilters['all'];
 
+                const similarity = parseFloat(row.dataset.similarity) || 0;
+                const similarityMatch = similarity >= minSimilarity && similarity <= maxSimilarity;
+
                 const textA = (row.dataset.textA || '').toLowerCase();
                 const textB = (row.dataset.textB || '').toLowerCase();
                 const textMatch = !searchText || textA.includes(searchText) || textB.includes(searchText);
@@ -571,7 +653,7 @@ def save_html_report_stage1(
                 const rowIdx = parseInt(row.dataset.rowIdx, 10);
                 const indexMatch = !allowedIndices || allowedIndices.has(rowIdx);
 
-                const shouldShow = typeMatch && textMatch && indexMatch;
+                const shouldShow = typeMatch && similarityMatch && textMatch && indexMatch;
 
                 if (shouldShow) {
                     row.classList.remove('hidden');
@@ -629,8 +711,20 @@ def save_html_report_stage1(
                 btn.classList.add('active');
             });
 
+            document.getElementById('minSimilarity').value = '';
+            document.getElementById('maxSimilarity').value = '';
             document.getElementById('searchText').value = '';
             document.getElementById('indexFilter').value = '';
+
+            // 重置列显示状态
+            columnVisibility['type'] = true;
+            columnVisibility['similarity'] = true;
+            document.querySelectorAll('.filter-btn[data-col]').forEach(btn => {
+                btn.classList.add('active');
+            });
+            document.querySelectorAll('.alignment-table th.hidden, .alignment-table td.hidden').forEach(cell => {
+                cell.classList.remove('hidden');
+            });
 
             applyFilters();
         }
@@ -921,12 +1015,12 @@ def save_html_report_stage1(
             if (sessionStorage.getItem('filterWarningShown') === 'true') {
                 return;
             }
-            
+
             // 创建提示元素
             const warningDiv = document.createElement('div');
             warningDiv.style.cssText = 'background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px; margin-bottom: 15px; color: #856404; font-size: 13px;';
             warningDiv.innerHTML = '<strong>提示：</strong>筛选条件（类型、序号、文本搜索）无法保存，刷新页面后会重置。如需保存筛选结果，请使用浏览器的打印功能或截图。';
-            
+
             // 添加关闭按钮
             const closeBtn = document.createElement('button');
             closeBtn.textContent = '×';
@@ -936,7 +1030,7 @@ def save_html_report_stage1(
                 sessionStorage.setItem('filterWarningShown', 'true');
             };
             warningDiv.insertBefore(closeBtn, warningDiv.firstChild);
-            
+
             // 插入到筛选控件之前
             const filterControls = document.querySelector('.filter-controls');
             if (filterControls && filterControls.parentNode) {
