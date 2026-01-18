@@ -341,8 +341,12 @@ def save_html_report_stage1(
                 </div>
             </div>
             <div class="filter-group">
+                <label class="filter-label">序号筛选：</label>
+                <input type="text" class="filter-search" id="indexFilter" placeholder="如: 1,2,5-20,80-" oninput="applyFilters()" title="支持格式: 1,2,5-20,80- (注意：筛选条件无法保存)">
+            </div>
+            <div class="filter-group">
                 <label class="filter-label">文本搜索：</label>
-                <input type="text" class="filter-search" id="searchText" placeholder="在左右文本中搜索..." oninput="applyFilters()">
+                <input type="text" class="filter-search" id="searchText" placeholder="在左右文本中搜索..." oninput="applyFilters()" title="注意：筛选条件无法保存">
                 <button class="filter-reset" onclick="resetFilters()">重置筛选</button>
             </div>
         </div>
@@ -486,10 +490,72 @@ def save_html_report_stage1(
             applyFilters();
         }
 
+        // 解析序号筛选字符串
+        // 支持格式: 1,2,5-20,80- (单个数字、范围、起始范围)
+        // 忽略空格，兼容中英文逗号
+        function parseIndexFilter(filterText, maxRowIndex) {
+            if (!filterText || !filterText.trim()) {
+                return null; // 空字符串表示不过滤
+            }
+
+            const allowedIndices = new Set();
+            // 替换中文逗号为英文逗号，去除所有空格
+            const normalized = filterText.replace(/，/g, ',').replace(/\\s+/g, '');
+            
+            if (!normalized) {
+                return null;
+            }
+
+            // 按逗号分割
+            const parts = normalized.split(',');
+            
+            for (const part of parts) {
+                if (!part) continue; // 跳过空部分
+                
+                if (part.includes('-')) {
+                    // 处理范围
+                    const rangeParts = part.split('-');
+                    if (rangeParts.length === 2) {
+                        const start = rangeParts[0] ? parseInt(rangeParts[0], 10) : null;
+                        const end = rangeParts[1] ? parseInt(rangeParts[1], 10) : null;
+                        
+                        if (start !== null && !isNaN(start)) {
+                            if (end !== null && !isNaN(end)) {
+                                // 完整范围: 5-20
+                                for (let i = start; i <= end && i <= maxRowIndex; i++) {
+                                    if (i >= 1) {
+                                        allowedIndices.add(i);
+                                    }
+                                }
+                            } else {
+                                // 起始范围: 80- (从80开始到最大序号)
+                                for (let i = start; i <= maxRowIndex; i++) {
+                                    if (i >= 1) {
+                                        allowedIndices.add(i);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // 单个数字
+                    const num = parseInt(part, 10);
+                    if (!isNaN(num) && num >= 1 && num <= maxRowIndex) {
+                        allowedIndices.add(num);
+                    }
+                }
+            }
+
+            return allowedIndices.size > 0 ? allowedIndices : null;
+        }
+
         // 应用所有筛选条件
         function applyFilters() {
             const rows = document.querySelectorAll('.alignment-table tbody tr');
+            const maxRowIndex = rows.length;
             const searchText = document.getElementById('searchText').value.toLowerCase().trim();
+            const indexFilterText = document.getElementById('indexFilter').value.trim();
+            const allowedIndices = parseIndexFilter(indexFilterText, maxRowIndex);
 
             let visibleCount = 0;
 
@@ -501,7 +567,11 @@ def save_html_report_stage1(
                 const textB = (row.dataset.textB || '').toLowerCase();
                 const textMatch = !searchText || textA.includes(searchText) || textB.includes(searchText);
 
-                const shouldShow = typeMatch && textMatch;
+                // 序号筛选
+                const rowIdx = parseInt(row.dataset.rowIdx, 10);
+                const indexMatch = !allowedIndices || allowedIndices.has(rowIdx);
+
+                const shouldShow = typeMatch && textMatch && indexMatch;
 
                 if (shouldShow) {
                     row.classList.remove('hidden');
@@ -560,6 +630,7 @@ def save_html_report_stage1(
             });
 
             document.getElementById('searchText').value = '';
+            document.getElementById('indexFilter').value = '';
 
             applyFilters();
         }
@@ -844,8 +915,38 @@ def save_html_report_stage1(
             });
         }
 
+        // 显示筛选条件无法保存的提示
+        function showFilterWarning() {
+            // 检查是否已经显示过提示
+            if (sessionStorage.getItem('filterWarningShown') === 'true') {
+                return;
+            }
+            
+            // 创建提示元素
+            const warningDiv = document.createElement('div');
+            warningDiv.style.cssText = 'background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px; margin-bottom: 15px; color: #856404; font-size: 13px;';
+            warningDiv.innerHTML = '<strong>提示：</strong>筛选条件（类型、序号、文本搜索）无法保存，刷新页面后会重置。如需保存筛选结果，请使用浏览器的打印功能或截图。';
+            
+            // 添加关闭按钮
+            const closeBtn = document.createElement('button');
+            closeBtn.textContent = '×';
+            closeBtn.style.cssText = 'float: right; background: none; border: none; font-size: 20px; cursor: pointer; color: #856404; padding: 0 5px;';
+            closeBtn.onclick = function() {
+                warningDiv.remove();
+                sessionStorage.setItem('filterWarningShown', 'true');
+            };
+            warningDiv.insertBefore(closeBtn, warningDiv.firstChild);
+            
+            // 插入到筛选控件之前
+            const filterControls = document.querySelector('.filter-controls');
+            if (filterControls && filterControls.parentNode) {
+                filterControls.parentNode.insertBefore(warningDiv, filterControls);
+            }
+        }
+
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
+            showFilterWarning();
             applyFilters();
 
             // 初始渲染

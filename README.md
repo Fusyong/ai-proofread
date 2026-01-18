@@ -122,7 +122,6 @@ Also includes some experimental tools related to proofreading.
 
 * [x] 句子切分器
 * [x] 校对前后的句子对齐，生成类似勘误表的结果
-    * [x] 简单锚点对齐算法
 * [x] 四种常见的文本切分方法
 * [x] 支持参考资料
     * [x] 切分并添加语境
@@ -137,7 +136,6 @@ Also includes some experimental tools related to proofreading.
     7. [ ] 低频度词汇
     8. [ ] 年代
     9. [ ] 注释
-* [ ] 用chopdiff、diff-match-patch、jsdiff匹配文档更改
 * [ ] 字词典数据、字表词表数据萃取
 * [x] 智能体功能
     * [x] 遇到专有名词查字典 lookup_mdict.py，示例，未集成到校对工作流中
