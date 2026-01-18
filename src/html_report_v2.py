@@ -98,19 +98,40 @@ def save_html_report_stage1(
             background-color: #f0f0f0;
         }}
         .alignment-table tr.match {{
-            border-left: 4px solid #27ae60;
+            border-left: 4px solid #ffd700;
+        }}
+        .alignment-table tr.match:hover {{
+            background-color: rgba(255, 215, 0, 0.3);
+        }}
+        .alignment-table tr.match.match-exact {{
+            border-left: none;
+        }}
+        .alignment-table tr.match.match-exact:hover {{
+            background-color: #f0f0f0;
         }}
         .alignment-table tr.delete {{
             border-left: 4px solid #e74c3c;
         }}
+        .alignment-table tr.delete:hover {{
+            background-color: rgba(231, 76, 60, 0.3);
+        }}
         .alignment-table tr.insert {{
-            border-left: 4px solid #3498db;
+            border-left: 4px solid #27ae60;
+        }}
+        .alignment-table tr.insert:hover {{
+            background-color: rgba(39, 174, 96, 0.3);
         }}
         .alignment-table tr.movein {{
-            border-left: 4px solid #9b59b6;
+            border-left: 4px solid #3498db;
+        }}
+        .alignment-table tr.movein:hover {{
+            background-color: rgba(52, 152, 219, 0.3);
         }}
         .alignment-table tr.moveout {{
-            border-left: 4px solid #f39c12;
+            border-left: 4px solid #9b59b6;
+        }}
+        .alignment-table tr.moveout:hover {{
+            background-color: rgba(155, 89, 182, 0.3);
         }}
         .col-index {{
             width: 5%;
@@ -349,8 +370,8 @@ def save_html_report_stage1(
         text_a_escaped = html.escape(str(text_a_raw))
         text_b_escaped = html.escape(str(text_b_raw))
 
-        # 判断是否需要显示差异：只要原始文本不相等就比较
-        needs_diff = (text_a_raw != text_b_raw) and text_a_raw and text_b_raw
+        # 所有行都无条件应用jsdiff（只要至少有一个文本不为空）
+        needs_diff = bool(text_a_raw or text_b_raw)
 
         # 构建原文句子
         sentence_a_text = ""
@@ -406,8 +427,13 @@ def save_html_report_stage1(
 
         # 为需要比较的行添加标记
         needs_diff_attr = 'data-needs-diff="true"' if needs_diff else ''
+
+        # 判断是否为完全匹配（相似度为1的match）
+        is_exact_match = (item_type == 'match' and similarity_value is not None and abs(similarity_value - 1.0) < 0.001)
+        row_class = f"{item_type} match-exact" if is_exact_match else item_type
+
         html_lines.append(f"""
-            <tr class="{item_type}" data-type="{item_type}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}" data-diff-mode="false" {needs_diff_attr}>
+            <tr class="{row_class}" data-type="{item_type}" data-text-a="{text_a_escaped}" data-text-b="{text_b_escaped}" data-row-idx="{idx}" data-diff-mode="false" {needs_diff_attr}>
                 <td class="col-index">{idx}</td>
                 <td class="col-type"><span class="item-header">{item_type.upper()}</span></td>
                 <td class="col-similarity"><span class="similarity">{similarity_text}</span></td>

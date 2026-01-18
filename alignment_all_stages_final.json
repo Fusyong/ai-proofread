@@ -1,15 +1,26 @@
 [
   {
-    "type": "delete",
+    "type": "moveout",
     "a": "以 《评战犯求和》 为例。",
-    "b": null,
-    "similarity": null,
-    "a_index": 0,
-    "b_index": null,
-    "a_line_number": 1,
+    "b": "以《评战犯求和》为例。\n\n",
+    "similarity": 0.5714285714285714,
+    "a_indices": [
+      0
+    ],
+    "b_indices": [
+      3
+    ],
     "a_line_numbers": [
       1
-    ]
+    ],
+    "a_line_number": 1,
+    "b_line_numbers": [
+      9
+    ],
+    "b_line_number": 9,
+    "a_index": 0,
+    "b_index": 3,
+    "original_b_index": 3
   },
   {
     "type": "match",
@@ -72,16 +83,27 @@
     "b_line_number": 5
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "movein",
+    "a": "以 《评战犯求和》 为例。",
     "b": "以《评战犯求和》为例。\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 3,
-    "b_line_number": 9,
+    "similarity": 0.5714285714285714,
+    "a_indices": [
+      0
+    ],
+    "b_indices": [
+      3
+    ],
+    "a_line_numbers": [
+      1
+    ],
+    "a_line_number": 1,
     "b_line_numbers": [
       9
-    ]
+    ],
+    "b_line_number": 9,
+    "a_index": 0,
+    "b_index": 3,
+    "original_a_index": 0
   },
   {
     "type": "match",
@@ -204,28 +226,24 @@
     "b_line_number": 17
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "“和平”就是为了这个。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 10,
-    "b_line_number": 20,
-    "b_line_numbers": [
-      20
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " ‘和平’ 就是为了这个。",
-    "b": null,
-    "similarity": null,
-    "a_index": 10,
-    "b_index": null,
-    "a_line_number": 18,
+    "b": "“和平”就是为了这个。",
+    "similarity": 0.5,
+    "a_indices": [
+      10
+    ],
+    "b_indices": [
+      10
+    ],
     "a_line_numbers": [
       18
-    ]
+    ],
+    "a_line_number": 18,
+    "b_line_numbers": [
+      20
+    ],
+    "b_line_number": 20
   },
   {
     "type": "match",
@@ -394,29 +412,6 @@
     "b_line_number": 33
   },
   {
-    "type": "movein",
-    "a": " 《友谊，还是侵略?",
-    "b": "以《友谊，还是侵略？",
-    "similarity": 0.7,
-    "a_indices": [
-      23
-    ],
-    "b_indices": [
-      18
-    ],
-    "a_line_numbers": [
-      37
-    ],
-    "a_line_number": 37,
-    "b_line_numbers": [
-      34
-    ],
-    "b_line_number": 34,
-    "a_index": 23,
-    "b_index": 18,
-    "original_a_index": 23
-  },
-  {
     "type": "moveout",
     "a": " 以 《友谊，还是侵略?",
     "b": "《友谊，还是侵略？",
@@ -440,16 +435,47 @@
     "original_b_index": 23
   },
   {
-    "type": "delete",
+    "type": "movein",
+    "a": " 《友谊，还是侵略?",
+    "b": "以《友谊，还是侵略？",
+    "similarity": 0.7,
+    "a_indices": [
+      23
+    ],
+    "b_indices": [
+      18
+    ],
+    "a_line_numbers": [
+      37
+    ],
+    "a_line_number": 37,
+    "b_line_numbers": [
+      34
+    ],
+    "b_line_number": 34,
+    "a_index": 23,
+    "b_index": 18,
+    "original_a_index": 23
+  },
+  {
+    "type": "match",
     "a": "》 为例。",
-    "b": null,
-    "similarity": null,
-    "a_index": 19,
-    "b_index": null,
-    "a_line_number": 32,
+    "b": "》为例。",
+    "similarity": 0.4,
+    "a_indices": [
+      19
+    ],
+    "b_indices": [
+      19
+    ],
     "a_line_numbers": [
       32
-    ]
+    ],
+    "a_line_number": 32,
+    "b_line_numbers": [
+      34
+    ],
+    "b_line_number": 34
   },
   {
     "type": "match",
@@ -533,18 +559,6 @@
     "a_index": 23,
     "b_index": 18,
     "original_b_index": 18
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": "》为例。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 19,
-    "b_line_number": 34,
-    "b_line_numbers": [
-      34
-    ]
   },
   {
     "type": "movein",
@@ -1716,28 +1730,24 @@
     "b_line_number": 131
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "(原载《教学与管理》1989年第5期，有删改)\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 81,
-    "b_line_number": 133,
-    "b_line_numbers": [
-      133
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(原载 《教学与管理》 1989 年 5 期，有删改)\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 84,
-    "b_index": null,
-    "a_line_number": 158,
+    "b": "(原载《教学与管理》1989年第5期，有删改)\n\n",
+    "similarity": 0.5,
+    "a_indices": [
+      84
+    ],
+    "b_indices": [
+      81
+    ],
     "a_line_numbers": [
       158
-    ]
+    ],
+    "a_line_number": 158,
+    "b_line_numbers": [
+      133
+    ],
+    "b_line_number": 133
   },
   {
     "type": "match",
@@ -2760,16 +2770,24 @@
     "b_line_number": 242
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "match",
+    "a": "(原载 《中学语文》 1989 年 9 期)\n\n",
     "b": "(原载《中学语文》1989年第9期)\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 133,
-    "b_line_number": 244,
+    "similarity": 0.4230769230769231,
+    "a_indices": [
+      136
+    ],
+    "b_indices": [
+      133
+    ],
+    "a_line_numbers": [
+      282
+    ],
+    "a_line_number": 282,
     "b_line_numbers": [
       244
-    ]
+    ],
+    "b_line_number": 244
   },
   {
     "type": "insert",
@@ -2793,18 +2811,6 @@
     "b_line_number": 248,
     "b_line_numbers": [
       248
-    ]
-  },
-  {
-    "type": "delete",
-    "a": "(原载 《中学语文》 1989 年 9 期)\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 136,
-    "b_index": null,
-    "a_line_number": 282,
-    "a_line_numbers": [
-      282
     ]
   },
   {
@@ -3126,28 +3132,24 @@
     "b_line_number": 254
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 四是趣味性。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 150,
-    "b_line_number": 254,
-    "b_line_numbers": [
-      254
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 四\n是趣味性。",
-    "b": null,
-    "similarity": null,
-    "a_index": 155,
-    "b_index": null,
-    "a_line_number": 362,
+    "b": " 四是趣味性。",
+    "similarity": 0.5714285714285714,
+    "a_indices": [
+      155
+    ],
+    "b_indices": [
+      150
+    ],
     "a_line_numbers": [
       362
-    ]
+    ],
+    "a_line_number": 362,
+    "b_line_numbers": [
+      254
+    ],
+    "b_line_number": 254
   },
   {
     "type": "match",
@@ -3546,28 +3548,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "写作教学是文学教学的一个重要组成部分，具有极大的教养和教育意义。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 171,
-    "b_line_number": 264,
-    "b_line_numbers": [
-      264
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "一、 写作教学的意义和改进写作教学的根本途径\n写作教学是文学教学的一个重要组成部分，具有极大的教养和教\n育的意义。",
-    "b": null,
-    "similarity": null,
-    "a_index": 177,
-    "b_index": null,
-    "a_line_number": 398,
+    "b": "写作教学是文学教学的一个重要组成部分，具有极大的教养和教育意义。",
+    "similarity": 0.5957446808510638,
+    "a_indices": [
+      177
+    ],
+    "b_indices": [
+      171
+    ],
     "a_line_numbers": [
       398
-    ]
+    ],
+    "a_line_number": 398,
+    "b_line_numbers": [
+      264
+    ],
+    "b_line_number": 264
   },
   {
     "type": "match",
@@ -3750,18 +3748,6 @@
     "b_line_number": 268
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "《初级中学文学教学大纲（草案）》\"说明\"指出：\"教师应该了解，帮助学生领会作品的过程，同时就是帮助学生提高说话和写作能力的过程。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 181,
-    "b_line_number": 268,
-    "b_line_numbers": [
-      268
-    ]
-  },
-  {
     "type": "delete",
     "a": " 《初级中学文学教学大纲\n\n",
     "b": null,
@@ -3786,16 +3772,24 @@
     ]
   },
   {
-    "type": "delete",
+    "type": "match",
     "a": "(草案) 》 “说明” 指出 “教师应该了解，帮助学生领会作品的过程，\n同时就是帮助学生提高说话和写作能力的过程。”",
-    "b": null,
-    "similarity": null,
-    "a_index": 189,
-    "b_index": null,
-    "a_line_number": 429,
+    "b": "《初级中学文学教学大纲（草案）》\"说明\"指出：\"教师应该了解，帮助学生领会作品的过程，同时就是帮助学生提高说话和写作能力的过程。",
+    "similarity": 0.4931506849315068,
+    "a_indices": [
+      189
+    ],
+    "b_indices": [
+      181
+    ],
     "a_line_numbers": [
       429
-    ]
+    ],
+    "a_line_number": 429,
+    "b_line_numbers": [
+      268
+    ],
+    "b_line_number": 268
   },
   {
     "type": "match",
@@ -4892,28 +4886,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "这种作业一方面能显示出学生对原作品理解的深广度，一方面能在很大程度上发展创造性想象。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 237,
-    "b_line_number": 339,
-    "b_line_numbers": [
-      339
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 这是继续补写原\n文的情节，使原文情节获得新的发展这种作业一方面能显示出学生对\n原作品理解的深广度，一方面能在很大程度上发展创造性想象。",
-    "b": null,
-    "similarity": null,
-    "a_index": 245,
-    "b_index": null,
-    "a_line_number": 555,
+    "b": "这种作业一方面能显示出学生对原作品理解的深广度，一方面能在很大程度上发展创造性想象。",
+    "similarity": 0.5967741935483871,
+    "a_indices": [
+      245
+    ],
+    "b_indices": [
+      237
+    ],
     "a_line_numbers": [
       555
-    ]
+    ],
+    "a_line_number": 555,
+    "b_line_numbers": [
+      339
+    ],
+    "b_line_number": 339
   },
   {
     "type": "match",
@@ -5188,28 +5178,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "它的作用和口头叙\n述是相同的，区别仅在于它能训练学生的书面语言。\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 252,
-    "b_line_number": 365,
-    "b_line_numbers": [
-      365
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "述一个与学过的课文的故事情节相类似的故事) 等它的作用和口头叙\n述是相同的，区别仅在于它能训练学生的书面语言。\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 259,
-    "b_index": null,
-    "a_line_number": 591,
+    "b": "它的作用和口头叙\n述是相同的，区别仅在于它能训练学生的书面语言。\n\n",
+    "similarity": 0.5961538461538461,
+    "a_indices": [
+      259
+    ],
+    "b_indices": [
+      252
+    ],
     "a_line_numbers": [
       591
-    ]
+    ],
+    "a_line_number": 591,
+    "b_line_numbers": [
+      365
+    ],
+    "b_line_number": 365
   },
   {
     "type": "match",
@@ -5376,28 +5362,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "指导作文的过程，一般包括命题、指导、批改、评讲等几个相关\n联的阶段。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 262,
-    "b_line_number": 381,
-    "b_line_numbers": [
-      381
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 在作文中过多地模仿，特别是近于抄袭的模仿，是不适当的，\n指导作文的过程，一般包括命题、 指导、 批改、 评讲等几个相关\n联的阶段。",
-    "b": null,
-    "similarity": null,
-    "a_index": 267,
-    "b_index": null,
-    "a_line_number": 606,
+    "b": "指导作文的过程，一般包括命题、指导、批改、评讲等几个相关\n联的阶段。",
+    "similarity": 0.47540983606557374,
+    "a_indices": [
+      267
+    ],
+    "b_indices": [
+      262
+    ],
     "a_line_numbers": [
       606
-    ]
+    ],
+    "a_line_number": 606,
+    "b_line_numbers": [
+      381
+    ],
+    "b_line_number": 381
   },
   {
     "type": "match",
@@ -5500,52 +5482,44 @@
     "b_line_number": 388
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 封建科举时代就是要求士子\n\"代圣贤立言\", 不让说自己的话。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 268,
-    "b_line_number": 389,
-    "b_line_numbers": [
-      389
-    ]
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": " 现在存心要学生 \"代圣贤立言\"\n的人当然是没有的, 但许多因命题而造成的后果确实使学生只能代别\n人 \"立言\", 不能和不会说自己的话, 使学生的思想和作文脱离了关\n系。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 269,
-    "b_line_number": 390,
-    "b_line_numbers": [
-      390
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 封建科举时代就是要求仕子\n“代圣贤立言”，不让说自己的话。",
-    "b": null,
-    "similarity": null,
-    "a_index": 273,
-    "b_index": null,
-    "a_line_number": 615,
+    "b": " 封建科举时代就是要求士子\n\"代圣贤立言\", 不让说自己的话。",
+    "similarity": 0.5833333333333334,
+    "a_indices": [
+      273
+    ],
+    "b_indices": [
+      268
+    ],
     "a_line_numbers": [
       615
-    ]
+    ],
+    "a_line_number": 615,
+    "b_line_numbers": [
+      389
+    ],
+    "b_line_number": 389
   },
   {
-    "type": "delete",
+    "type": "match",
     "a": " 现在存心要学生 “ 代圣贤立言”\n的人当然是没有的，但许多因命题而造成的后果确实使学生只能代别\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 274,
-    "b_index": null,
-    "a_line_number": 616,
+    "b": " 现在存心要学生 \"代圣贤立言\"\n的人当然是没有的, 但许多因命题而造成的后果确实使学生只能代别\n人 \"立言\", 不能和不会说自己的话, 使学生的思想和作文脱离了关\n系。",
+    "similarity": 0.4634146341463415,
+    "a_indices": [
+      274
+    ],
+    "b_indices": [
+      269
+    ],
     "a_line_numbers": [
       616
-    ]
+    ],
+    "a_line_number": 616,
+    "b_line_numbers": [
+      390
+    ],
+    "b_line_number": 390
   },
   {
     "type": "delete",
@@ -6012,28 +5986,24 @@
     "b_line_number": 418
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 本无所感而硬要写出 \"感\" 来, 也正是曾经促成学\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 292,
-    "b_line_number": 419,
-    "b_line_numbers": [
-      419
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 本无所感而硬要写出 “感” 来，也正是曾经促成学\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 299,
-    "b_index": null,
-    "a_line_number": 647,
+    "b": " 本无所感而硬要写出 \"感\" 来, 也正是曾经促成学\n\n",
+    "similarity": 0.5666666666666667,
+    "a_indices": [
+      299
+    ],
+    "b_indices": [
+      292
+    ],
     "a_line_numbers": [
       647
-    ]
+    ],
+    "a_line_number": 647,
+    "b_line_numbers": [
+      419
+    ],
+    "b_line_number": 419
   },
   {
     "type": "match",
@@ -6896,28 +6866,24 @@
     "b_line_number": 479
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "(原载《语文学习》1956年第9期)\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 336,
-    "b_line_number": 482,
-    "b_line_numbers": [
-      482
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(原载 《语文学习》 1956 年第 9 期)\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 343,
-    "b_index": null,
-    "a_line_number": 710,
+    "b": "(原载《语文学习》1956年第9期)\n\n",
+    "similarity": 0.4444444444444444,
+    "a_indices": [
+      343
+    ],
+    "b_indices": [
+      336
+    ],
     "a_line_numbers": [
       710
-    ]
+    ],
+    "a_line_number": 710,
+    "b_line_numbers": [
+      482
+    ],
+    "b_line_number": 482
   },
   {
     "type": "match",
@@ -7260,28 +7226,24 @@
     "b_line_number": 510
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "》，《人民教育》1957年第6期。\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 354,
-    "b_line_number": 510,
-    "b_line_numbers": [
-      510
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "》，《人民教育》 1957 年第 6 期。\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 361,
-    "b_index": null,
-    "a_line_number": 738,
+    "b": "》，《人民教育》1957年第6期。\n",
+    "similarity": 0.5,
+    "a_indices": [
+      361
+    ],
+    "b_indices": [
+      354
+    ],
     "a_line_numbers": [
       738
-    ]
+    ],
+    "a_line_number": 738,
+    "b_line_numbers": [
+      510
+    ],
+    "b_line_number": 510
   },
   {
     "type": "match",
@@ -7496,28 +7458,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "《人民教育》过去发表的讨论文学教学任务的文章，特别是像《目前北京市中学语文教学中的问题和改进措施》等文章，对于这一任务也有较明确的认识。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 366,
-    "b_line_number": 544,
-    "b_line_numbers": [
-      544
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(三) 汉语科不能代替文学科的语言教学任务\n关于文学科的语言教学任务，初中和高中的文学教学大纲 ( 草\n案) 说明部分均有较明确的规定，《人民教育》 过去发表的讨论文学\n教学任务的文章，特别是像 《目前北京市中学语文教学中的问题和改\n进措施》 等文章，对于这一任务也有较明确的认识。",
-    "b": null,
-    "similarity": null,
-    "a_index": 372,
-    "b_index": null,
-    "a_line_number": 770,
+    "b": "《人民教育》过去发表的讨论文学教学任务的文章，特别是像《目前北京市中学语文教学中的问题和改进措施》等文章，对于这一任务也有较明确的认识。",
+    "similarity": 0.5042735042735043,
+    "a_indices": [
+      372
+    ],
+    "b_indices": [
+      366
+    ],
     "a_line_numbers": [
       770
-    ]
+    ],
+    "a_line_number": 770,
+    "b_line_numbers": [
+      544
+    ],
+    "b_line_number": 544
   },
   {
     "type": "match",
@@ -7640,28 +7598,24 @@
     "b_line_number": 546
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "《人民教育》1957年第1期。\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 373,
-    "b_line_number": 548,
-    "b_line_numbers": [
-      548
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 《人民教育》 1957 年第 1 期。\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 379,
-    "b_index": null,
-    "a_line_number": 786,
+    "b": "《人民教育》1957年第1期。\n",
+    "similarity": 0.47619047619047616,
+    "a_indices": [
+      379
+    ],
+    "b_indices": [
+      373
+    ],
     "a_line_numbers": [
       786
-    ]
+    ],
+    "a_line_number": 786,
+    "b_line_numbers": [
+      548
+    ],
+    "b_line_number": 548
   },
   {
     "type": "match",
@@ -7864,28 +7818,24 @@
     "b_line_number": 553
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "高中文学教学大纲（草案）说明中说\"高级中学教学大纲规定的教材，在语言教学上提供了充分的材料。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 384,
-    "b_line_number": 553,
-    "b_line_numbers": [
-      553
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 高中文\n学教学大纲 (草案) 说明中说 “高级中学教学大纲规定的教材，在语\n言教学上提供了充分的材料。”",
-    "b": null,
-    "similarity": null,
-    "a_index": 390,
-    "b_index": null,
-    "a_line_number": 801,
+    "b": "高中文学教学大纲（草案）说明中说\"高级中学教学大纲规定的教材，在语言教学上提供了充分的材料。",
+    "similarity": 0.5925925925925926,
+    "a_indices": [
+      390
+    ],
+    "b_indices": [
+      384
+    ],
     "a_line_numbers": [
       801
-    ]
+    ],
+    "a_line_number": 801,
+    "b_line_numbers": [
+      553
+    ],
+    "b_line_number": 553
   },
   {
     "type": "match",
@@ -8770,28 +8720,24 @@
     "b_line_number": 604
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "《语文学习》1956年第8期。\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 429,
-    "b_line_number": 604,
-    "b_line_numbers": [
-      604
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 《语文学习》 1956 年第 8 期。\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 436,
-    "b_index": null,
-    "a_line_number": 876,
+    "b": "《语文学习》1956年第8期。\n\n",
+    "similarity": 0.45454545454545453,
+    "a_indices": [
+      436
+    ],
+    "b_indices": [
+      429
+    ],
     "a_line_numbers": [
       876
-    ]
+    ],
+    "a_line_number": 876,
+    "b_line_numbers": [
+      604
+    ],
+    "b_line_number": 604
   },
   {
     "type": "match",
@@ -10238,28 +10184,24 @@
     "b_line_number": 717
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "(原载《人民教育》1957年第9期)\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 501,
-    "b_line_number": 726,
-    "b_line_numbers": [
-      726
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(原载 《人民教育》 1957 年第 9 期)\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 510,
-    "b_index": null,
-    "a_line_number": 997,
+    "b": "(原载《人民教育》1957年第9期)\n\n",
+    "similarity": 0.4444444444444444,
+    "a_indices": [
+      510
+    ],
+    "b_indices": [
+      501
+    ],
     "a_line_numbers": [
       997
-    ]
+    ],
+    "a_line_number": 997,
+    "b_line_numbers": [
+      726
+    ],
+    "b_line_number": 726
   },
   {
     "type": "match",
@@ -11373,24 +11315,40 @@
   },
   {
     "type": "match",
-    "a": " 这是一种适用某些内容比较复\n杂和语言比较艰深的课文的阅读方式它和朗读、 默读等不同，它要指\n导学生一边阅读课文。 一边对课文中的环境、 人物形象、 事件进程、\n思想脉络和某些词语 (有时可以着重在词语方面) 进行分析，帮助学\n生进一步地理解课文的内容和语言。",
-    "b": "这是一种适用于某些内容比较复杂和语言比较艰深的课文的阅读方式。它和朗读、默读等不同，它要指导学生一边阅读课文，一边对课文中的环境、人物形象、事件进程、思想脉络和某些词语（有时可以着重在词语方面）进行分析，帮助学生进一步地理解课文的内容和语言。",
-    "similarity": 0.7,
+    "a": " 这是一种适用某些内容比较复\n杂和语言比较艰深的课文的阅读方式它和朗读、 默读等不同，它要指\n导学生一边阅读课文。",
+    "b": "这是一种适用于某些内容比较复杂和语言比较艰深的课文的阅读方式。",
+    "similarity": 0.44642857142857145,
     "a_indices": [
-      566,
-      567
+      566
     ],
     "b_indices": [
-      558,
-      559
+      558
     ],
     "a_line_numbers": [
-      1118,
-      1120
+      1118
     ],
     "a_line_number": 1118,
     "b_line_numbers": [
-      758,
+      758
+    ],
+    "b_line_number": 758
+  },
+  {
+    "type": "match",
+    "a": " 一边对课文中的环境、 人物形象、 事件进程、\n思想脉络和某些词语 (有时可以着重在词语方面) 进行分析，帮助学\n生进一步地理解课文的内容和语言。",
+    "b": "它和朗读、默读等不同，它要指导学生一边阅读课文，一边对课文中的环境、人物形象、事件进程、思想脉络和某些词语（有时可以着重在词语方面）进行分析，帮助学生进一步地理解课文的内容和语言。",
+    "similarity": 0.5670103092783505,
+    "a_indices": [
+      567
+    ],
+    "b_indices": [
+      559
+    ],
+    "a_line_numbers": [
+      1120
+    ],
+    "a_line_number": 1120,
+    "b_line_numbers": [
       758
     ],
     "b_line_number": 758
@@ -12238,28 +12196,24 @@
     "b_line_number": 805
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "“这是怎样的？”",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 602,
-    "b_line_number": 806,
-    "b_line_numbers": [
-      806
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " “这是怎样的?”",
-    "b": null,
-    "similarity": null,
-    "a_index": 611,
-    "b_index": null,
-    "a_line_number": 1192,
+    "b": "“这是怎样的？”",
+    "similarity": 0.5555555555555556,
+    "a_indices": [
+      611
+    ],
+    "b_indices": [
+      602
+    ],
     "a_line_numbers": [
       1192
-    ]
+    ],
+    "a_line_number": 1192,
+    "b_line_numbers": [
+      806
+    ],
+    "b_line_number": 806
   },
   {
     "type": "match",
@@ -12644,52 +12598,44 @@
     "b_line_number": 835
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "教师应该引导学生思考并掌握的形容词有：隐晦、苍黄、萧索、神异、深黛、絮絮、愤愤、痴痴、潺潺、鄙夷、茫远、惘然、松松爽爽，等等。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 622,
-    "b_line_number": 835,
-    "b_line_numbers": [
-      835
-    ]
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": "《故乡》也提供了大量的需要学生理解和掌握的动词，如：苏生、冒、横着、闪出、缚在、罩在、贴在、回旋、涌出、现出、隔绝，等等。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 623,
-    "b_line_number": 835,
-    "b_line_numbers": [
-      835
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 教师应该引导学生思考并掌握\n的形容词有隐晦、 苍黄、 萧索、 神异、 深黛、 絮絮、 愤愤、 痴痴、 潺\n潺、 鄙夷、 茫远、 惘然、 松松爽爽，等等。",
-    "b": null,
-    "similarity": null,
-    "a_index": 632,
-    "b_index": null,
-    "a_line_number": 1230,
+    "b": "教师应该引导学生思考并掌握的形容词有：隐晦、苍黄、萧索、神异、深黛、絮絮、愤愤、痴痴、潺潺、鄙夷、茫远、惘然、松松爽爽，等等。",
+    "similarity": 0.575,
+    "a_indices": [
+      632
+    ],
+    "b_indices": [
+      622
+    ],
     "a_line_numbers": [
       1230
-    ]
+    ],
+    "a_line_number": 1230,
+    "b_line_numbers": [
+      835
+    ],
+    "b_line_number": 835
   },
   {
-    "type": "delete",
+    "type": "match",
     "a": " 《故乡》 也提供了大量的\n需要学生理解和掌握的动词，苏生、 冒、 横着、 闪出、 缚在、 罩在、\n贴在、 回旋、 涌出、 现出、 隔绝，等等。",
-    "b": null,
-    "similarity": null,
-    "a_index": 633,
-    "b_index": null,
-    "a_line_number": 1232,
+    "b": "《故乡》也提供了大量的需要学生理解和掌握的动词，如：苏生、冒、横着、闪出、缚在、罩在、贴在、回旋、涌出、现出、隔绝，等等。",
+    "similarity": 0.5616438356164384,
+    "a_indices": [
+      633
+    ],
+    "b_indices": [
+      623
+    ],
     "a_line_numbers": [
       1232
-    ]
+    ],
+    "a_line_number": 1232,
+    "b_line_numbers": [
+      835
+    ],
+    "b_line_number": 835
   },
   {
     "type": "match",
@@ -13566,28 +13512,24 @@
     "b_line_number": 867
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "它由12个句子组成，句法十分简洁，“呜呜地响”“时候既然是深冬”等4个字到7个字的句子占三分之二，最长的句子如“远近横着几个萧索的荒村”也只有11个字。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 668,
-    "b_line_number": 867,
-    "b_line_numbers": [
-      867
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 它出 12 个句子组成，句法\n十分简洁，“呜呜地响” “时候既然是深冬” 等 4 个字到 7 个字的句子\n占三分之二，最长的句子如 “远近横着几个萧索的荒村” 也只有 11\n个字。",
-    "b": null,
-    "similarity": null,
-    "a_index": 678,
-    "b_index": null,
-    "a_line_number": 1326,
+    "b": "它由12个句子组成，句法十分简洁，“呜呜地响”“时候既然是深冬”等4个字到7个字的句子占三分之二，最长的句子如“远近横着几个萧索的荒村”也只有11个字。",
+    "similarity": 0.5913978494623656,
+    "a_indices": [
+      678
+    ],
+    "b_indices": [
+      668
+    ],
     "a_line_numbers": [
       1326
-    ]
+    ],
+    "a_line_number": 1326,
+    "b_line_numbers": [
+      867
+    ],
+    "b_line_number": 867
   },
   {
     "type": "match",
@@ -14170,28 +14112,24 @@
     "b_line_number": 878
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "因此，就要求他们多思考，勤练习。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 698,
-    "b_line_number": 878,
-    "b_line_numbers": [
-      878
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 因此，就要求他们多想，勤\n练。",
-    "b": null,
-    "similarity": null,
-    "a_index": 708,
-    "b_index": null,
-    "a_line_number": 1380,
+    "b": "因此，就要求他们多思考，勤练习。",
+    "similarity": 0.45,
+    "a_indices": [
+      708
+    ],
+    "b_indices": [
+      698
+    ],
     "a_line_numbers": [
       1380
-    ]
+    ],
+    "a_line_number": 1380,
+    "b_line_numbers": [
+      878
+    ],
+    "b_line_number": 878
   },
   {
     "type": "match",
@@ -14356,28 +14294,24 @@
     "b_line_number": 880
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "（原载《吉林师大学报》1959年第4期，有删节）\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 707,
-    "b_line_number": 882,
-    "b_line_numbers": [
-      882
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(原载 《吉林师大学报》 1959 年第 4 期，有删节)\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 718,
-    "b_index": null,
-    "a_line_number": 1399,
+    "b": "（原载《吉林师大学报》1959年第4期，有删节）\n\n",
+    "similarity": 0.45714285714285713,
+    "a_indices": [
+      718
+    ],
+    "b_indices": [
+      707
+    ],
     "a_line_numbers": [
       1399
-    ]
+    ],
+    "a_line_number": 1399,
+    "b_line_numbers": [
+      882
+    ],
+    "b_line_number": 882
   },
   {
     "type": "match",
@@ -15626,28 +15560,24 @@
     "b_line_number": 970
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "教学方法的改革试验,领域既宽广,又没有止境。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 770,
-    "b_line_number": 970,
-    "b_line_numbers": [
-      970
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 教学方\n法的改革试验，领域既宽广，又没有止境。",
-    "b": null,
-    "similarity": null,
-    "a_index": 782,
-    "b_index": null,
-    "a_line_number": 1507,
+    "b": "教学方法的改革试验,领域既宽广,又没有止境。",
+    "similarity": 0.5925925925925926,
+    "a_indices": [
+      782
+    ],
+    "b_indices": [
+      770
+    ],
     "a_line_numbers": [
       1507
-    ]
+    ],
+    "a_line_number": 1507,
+    "b_line_numbers": [
+      970
+    ],
+    "b_line_number": 970
   },
   {
     "type": "match",
@@ -15770,28 +15700,24 @@
     "b_line_number": 976
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "\"谋定后动\",试验前有设计,可以增强目的性和计划性,减少盲目性和紊乱性。\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 777,
-    "b_line_number": 976,
-    "b_line_numbers": [
-      976
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "“谋定后动”，试验前有设计，可以增强目的性和计划性，减少盲目性\n和紊乱性。\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 789,
-    "b_index": null,
-    "a_line_number": 1520,
+    "b": "\"谋定后动\",试验前有设计,可以增强目的性和计划性,减少盲目性和紊乱性。\n\n",
+    "similarity": 0.5909090909090909,
+    "a_indices": [
+      789
+    ],
+    "b_indices": [
+      777
+    ],
     "a_line_numbers": [
       1520
-    ]
+    ],
+    "a_line_number": 1520,
+    "b_line_numbers": [
+      976
+    ],
+    "b_line_number": 976
   },
   {
     "type": "match",
@@ -16354,28 +16280,24 @@
     "b_line_number": 1030
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "第四, 试验要有总结。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 806,
-    "b_line_number": 1033,
-    "b_line_numbers": [
-      1033
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "第四，试验要有总结。",
-    "b": null,
-    "similarity": null,
-    "a_index": 818,
-    "b_index": null,
-    "a_line_number": 1579,
+    "b": "第四, 试验要有总结。",
+    "similarity": 0.5833333333333334,
+    "a_indices": [
+      818
+    ],
+    "b_indices": [
+      806
+    ],
     "a_line_numbers": [
       1579
-    ]
+    ],
+    "a_line_number": 1579,
+    "b_line_numbers": [
+      1033
+    ],
+    "b_line_number": 1033
   },
   {
     "type": "match",
@@ -17130,28 +17052,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "议论文有许多不同的属性，人们也可以依据不同的标准给以不同的分类。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 845,
-    "b_line_number": 1089,
-    "b_line_numbers": [
-      1089
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 每类事物都\n有许多不同的属性，人们可以根据不同的属性给同类事物做不同的划\n分，议论文有许多不同的属性，人们也可以依据不同的标准给以不同\n的分类。",
-    "b": null,
-    "similarity": null,
-    "a_index": 856,
-    "b_index": null,
-    "a_line_number": 1635,
+    "b": "议论文有许多不同的属性，人们也可以依据不同的标准给以不同的分类。",
+    "similarity": 0.5625,
+    "a_indices": [
+      856
+    ],
+    "b_indices": [
+      845
+    ],
     "a_line_numbers": [
       1635
-    ]
+    ],
+    "a_line_number": 1635,
+    "b_line_numbers": [
+      1089
+    ],
+    "b_line_number": 1089
   },
   {
     "type": "match",
@@ -17692,28 +17610,24 @@
     "b_line_number": 1129
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "中学\n语文教材中的《\"友邦惊诧\"论》、《\"丧家的\"\"资本家的乏走狗\"》\n等是最典型的例子。\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 873,
-    "b_line_number": 1130,
-    "b_line_numbers": [
-      1130
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 中学\n语文教材中的 《 “友邦惊诧” 论》 《 “丧家的” “资本家的乏走狗” 》\n等是最典型的例子。\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 883,
-    "b_index": null,
-    "a_line_number": 1728,
+    "b": "中学\n语文教材中的《\"友邦惊诧\"论》、《\"丧家的\"\"资本家的乏走狗\"》\n等是最典型的例子。\n\n",
+    "similarity": 0.5178571428571429,
+    "a_indices": [
+      883
+    ],
+    "b_indices": [
+      873
+    ],
     "a_line_numbers": [
       1728
-    ]
+    ],
+    "a_line_number": 1728,
+    "b_line_numbers": [
+      1130
+    ],
+    "b_line_number": 1130
   },
   {
     "type": "match",
@@ -18038,28 +17952,24 @@
     "b_line_number": 1155
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "（二）立论性议论文和驳论性议论文\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 890,
-    "b_line_number": 1157,
-    "b_line_numbers": [
-      1157
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(二) 立论性议论文和驳论性议论文\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 901,
-    "b_index": null,
-    "a_line_number": 1768,
+    "b": "（二）立论性议论文和驳论性议论文\n\n",
+    "similarity": 0.5333333333333333,
+    "a_indices": [
+      901
+    ],
+    "b_indices": [
+      890
+    ],
     "a_line_numbers": [
       1768
-    ]
+    ],
+    "a_line_number": 1768,
+    "b_line_numbers": [
+      1157
+    ],
+    "b_line_number": 1157
   },
   {
     "type": "match",
@@ -18162,28 +18072,24 @@
     "b_line_number": 1163
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "中学语文课文如《评战犯求和》《\"丧家的\"\"资本家的乏走狗\"》《\"友邦惊诧\"\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 896,
-    "b_line_number": 1163,
-    "b_line_numbers": [
-      1163
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 中学语文课文\n如 《评战犯求和》 《 “丧家的” “资本家的乏走狗” 》 《 “友邦惊诧”\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 907,
-    "b_index": null,
-    "a_line_number": 1780,
+    "b": "中学语文课文如《评战犯求和》《\"丧家的\"\"资本家的乏走狗\"》《\"友邦惊诧\"\n\n",
+    "similarity": 0.4375,
+    "a_indices": [
+      907
+    ],
+    "b_indices": [
+      896
+    ],
     "a_line_numbers": [
       1780
-    ]
+    ],
+    "a_line_number": 1780,
+    "b_line_numbers": [
+      1163
+    ],
+    "b_line_number": 1163
   },
   {
     "type": "match",
@@ -19108,28 +19014,24 @@
     "b_line_number": 1218
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "不妨也列表一表解：\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 943,
-    "b_line_number": 1218,
-    "b_line_numbers": [
-      1218
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 不妨也列\n表一表解:\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 955,
-    "b_index": null,
-    "a_line_number": 1860,
+    "b": "不妨也列表一表解：\n\n",
+    "similarity": 0.5454545454545454,
+    "a_indices": [
+      955
+    ],
+    "b_indices": [
+      943
+    ],
     "a_line_numbers": [
       1860
-    ]
+    ],
+    "a_line_number": 1860,
+    "b_line_numbers": [
+      1218
+    ],
+    "b_line_number": 1218
   },
   {
     "type": "match",
@@ -19296,52 +19198,44 @@
     "b_line_number": 1276
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "比较起来说，议论文着重回答的是\"为什么\"的问题；说明文着重回答的是\"是什么\"的问题；记叙文着重回答的是\"怎么样\"的问题。\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 952,
-    "b_line_number": 1278,
-    "b_line_numbers": [
-      1278
-    ]
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": "(原载《语文教学通讯》1980年第12期)\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 953,
-    "b_line_number": 1280,
-    "b_line_numbers": [
-      1280
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "比较起来说，议论文着重回答的是 “为什么” 的问题说明文着重\n回答的是 “是什么” 的问题; 记叙文着重回答的是 “ 怎么样” 的\n问题。\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 966,
-    "b_index": null,
-    "a_line_number": 1929,
+    "b": "比较起来说，议论文着重回答的是\"为什么\"的问题；说明文着重回答的是\"是什么\"的问题；记叙文着重回答的是\"怎么样\"的问题。\n\n",
+    "similarity": 0.48148148148148145,
+    "a_indices": [
+      966
+    ],
+    "b_indices": [
+      952
+    ],
     "a_line_numbers": [
       1929
-    ]
+    ],
+    "a_line_number": 1929,
+    "b_line_numbers": [
+      1278
+    ],
+    "b_line_number": 1278
   },
   {
-    "type": "delete",
+    "type": "match",
     "a": "(原载 《语文教学通讯》 ) 1980 年第 12 期)\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 967,
-    "b_index": null,
-    "a_line_number": 1933,
+    "b": "(原载《语文教学通讯》1980年第12期)\n\n",
+    "similarity": 0.4838709677419355,
+    "a_indices": [
+      967
+    ],
+    "b_indices": [
+      953
+    ],
     "a_line_numbers": [
       1933
-    ]
+    ],
+    "a_line_number": 1933,
+    "b_line_numbers": [
+      1280
+    ],
+    "b_line_number": 1280
   },
   {
     "type": "match",
@@ -20184,28 +20078,24 @@
     "b_line_number": 1363
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "（二）作文练习中的说话训练\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 996,
-    "b_line_number": 1365,
-    "b_line_numbers": [
-      1365
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(二) 作文练习中的说话训练\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1010,
-    "b_index": null,
-    "a_line_number": 2017,
+    "b": "（二）作文练习中的说话训练\n\n",
+    "similarity": 0.5625,
+    "a_indices": [
+      1010
+    ],
+    "b_indices": [
+      996
+    ],
     "a_line_numbers": [
       2017
-    ]
+    ],
+    "a_line_number": 2017,
+    "b_line_numbers": [
+      1365
+    ],
+    "b_line_number": 1365
   },
   {
     "type": "match",
@@ -22508,28 +22398,24 @@
     "b_line_number": 1495
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 这里, 也想略陈己见, 以就正于大家。\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1097,
-    "b_line_number": 1495,
-    "b_line_numbers": [
-      1495
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 这\n里，也想略陈己见，以就正于大家。\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1135,
-    "b_index": null,
-    "a_line_number": 2210,
+    "b": " 这里, 也想略陈己见, 以就正于大家。\n\n",
+    "similarity": 0.4782608695652174,
+    "a_indices": [
+      1135
+    ],
+    "b_indices": [
+      1097
+    ],
     "a_line_numbers": [
       2210
-    ]
+    ],
+    "a_line_number": 2210,
+    "b_line_numbers": [
+      1495
+    ],
+    "b_line_number": 1495
   },
   {
     "type": "match",
@@ -22552,28 +22438,24 @@
     "b_line_number": 1497
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 到了国民党统治时期, 还有了进一步发展, 大学一年级也随之增设, 即所谓大一\"国文\"。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1099,
-    "b_line_number": 1497,
-    "b_line_numbers": [
-      1497
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 到了国民党统治时期，还有\n了进一步发展，大学一年级也随之增设，即所谓大一\n“国文”。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1137,
-    "b_index": null,
-    "a_line_number": 2213,
+    "b": " 到了国民党统治时期, 还有了进一步发展, 大学一年级也随之增设, 即所谓大一\"国文\"。",
+    "similarity": 0.5283018867924528,
+    "a_indices": [
+      1137
+    ],
+    "b_indices": [
+      1099
+    ],
     "a_line_numbers": [
       2213
-    ]
+    ],
+    "a_line_number": 2213,
+    "b_line_numbers": [
+      1497
+    ],
+    "b_line_number": 1497
   },
   {
     "type": "match",
@@ -22676,28 +22558,24 @@
     "b_line_number": 1501
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "1902 年, 我国公布 \"壬寅学制\" (四年制), 中等教育正式确立, 设 12 门学科, 语文定名为 \"辞章\", 课本由一般文言散文组成, 目标和内容是 \"读法、 作法、 书法\"。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1105,
-    "b_line_number": 1503,
-    "b_line_numbers": [
-      1503
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "1902 年，我国公布 “壬寅学制” (四年制)，中等教育正式确立，\n设 12 门学科，语文定名为 “辞章”，课本由一般文言散文组成，目标\n和内容是 “读法、 作法、 书法”。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1143,
-    "b_index": null,
-    "a_line_number": 2229,
+    "b": "1902 年, 我国公布 \"壬寅学制\" (四年制), 中等教育正式确立, 设 12 门学科, 语文定名为 \"辞章\", 课本由一般文言散文组成, 目标和内容是 \"读法、 作法、 书法\"。",
+    "similarity": 0.5523809523809524,
+    "a_indices": [
+      1143
+    ],
+    "b_indices": [
+      1105
+    ],
     "a_line_numbers": [
       2229
-    ]
+    ],
+    "a_line_number": 2229,
+    "b_line_numbers": [
+      1503
+    ],
+    "b_line_number": 1503
   },
   {
     "type": "match",
@@ -22720,76 +22598,64 @@
     "b_line_number": 1503
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 一年后的 1903 年, 公布了 \"癸卯学制\", 改学制为 5 年, 同时把 \"辞章\" 改称为 \"中国文学\"。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1107,
-    "b_line_number": 1503,
-    "b_line_numbers": [
-      1503
-    ]
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": " 内容虽仍包括论说文教学, 目标仍在于 \"实用\", 但和 \"辞章\" 有别, 侧重点转到了文学教育方面。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1108,
-    "b_line_number": 1503,
-    "b_line_numbers": [
-      1503
-    ]
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": " 同时, 作为政治课的 \"读经\" (后又称 \"读经讲经\") 中, 也含有语文课的因素(台湾国民党政府, 现在除 \"国文\" 外, 还设有 \"文化要义\" 一科, 也含有语文的因素)。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1109,
-    "b_line_number": 1503,
-    "b_line_numbers": [
-      1503
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 一年\n后的 1903 年，公布了 “癸卯学制”，改学制为 5 年，同时把 “辞章”\n改称为 “中国文学”。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1145,
-    "b_index": null,
-    "a_line_number": 2231,
+    "b": " 一年后的 1903 年, 公布了 \"癸卯学制\", 改学制为 5 年, 同时把 \"辞章\" 改称为 \"中国文学\"。",
+    "similarity": 0.46774193548387094,
+    "a_indices": [
+      1145
+    ],
+    "b_indices": [
+      1107
+    ],
     "a_line_numbers": [
       2231
-    ]
+    ],
+    "a_line_number": 2231,
+    "b_line_numbers": [
+      1503
+    ],
+    "b_line_number": 1503
   },
   {
-    "type": "delete",
+    "type": "match",
     "a": " 内容虽仍包括论说文教学，目标仍在于 “ 实\n用”，但和 “辞章” 有别，侧重点转到了文学教育方面。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1146,
-    "b_index": null,
-    "a_line_number": 2233,
+    "b": " 内容虽仍包括论说文教学, 目标仍在于 \"实用\", 但和 \"辞章\" 有别, 侧重点转到了文学教育方面。",
+    "similarity": 0.5245901639344263,
+    "a_indices": [
+      1146
+    ],
+    "b_indices": [
+      1108
+    ],
     "a_line_numbers": [
       2233
-    ]
+    ],
+    "a_line_number": 2233,
+    "b_line_numbers": [
+      1503
+    ],
+    "b_line_number": 1503
   },
   {
-    "type": "delete",
+    "type": "match",
     "a": " 同时，作为\n政治课的 “读经” (后又称 “读经讲经” ) 中，也含有语文课的因素\n(台湾国民党政府，现在除 “国文” 外，还设有 “文化要义” 一科，\n也含有语文的因素)。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1147,
-    "b_index": null,
-    "a_line_number": 2234,
+    "b": " 同时, 作为政治课的 \"读经\" (后又称 \"读经讲经\") 中, 也含有语文课的因素(台湾国民党政府, 现在除 \"国文\" 外, 还设有 \"文化要义\" 一科, 也含有语文的因素)。",
+    "similarity": 0.5054945054945055,
+    "a_indices": [
+      1147
+    ],
+    "b_indices": [
+      1109
+    ],
     "a_line_numbers": [
       2234
-    ]
+    ],
+    "a_line_number": 2234,
+    "b_line_numbers": [
+      1503
+    ],
+    "b_line_number": 1503
   },
   {
     "type": "match",
@@ -23732,16 +23598,24 @@
     "b_line_number": 1590
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "match",
+    "a": " 至于指导课外阅读的途径和步骤该\n是怎样的，可供采用的指导形式和方法有哪些，有些什\n么样的重要问题值得特别注意等等，就更不一定是人人\n能做出阅读答案的，仅就个人所知，指导好课外阅读的\n虽然到处都有，却似乎从来就不多，至少没有指导好课\n内阅读的那么多。",
     "b": " 至于指导课外阅读的途径和步骤该\n是怎样的, 可供采用的指导形式和方法有哪些, 有些什\n么样的重要问题值得特别注意等等, 就更不一定是人人\n能做出明确答案的。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1157,
-    "b_line_number": 1593,
+    "similarity": 0.5166666666666667,
+    "a_indices": [
+      1195
+    ],
+    "b_indices": [
+      1157
+    ],
+    "a_line_numbers": [
+      2327
+    ],
+    "a_line_number": 2327,
     "b_line_numbers": [
       1593
-    ]
+    ],
+    "b_line_number": 1593
   },
   {
     "type": "insert",
@@ -23753,18 +23627,6 @@
     "b_line_number": 1596,
     "b_line_numbers": [
       1596
-    ]
-  },
-  {
-    "type": "delete",
-    "a": " 至于指导课外阅读的途径和步骤该\n是怎样的，可供采用的指导形式和方法有哪些，有些什\n么样的重要问题值得特别注意等等，就更不一定是人人\n能做出阅读答案的，仅就个人所知，指导好课外阅读的\n虽然到处都有，却似乎从来就不多，至少没有指导好课\n内阅读的那么多。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1195,
-    "b_index": null,
-    "a_line_number": 2327,
-    "a_line_numbers": [
-      2327
     ]
   },
   {
@@ -24052,16 +23914,24 @@
     "b_line_number": 1613
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "match",
+    "a": "课外阅读教学的作用和意义远不止一端，概述起来，主要有\n第一，继续课内阅读，巩固课内阅读的成果。",
     "b": "课外阅读的作用和意义远不止一端，概述起来，主要有：\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1172,
-    "b_line_number": 1615,
+    "similarity": 0.5348837209302325,
+    "a_indices": [
+      1211
+    ],
+    "b_indices": [
+      1172
+    ],
+    "a_line_numbers": [
+      2371
+    ],
+    "a_line_number": 2371,
     "b_line_numbers": [
       1615
-    ]
+    ],
+    "b_line_number": 1615
   },
   {
     "type": "insert",
@@ -24073,18 +23943,6 @@
     "b_line_number": 1617,
     "b_line_numbers": [
       1617
-    ]
-  },
-  {
-    "type": "delete",
-    "a": "课外阅读教学的作用和意义远不止一端，概述起来，主要有\n第一，继续课内阅读，巩固课内阅读的成果。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1211,
-    "b_index": null,
-    "a_line_number": 2371,
-    "a_line_numbers": [
-      2371
     ]
   },
   {
@@ -24352,28 +24210,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "可以毫不夸大地说，它在发展智力方面的作用，并不低于数学课的计算训练。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1188,
-    "b_line_number": 1621,
-    "b_line_numbers": [
-      1621
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 中学生的智力发展，在相当大的程度上，首先\n取决于阅读训练，可以毫不夸大地说，它在发展智力方面之作用，并\n不低于数学课的计算训练。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1224,
-    "b_index": null,
-    "a_line_number": 2390,
+    "b": "可以毫不夸大地说，它在发展智力方面的作用，并不低于数学课的计算训练。",
+    "similarity": 0.47619047619047616,
+    "a_indices": [
+      1224
+    ],
+    "b_indices": [
+      1188
+    ],
     "a_line_numbers": [
       2390
-    ]
+    ],
+    "a_line_number": 2390,
+    "b_line_numbers": [
+      1621
+    ],
+    "b_line_number": 1621
   },
   {
     "type": "match",
@@ -24436,28 +24290,24 @@
     "b_line_number": 1623
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "  \n第四, 陶冶情操, 培育品德。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1192,
-    "b_line_number": 1624,
-    "b_line_numbers": [
-      1624
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "第四，陶冶情操，培育品德。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1228,
-    "b_index": null,
-    "a_line_number": 2397,
+    "b": "  \n第四, 陶冶情操, 培育品德。",
+    "similarity": 0.47058823529411764,
+    "a_indices": [
+      1228
+    ],
+    "b_indices": [
+      1192
+    ],
     "a_line_numbers": [
       2397
-    ]
+    ],
+    "a_line_number": 2397,
+    "b_line_numbers": [
+      1624
+    ],
+    "b_line_number": 1624
   },
   {
     "type": "match",
@@ -24552,28 +24402,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "第五, 能够因人而异, 因材施教。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1198,
-    "b_line_number": 1633,
-    "b_line_numbers": [
-      1633
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "第五，能够因人而异，因材施教。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1233,
-    "b_index": null,
-    "a_line_number": 2406,
+    "b": "第五, 能够因人而异, 因材施教。",
+    "similarity": 0.5263157894736842,
+    "a_indices": [
+      1233
+    ],
+    "b_indices": [
+      1198
+    ],
     "a_line_numbers": [
       2406
-    ]
+    ],
+    "a_line_number": 2406,
+    "b_line_numbers": [
+      1633
+    ],
+    "b_line_number": 1633
   },
   {
     "type": "match",
@@ -24740,16 +24586,26 @@
     "b_line_number": 1648
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "match",
+    "a": " 但又由于有课内课外之别，\n\n主要是阅读的条件不同，反映在指导上的侧重点也该有所区别。\n",
     "b": " 但又由于有课内课外之别,  \n主要是阅读的条件不同, 反映在指导上的侧重点也该有所区别。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1208,
-    "b_line_number": 1650,
+    "similarity": 0.782608695652174,
+    "a_indices": [
+      1241,
+      1242
+    ],
+    "b_indices": [
+      1208
+    ],
+    "a_line_numbers": [
+      2423,
+      2425
+    ],
+    "a_line_number": 2423,
     "b_line_numbers": [
       1650
-    ]
+    ],
+    "b_line_number": 1650
   },
   {
     "type": "insert",
@@ -24764,64 +24620,26 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "match",
+    "a": "成为我们的一个基本观点是，应该把课外阅读当作一个教育过\n\n程，把它看作应予认真指导的活动。",
     "b": "成为我们的一个基本观点是, 应该把课外阅读当作一个教育过  \n程, 把它看作应予认真指导的活动。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1210,
-    "b_line_number": 1653,
+    "similarity": 0.74,
+    "a_indices": [
+      1243,
+      1244
+    ],
+    "b_indices": [
+      1210
+    ],
+    "a_line_numbers": [
+      2426,
+      2428
+    ],
+    "a_line_number": 2426,
     "b_line_numbers": [
       1653
-    ]
-  },
-  {
-    "type": "delete",
-    "a": " 但又由于有课内课外之别，\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1241,
-    "b_index": null,
-    "a_line_number": 2423,
-    "a_line_numbers": [
-      2423
-    ]
-  },
-  {
-    "type": "delete",
-    "a": "主要是阅读的条件不同，反映在指导上的侧重点也该有所区别。\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1242,
-    "b_index": null,
-    "a_line_number": 2425,
-    "a_line_numbers": [
-      2425
-    ]
-  },
-  {
-    "type": "delete",
-    "a": "成为我们的一个基本观点是，应该把课外阅读当作一个教育过\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1243,
-    "b_index": null,
-    "a_line_number": 2426,
-    "a_line_numbers": [
-      2426
-    ]
-  },
-  {
-    "type": "delete",
-    "a": "程，把它看作应予认真指导的活动。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1244,
-    "b_index": null,
-    "a_line_number": 2428,
-    "a_line_numbers": [
-      2428
-    ]
+    ],
+    "b_line_number": 1653
   },
   {
     "type": "match",
@@ -24944,28 +24762,24 @@
     "b_line_number": 1660
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "第一, 要注重阅读的量, 指导学生多读。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1217,
-    "b_line_number": 1664,
-    "b_line_numbers": [
-      1664
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "第一，要注重阅读的量，指导学生多读。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1251,
-    "b_index": null,
-    "a_line_number": 2438,
+    "b": "第一, 要注重阅读的量, 指导学生多读。",
+    "similarity": 0.5909090909090909,
+    "a_indices": [
+      1251
+    ],
+    "b_indices": [
+      1217
+    ],
     "a_line_numbers": [
       2438
-    ]
+    ],
+    "a_line_number": 2438,
+    "b_line_numbers": [
+      1664
+    ],
+    "b_line_number": 1664
   },
   {
     "type": "match",
@@ -25028,52 +24842,44 @@
     "b_line_number": 1669
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 略读就是泛泛的读、粗疏的读, 只观其大意, 得其概\n要, 不求深解。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1221,
-    "b_line_number": 1669,
-    "b_line_numbers": [
-      1669
-    ]
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": " 这样, 才能增加数量, 扩大视野, 增广见闻。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1222,
-    "b_line_number": 1670,
-    "b_line_numbers": [
-      1670
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 略读就是泛泛的读、 粗疏的读，只观其大意，得其概\n要，不求深解。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1255,
-    "b_index": null,
-    "a_line_number": 2443,
+    "b": " 略读就是泛泛的读、粗疏的读, 只观其大意, 得其概\n要, 不求深解。",
+    "similarity": 0.5789473684210527,
+    "a_indices": [
+      1255
+    ],
+    "b_indices": [
+      1221
+    ],
     "a_line_numbers": [
       2443
-    ]
+    ],
+    "a_line_number": 2443,
+    "b_line_numbers": [
+      1669
+    ],
+    "b_line_number": 1669
   },
   {
-    "type": "delete",
+    "type": "match",
     "a": " 这样，才能增加数量，扩大视野，增广见闻。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1256,
-    "b_index": null,
-    "a_line_number": 2444,
+    "b": " 这样, 才能增加数量, 扩大视野, 增广见闻。",
+    "similarity": 0.5,
+    "a_indices": [
+      1256
+    ],
+    "b_indices": [
+      1222
+    ],
     "a_line_numbers": [
       2444
-    ]
+    ],
+    "a_line_number": 2444,
+    "b_line_numbers": [
+      1670
+    ],
+    "b_line_number": 1670
   },
   {
     "type": "match",
@@ -25156,28 +24962,24 @@
     "b_line_number": 1674
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 连课内的 \"阅读课文\", 也几乎都成了 \"半精\n读\" 课文。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1227,
-    "b_line_number": 1676,
-    "b_line_numbers": [
-      1676
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 连课内的 “ 阅读课文”，也几乎都成了 “ 半精\n读” 课文。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1261,
-    "b_index": null,
-    "a_line_number": 2450,
+    "b": " 连课内的 \"阅读课文\", 也几乎都成了 \"半精\n读\" 课文。",
+    "similarity": 0.5,
+    "a_indices": [
+      1261
+    ],
+    "b_indices": [
+      1227
+    ],
     "a_line_numbers": [
       2450
-    ]
+    ],
+    "a_line_number": 2450,
+    "b_line_numbers": [
+      1676
+    ],
+    "b_line_number": 1676
   },
   {
     "type": "match",
@@ -25402,28 +25204,24 @@
     "b_line_number": 1691
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "速读就是快速地理解地读。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1239,
-    "b_line_number": 1691,
-    "b_line_numbers": [
-      1691
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 速读就是理解的快速地读。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1274,
-    "b_index": null,
-    "a_line_number": 2466,
+    "b": "速读就是快速地理解地读。",
+    "similarity": 0.5714285714285714,
+    "a_indices": [
+      1274
+    ],
+    "b_indices": [
+      1239
+    ],
     "a_line_numbers": [
       2466
-    ]
+    ],
+    "a_line_number": 2466,
+    "b_line_numbers": [
+      1691
+    ],
+    "b_line_number": 1691
   },
   {
     "type": "match",
@@ -27194,28 +26992,24 @@
     "b_line_number": 1786
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 朗诵\n的材料, 可以是学过的课文, 也可以是课外选取的。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1326,
-    "b_line_number": 1786,
-    "b_line_numbers": [
-      1786
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 朗诵\n的作用，可以是学过的课文，也可以是课外选取的。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1368,
-    "b_index": null,
-    "a_line_number": 2639,
+    "b": " 朗诵\n的材料, 可以是学过的课文, 也可以是课外选取的。",
+    "similarity": 0.5666666666666667,
+    "a_indices": [
+      1368
+    ],
+    "b_indices": [
+      1326
+    ],
     "a_line_numbers": [
       2639
-    ]
+    ],
+    "a_line_number": 2639,
+    "b_line_numbers": [
+      1786
+    ],
+    "b_line_number": 1786
   },
   {
     "type": "match",
@@ -28072,28 +27866,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "我们要求三方面的紧密联结，通力合作，共同发挥课外阅读指导的作用。\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1370,
-    "b_line_number": 1858,
-    "b_line_numbers": [
-      1858
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(二) 学校和家庭、 社会的关系\n指导课外阅读，还要注意学校和家庭、 社会的关系我们要求三方\n面的紧密联结，通力合作，共同发挥课外阅读指导的作用。\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1412,
-    "b_index": null,
-    "a_line_number": 2712,
+    "b": "我们要求三方面的紧密联结，通力合作，共同发挥课外阅读指导的作用。\n\n",
+    "similarity": 0.5172413793103449,
+    "a_indices": [
+      1412
+    ],
+    "b_indices": [
+      1370
+    ],
     "a_line_numbers": [
       2712
-    ]
+    ],
+    "a_line_number": 2712,
+    "b_line_numbers": [
+      1858
+    ],
+    "b_line_number": 1858
   },
   {
     "type": "match",
@@ -29898,28 +29688,24 @@
     "b_line_number": 1998
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 又教学又研究, 颇为不易; 唯其不易, 方才可贵。\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1461,
-    "b_line_number": 1998,
-    "b_line_numbers": [
-      1998
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 又教学又研究，颇为不易; 唯其不易，方\n才可贵。\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1504,
-    "b_index": null,
-    "a_line_number": 2886,
+    "b": " 又教学又研究, 颇为不易; 唯其不易, 方才可贵。\n\n",
+    "similarity": 0.5714285714285714,
+    "a_indices": [
+      1504
+    ],
+    "b_indices": [
+      1461
+    ],
     "a_line_numbers": [
       2886
-    ]
+    ],
+    "a_line_number": 2886,
+    "b_line_numbers": [
+      1998
+    ],
+    "b_line_number": 1998
   },
   {
     "type": "match",
@@ -29940,42 +29726,6 @@
       2000
     ],
     "b_line_number": 2000
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": " 为了研究问题, 就要读得分外认真, 吃透材料; 就要写得分外认真, 琢磨表示方式。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1463,
-    "b_line_number": 2002,
-    "b_line_numbers": [
-      2002
-    ]
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": " 吸取知识, 整理材料, 选择表达技巧的过程, 就是一个锻炼, 提高的过程。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1464,
-    "b_line_number": 2002,
-    "b_line_numbers": [
-      2002
-    ]
-  },
-  {
-    "type": "insert",
-    "a": null,
-    "b": " \"己愈予人己愈多, 己愈教人己愈多\"。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1465,
-    "b_line_number": 2002,
-    "b_line_numbers": [
-      2002
-    ]
   },
   {
     "type": "delete",
@@ -30002,27 +29752,55 @@
     ]
   },
   {
-    "type": "delete",
+    "type": "match",
     "a": "真，吃透材料; 就要写得分外认真，琢磨表示方式。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1508,
-    "b_index": null,
-    "a_line_number": 2904,
+    "b": " 为了研究问题, 就要读得分外认真, 吃透材料; 就要写得分外认真, 琢磨表示方式。",
+    "similarity": 0.5588235294117647,
+    "a_indices": [
+      1508
+    ],
+    "b_indices": [
+      1463
+    ],
     "a_line_numbers": [
       2904
-    ]
+    ],
+    "a_line_number": 2904,
+    "b_line_numbers": [
+      2002
+    ],
+    "b_line_number": 2002
   },
   {
-    "type": "delete",
+    "type": "match",
     "a": " 吸取知识，整理\n材料，选择表达技巧的过程，就是一个锻炼，提高的过程。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1509,
-    "b_index": null,
-    "a_line_number": 2904,
+    "b": " 吸取知识, 整理材料, 选择表达技巧的过程, 就是一个锻炼, 提高的过程。",
+    "similarity": 0.5121951219512195,
+    "a_indices": [
+      1509
+    ],
+    "b_indices": [
+      1464
+    ],
     "a_line_numbers": [
       2904
+    ],
+    "a_line_number": 2904,
+    "b_line_numbers": [
+      2002
+    ],
+    "b_line_number": 2002
+  },
+  {
+    "type": "insert",
+    "a": null,
+    "b": " \"己愈予人己愈多, 己愈教人己愈多\"。",
+    "similarity": null,
+    "a_index": null,
+    "b_index": 1465,
+    "b_line_number": 2002,
+    "b_line_numbers": [
+      2002
     ]
   },
   {
@@ -30532,28 +30310,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "在大部分学科领域内，相当一部分成果都是业余工作者创造的，语文教学领域也是这样。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1491,
-    "b_line_number": 2020,
-    "b_line_numbers": [
-      2020
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "但是，只要兴趣浓厚，意志坚定，难关就能闯过，时间就能挤出\n在大部分学科领域内，相当一部分成果都是业余工作者创造的，语文\n教学领域也是这样。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1536,
-    "b_index": null,
-    "a_line_number": 2944,
+    "b": "在大部分学科领域内，相当一部分成果都是业余工作者创造的，语文教学领域也是这样。",
+    "similarity": 0.5303030303030303,
+    "a_indices": [
+      1536
+    ],
+    "b_indices": [
+      1491
+    ],
     "a_line_numbers": [
       2944
-    ]
+    ],
+    "a_line_number": 2944,
+    "b_line_numbers": [
+      2020
+    ],
+    "b_line_number": 2020
   },
   {
     "type": "match",
@@ -31190,28 +30964,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "每一项工作都有它的程序。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1524,
-    "b_line_number": 2060,
-    "b_line_numbers": [
-      2060
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "三、 研究工作的程序\n每一项工作都有它的程序。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1569,
-    "b_index": null,
-    "a_line_number": 2993,
+    "b": "每一项工作都有它的程序。",
+    "similarity": 0.5789473684210527,
+    "a_indices": [
+      1569
+    ],
+    "b_indices": [
+      1524
+    ],
     "a_line_numbers": [
       2993
-    ]
+    ],
+    "a_line_number": 2993,
+    "b_line_numbers": [
+      2060
+    ],
+    "b_line_number": 2060
   },
   {
     "type": "match",
@@ -31366,28 +31136,24 @@
     "b_line_number": 2068
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 语文教学的理论或实际问题；4.",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1533,
-    "b_line_number": 2068,
-    "b_line_numbers": [
-      2068
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 语文教学的理\n论或实际问题; 4.",
-    "b": null,
-    "similarity": null,
-    "a_index": 1577,
-    "b_index": null,
-    "a_line_number": 3005,
+    "b": " 语文教学的理论或实际问题；4.",
+    "similarity": 0.5789473684210527,
+    "a_indices": [
+      1577
+    ],
+    "b_indices": [
+      1533
+    ],
     "a_line_numbers": [
       3005
-    ]
+    ],
+    "a_line_number": 3005,
+    "b_line_numbers": [
+      2068
+    ],
+    "b_line_number": 2068
   },
   {
     "type": "match",
@@ -32032,28 +31798,24 @@
     "b_line_number": 2091
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "(原载《中学语文》1982年第10期)\n\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1566,
-    "b_line_number": 2094,
-    "b_line_numbers": [
-      2094
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(原载 《中学语文》 1982 年第 10 期)\n\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1611,
-    "b_index": null,
-    "a_line_number": 3066,
+    "b": "(原载《中学语文》1982年第10期)\n\n\n",
+    "similarity": 0.48148148148148145,
+    "a_indices": [
+      1611
+    ],
+    "b_indices": [
+      1566
+    ],
     "a_line_numbers": [
       3066
-    ]
+    ],
+    "a_line_number": 3066,
+    "b_line_numbers": [
+      2094
+    ],
+    "b_line_number": 2094
   },
   {
     "type": "match",
@@ -33676,16 +33438,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "match",
+    "a": "热情鼓励，就可能促使学生积极上进; 冷漠批评，就可能促使学\n生消极后退，因此，我们的立脚点，自然要放在鼓励积极上进。",
     "b": "热情鼓励，就可能促使学生积极上进；冷漠批评，就可能促使学生消极后退。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1650,
-    "b_line_number": 2232,
+    "similarity": 0.46,
+    "a_indices": [
+      1688
+    ],
+    "b_indices": [
+      1650
+    ],
+    "a_line_numbers": [
+      3223
+    ],
+    "a_line_number": 3223,
     "b_line_numbers": [
       2232
-    ]
+    ],
+    "b_line_number": 2232
   },
   {
     "type": "insert",
@@ -33697,18 +33467,6 @@
     "b_line_number": 2232,
     "b_line_numbers": [
       2232
-    ]
-  },
-  {
-    "type": "delete",
-    "a": "热情鼓励，就可能促使学生积极上进; 冷漠批评，就可能促使学\n生消极后退，因此，我们的立脚点，自然要放在鼓励积极上进。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1688,
-    "b_index": null,
-    "a_line_number": 3223,
-    "a_line_numbers": [
-      3223
     ]
   },
   {
@@ -33974,28 +33732,24 @@
     "b_line_number": 2251
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "(原载《语文教学通讯》1983年第3期)\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1665,
-    "b_line_number": 2255,
-    "b_line_numbers": [
-      2255
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(原载 《语文教学通讯》 1983 年第 3 期)\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1703,
-    "b_index": null,
-    "a_line_number": 3248,
+    "b": "(原载《语文教学通讯》1983年第3期)\n\n",
+    "similarity": 0.5,
+    "a_indices": [
+      1703
+    ],
+    "b_indices": [
+      1665
+    ],
     "a_line_numbers": [
       3248
-    ]
+    ],
+    "a_line_number": 3248,
+    "b_line_numbers": [
+      2255
+    ],
+    "b_line_number": 2255
   },
   {
     "type": "match",
@@ -34618,28 +34372,24 @@
     "b_line_number": 2316
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 考其原因, 可\n能是:\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1697,
-    "b_line_number": 2316,
-    "b_line_numbers": [
-      2316
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 考其原因，可\n能是:\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1735,
-    "b_index": null,
-    "a_line_number": 3307,
+    "b": " 考其原因, 可\n能是:\n\n",
+    "similarity": 0.5833333333333334,
+    "a_indices": [
+      1735
+    ],
+    "b_indices": [
+      1697
+    ],
     "a_line_numbers": [
       3307
-    ]
+    ],
+    "a_line_number": 3307,
+    "b_line_numbers": [
+      2316
+    ],
+    "b_line_number": 2316
   },
   {
     "type": "match",
@@ -36262,28 +36012,24 @@
     "b_line_number": 2457
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "(原载《中学语文》1984年第3期)\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1779,
-    "b_line_number": 2460,
-    "b_line_numbers": [
-      2460
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "(原载 《中学语文》 1984 年第 3 期)\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 1817,
-    "b_index": null,
-    "a_line_number": 3454,
+    "b": "(原载《中学语文》1984年第3期)\n\n",
+    "similarity": 0.4444444444444444,
+    "a_indices": [
+      1817
+    ],
+    "b_indices": [
+      1779
+    ],
     "a_line_numbers": [
       3454
-    ]
+    ],
+    "a_line_number": 3454,
+    "b_line_numbers": [
+      2460
+    ],
+    "b_line_number": 2460
   },
   {
     "type": "match",
@@ -37298,41 +37044,51 @@
     "b_line_number": 2533
   },
   {
+    "type": "insert",
+    "a": null,
+    "b": "这同作文的材料相比，是属于第二位问题，但也是作好文的前提。",
+    "similarity": null,
+    "a_index": null,
+    "b_index": 1830,
+    "b_line_number": 2534,
+    "b_line_numbers": [
+      2534
+    ]
+  },
+  {
     "type": "match",
-    "a": " 这同作文\n的材料相比，是属于第二位问题，但也是作好文的前提，比如会写一\n定量的字、 会用一定数量的词，会造必要的句子，会组成起码的段落\n等，都应是存在于作文之先的。 如果没有这一提。",
-    "b": "这同作文的材料相比，是属于第二位问题，但也是作好文的前提。比如会写一定量的字、会用一定数量的词，会造必要的句子，会组成起码的段落等，都应是存在于作文之先的。",
-    "similarity": 0.7666666666666667,
+    "a": " 这同作文\n的材料相比，是属于第二位问题，但也是作好文的前提，比如会写一\n定量的字、 会用一定数量的词，会造必要的句子，会组成起码的段落\n等，都应是存在于作文之先的。",
+    "b": "比如会写一定量的字、会用一定数量的词，会造必要的句子，会组成起码的段落等，都应是存在于作文之先的。",
+    "similarity": 0.5375,
     "a_indices": [
-      1869,
-      1870
+      1869
     ],
     "b_indices": [
-      1830,
       1831
     ],
     "a_line_numbers": [
-      3539,
-      3542
+      3539
     ],
     "a_line_number": 3539,
     "b_line_numbers": [
-      2534,
       2534
     ],
     "b_line_number": 2534
   },
   {
     "type": "match",
-    "a": " 即使有了好的经\n历，有了内在的动机，也是不成其为文章的。",
+    "a": " 如果没有这一提。 即使有了好的经\n历，有了内在的动机，也是不成其为文章的。",
     "b": "如果没有这一前提，即使有了好的经历，有了内在的动机，也是不成其为文章的。",
-    "similarity": 0.6666666666666666,
+    "similarity": 0.725,
     "a_indices": [
+      1870,
       1871
     ],
     "b_indices": [
       1832
     ],
     "a_line_numbers": [
+      3542,
       3542
     ],
     "a_line_number": 3542,
@@ -37762,12 +37518,23 @@
     "b_line_number": 2547
   },
   {
+    "type": "delete",
+    "a": "1. 以教材为基础，进行创造性地表达活动。 即学生想写的内容\n",
+    "b": null,
+    "similarity": null,
+    "a_index": 1893,
+    "b_index": null,
+    "a_line_number": 3577,
+    "a_line_numbers": [
+      3577
+    ]
+  },
+  {
     "type": "match",
-    "a": "1. 以教材为基础，进行创造性地表达活动。 即学生想写的内容\n是由读课文而引起的，进而把思考的结果写为文章。 比如 (1) 读后\n的感想和意见 (评价、 赏); (2) 读后的联想和想象; (3) 续写，把\n课文中的故事继续下去; (4) 扩写，就一个情节、 一个场面展开想\n象; (5) 仿写; (6) 以主人公或作者为对象写信; (7) 对课文说明、\n评论的事物的疑问。\n\n",
+    "a": "是由读课文而引起的，进而把思考的结果写为文章。 比如 (1) 读后\n的感想和意见 (评价、 赏); (2) 读后的联想和想象; (3) 续写，把\n课文中的故事继续下去; (4) 扩写，就一个情节、 一个场面展开想\n象; (5) 仿写; (6) 以主人公或作者为对象写信; (7) 对课文说明、\n评论的事物的疑问。\n\n",
     "b": "1. 以教材为基础，进行创造性地表达活动。即学生想写的内容是由读课文而引起的，进而把思考的结果写为文章。比如 (1) 读后的感想和意见 (评价、赏析); (2) 读后的联想和想象; (3) 续写，把课文中的故事继续下去; (4) 扩写，就一个情节、一个场面展开想象; (5) 仿写; (6) 以主人公或作者为对象写信; (7) 对课文说明、评论的事物的疑问。\n\n",
-    "similarity": 0.8424242424242424,
+    "similarity": 0.7037037037037037,
     "a_indices": [
-      1893,
       1894,
       1895
     ],
@@ -37775,11 +37542,10 @@
       1854
     ],
     "a_line_numbers": [
-      3577,
       3578,
       3578
     ],
-    "a_line_number": 3577,
+    "a_line_number": 3578,
     "b_line_numbers": [
       2548
     ],
@@ -37807,20 +37573,18 @@
   },
   {
     "type": "match",
-    "a": "2. 和阅读课文紧密联结的表达活动，比如 (1) 抄写; (2) 摘\n录; (3) 写提要、 缩写; (4) 改写。 这种表达活动的内容已在课文\n\n",
+    "a": "2. 和阅读课文紧密联结的表达活动，比如 (1) 抄写; (2) 摘\n录; (3) 写提要、 缩写; (4) 改写。",
     "b": "2. 和阅读课文紧密联结的表达活动，比如 (1) 抄写; (2) 摘录; (3) 写提要、缩写; (4) 改写。这种表达活动的内容已在课文\n\n",
-    "similarity": 0.8524590163934426,
+    "similarity": 0.7457627118644068,
     "a_indices": [
       1897,
-      1898,
-      1899
+      1898
     ],
     "b_indices": [
       1856
     ],
     "a_line_numbers": [
       3586,
-      3587,
       3587
     ],
     "a_line_number": 3586,
@@ -37828,6 +37592,18 @@
       2551
     ],
     "b_line_number": 2551
+  },
+  {
+    "type": "delete",
+    "a": " 这种表达活动的内容已在课文\n\n",
+    "b": null,
+    "similarity": null,
+    "a_index": 1899,
+    "b_index": null,
+    "a_line_number": 3587,
+    "a_line_numbers": [
+      3587
+    ]
   },
   {
     "type": "match",
@@ -39492,16 +39268,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "match",
+    "a": "教书\n我从教这么多年，又是教教学法的，总该是比较善教的吧，实际\n上也并非如此，事实倒是，不成功远比较为成功的时候多。",
     "b": "我从教这么多年，又是教教学法的，总该是比较善教的吧，实际上也并非如此。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1941,
-    "b_line_number": 2669,
+    "similarity": 0.5614035087719298,
+    "a_indices": [
+      1984
+    ],
+    "b_indices": [
+      1941
+    ],
+    "a_line_numbers": [
+      3747
+    ],
+    "a_line_number": 3747,
     "b_line_numbers": [
       2669
-    ]
+    ],
+    "b_line_number": 2669
   },
   {
     "type": "insert",
@@ -39513,18 +39297,6 @@
     "b_line_number": 2669,
     "b_line_numbers": [
       2669
-    ]
-  },
-  {
-    "type": "delete",
-    "a": "教书\n我从教这么多年，又是教教学法的，总该是比较善教的吧，实际\n上也并非如此，事实倒是，不成功远比较为成功的时候多。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1984,
-    "b_index": null,
-    "a_line_number": 3747,
-    "a_line_numbers": [
-      3747
     ]
   },
   {
@@ -39610,16 +39382,24 @@
     "b_line_number": 2671
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "match",
+    "a": " 对于像语文这样非科学因素 (比如文学因素) 本就很\n多的学科来说，我们能够作出科学解说并给以控制的地方就更少，举\n例说，我们早就需要分别制订出中小学生应该和能够掌握的汉字数量\n标准和词汇数量标准。",
     "b": "对于像语文这样非科学因素（比如文学因素）本就很多的学科来说，我们能够作出科学解说并给以控制的地方就更少。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1947,
-    "b_line_number": 2671,
+    "similarity": 0.44680851063829785,
+    "a_indices": [
+      1990
+    ],
+    "b_indices": [
+      1947
+    ],
+    "a_line_numbers": [
+      3759
+    ],
+    "a_line_number": 3759,
     "b_line_numbers": [
       2671
-    ]
+    ],
+    "b_line_number": 2671
   },
   {
     "type": "insert",
@@ -39631,18 +39411,6 @@
     "b_line_number": 2671,
     "b_line_numbers": [
       2671
-    ]
-  },
-  {
-    "type": "delete",
-    "a": " 对于像语文这样非科学因素 (比如文学因素) 本就很\n多的学科来说，我们能够作出科学解说并给以控制的地方就更少，举\n例说，我们早就需要分别制订出中小学生应该和能够掌握的汉字数量\n标准和词汇数量标准。",
-    "b": null,
-    "similarity": null,
-    "a_index": 1990,
-    "b_index": null,
-    "a_line_number": 3759,
-    "a_line_numbers": [
-      3759
     ]
   },
   {
@@ -39906,28 +39674,24 @@
     "b_line_number": 2673
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "教学, 既是艺术, 又是科学, 而比较起来, 至少在当前, 后者是\n应该更加重视的。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1962,
-    "b_line_number": 2675,
-    "b_line_numbers": [
-      2675
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "教学，既是艺术，又是科学，而比较起来，至少在当前，后者是\n应该更加重视的。",
-    "b": null,
-    "similarity": null,
-    "a_index": 2004,
-    "b_index": null,
-    "a_line_number": 3785,
+    "b": "教学, 既是艺术, 又是科学, 而比较起来, 至少在当前, 后者是\n应该更加重视的。",
+    "similarity": 0.5777777777777777,
+    "a_indices": [
+      2004
+    ],
+    "b_indices": [
+      1962
+    ],
     "a_line_numbers": [
       3785
-    ]
+    ],
+    "a_line_number": 3785,
+    "b_line_numbers": [
+      2675
+    ],
+    "b_line_number": 2675
   },
   {
     "type": "match",
@@ -40042,28 +39806,24 @@
     "b_line_number": 2684
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 不过,\n说是几本书,\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1968,
-    "b_line_number": 2684,
-    "b_line_numbers": [
-      2684
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 不过，\n说是几本书，\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 2011,
-    "b_index": null,
-    "a_line_number": 3795,
+    "b": " 不过,\n说是几本书,\n\n",
+    "similarity": 0.5,
+    "a_indices": [
+      2011
+    ],
+    "b_indices": [
+      1968
+    ],
     "a_line_numbers": [
       3795
-    ]
+    ],
+    "a_line_number": 3795,
+    "b_line_numbers": [
+      2684
+    ],
+    "b_line_number": 2684
   },
   {
     "type": "match",
@@ -40098,28 +39858,24 @@
     ]
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": "我常在想, 也跟别人不止一次地说过, 在我们国家的语文\n教育界里, 真正给语文教学以指导和推动的, 除了叶圣陶、 吕叔湘、\n张志公等位学者和另外为数不多的语文教育学者外, 就是语文教师自\n己。",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1971,
-    "b_line_number": 2689,
-    "b_line_numbers": [
-      2689
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": "其理论意义本就极有限，其实践价值就更远不如中学语文教师自己写\n的论著了，我常在想，也跟别人不止一次地说过，在我们国家的语文\n教育界里，真正给语文教学以指导和推动的，除了叶圣陶、 吕叔湘、\n张志公等位学者和另外为数不多的语文教育学者外，就是语文教师自\n己。",
-    "b": null,
-    "similarity": null,
-    "a_index": 2013,
-    "b_index": null,
-    "a_line_number": 3799,
+    "b": "我常在想, 也跟别人不止一次地说过, 在我们国家的语文\n教育界里, 真正给语文教学以指导和推动的, 除了叶圣陶、 吕叔湘、\n张志公等位学者和另外为数不多的语文教育学者外, 就是语文教师自\n己。",
+    "similarity": 0.576,
+    "a_indices": [
+      2013
+    ],
+    "b_indices": [
+      1971
+    ],
     "a_line_numbers": [
       3799
-    ]
+    ],
+    "a_line_number": 3799,
+    "b_line_numbers": [
+      2689
+    ],
+    "b_line_number": 2689
   },
   {
     "type": "match",
@@ -40244,28 +40000,24 @@
     "b_line_number": 2701
   },
   {
-    "type": "insert",
-    "a": null,
-    "b": " 没有教学, 教学研究固然\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 1978,
-    "b_line_number": 2701,
-    "b_line_numbers": [
-      2701
-    ]
-  },
-  {
-    "type": "delete",
+    "type": "match",
     "a": " 没有教学，教学研究固然\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 2021,
-    "b_index": null,
-    "a_line_number": 3812,
+    "b": " 没有教学, 教学研究固然\n\n",
+    "similarity": 0.5833333333333334,
+    "a_indices": [
+      2021
+    ],
+    "b_indices": [
+      1978
+    ],
     "a_line_numbers": [
       3812
-    ]
+    ],
+    "a_line_number": 3812,
+    "b_line_numbers": [
+      2701
+    ],
+    "b_line_number": 2701
   },
   {
     "type": "match",
@@ -40800,16 +40552,24 @@
     "b_line_number": 2712
   },
   {
-    "type": "insert",
-    "a": null,
+    "type": "match",
+    "a": "(原载 《语文教学通讯》 1989 年第 6 期)\n\n",
     "b": "(原载《语文教学通讯》1989年第6期)\n\n",
-    "similarity": null,
-    "a_index": null,
-    "b_index": 2005,
-    "b_line_number": 2714,
+    "similarity": 0.4827586206896552,
+    "a_indices": [
+      2049
+    ],
+    "b_indices": [
+      2005
+    ],
+    "a_line_numbers": [
+      3851
+    ],
+    "a_line_number": 3851,
     "b_line_numbers": [
       2714
-    ]
+    ],
+    "b_line_number": 2714
   },
   {
     "type": "insert",
@@ -40821,18 +40581,6 @@
     "b_line_number": 2716,
     "b_line_numbers": [
       2716
-    ]
-  },
-  {
-    "type": "delete",
-    "a": "(原载 《语文教学通讯》 1989 年第 6 期)\n\n",
-    "b": null,
-    "similarity": null,
-    "a_index": 2049,
-    "b_index": null,
-    "a_line_number": 3851,
-    "a_line_numbers": [
-      3851
     ]
   },
   {
