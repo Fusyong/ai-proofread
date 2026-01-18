@@ -598,7 +598,7 @@ def save_html_report_stage1(
                 // 检查是否有diffWords方法（v7.0.0可能使用不同的导出方式）
                 const diffWordsFunc = Diff.diffWords || (Diff.default && Diff.default.diffWords);
                 const diffWordsWithSpaceFunc = Diff.diffWordsWithSpace || (Diff.default && Diff.default.diffWordsWithSpace);
-                
+
                 if (!diffWordsFunc) {
                     // 如果jsdiff不可用，显示原始文本
                     const indexA = cellA.querySelector('.index');

@@ -222,6 +222,37 @@ def split_chinese_sentences_simple(text: str) -> List[str]:
                     if end_pos < len(text) and text[end_pos].isdigit():
                         continue  # 是小数点，跳过
 
+        # 如果是句末标点（不是连续换行），需要包含后面的换行符和空行
+        # 直到遇到下一个非空行
+        if match.group(1) or match.group(2):  # 句末标点
+            # 从end_pos开始，查找后面的换行符和空行
+            trailing_pos = end_pos
+            while trailing_pos < len(text):
+                # 检查当前位置是否是换行符
+                if text[trailing_pos] == '\n':
+                    trailing_pos += 1
+                    # 检查后面是否还有空行（只包含空白字符的行）
+                    # 查找下一个换行符或非空白字符
+                    temp_pos = trailing_pos
+                    while temp_pos < len(text) and text[temp_pos] in ' \t':
+                        temp_pos += 1
+                    # 如果下一个字符是换行符，说明是空行，继续包含
+                    if temp_pos < len(text) and text[temp_pos] == '\n':
+                        trailing_pos = temp_pos + 1
+                        continue
+                    # 如果下一个字符是非空白字符，停止
+                    elif temp_pos < len(text) and not text[temp_pos].isspace():
+                        break
+                    # 如果到达文本末尾，停止
+                    else:
+                        break
+                else:
+                    # 不是换行符，停止
+                    break
+
+            # 更新end_pos以包含后面的换行符和空行
+            end_pos = trailing_pos
+
         # 提取句子
         sentence = text[last_end:end_pos]
         if sentence:
@@ -260,7 +291,9 @@ def split_chinese_sentences(text: str) -> List[str]:
     sentences = []
     current_text = []  # 收集普通文本（非标题、非列表项）
 
-    for line in lines:
+    i = 0
+    while i < len(lines):
+        line = lines[i]
         is_title = _is_markdown_title(line)
         is_list_item = _is_list_item(line)
 
@@ -272,8 +305,22 @@ def split_chinese_sentences(text: str) -> List[str]:
                 chunk_sentences = split_chinese_sentences_simple(text_chunk)
                 sentences.extend(chunk_sentences)
                 current_text = []
-            # 标题本身作为一句（保留换行符）
-            sentences.append(line)
+
+            # 标题本身作为一句，包含后面的空行
+            title_sentence = line
+            # 检查后面的行是否是空行，如果是，包含它们
+            j = i + 1
+            while j < len(lines):
+                next_line = lines[j]
+                # 如果下一行是空行（只包含空白字符），包含它
+                if not next_line.strip():
+                    title_sentence += next_line
+                    j += 1
+                else:
+                    # 遇到非空行，停止
+                    break
+            sentences.append(title_sentence)
+            i = j  # 跳过已处理的行
             continue
 
         # 处理Markdown列表项：每一项作为完整句子
@@ -284,12 +331,27 @@ def split_chinese_sentences(text: str) -> List[str]:
                 chunk_sentences = split_chinese_sentences_simple(text_chunk)
                 sentences.extend(chunk_sentences)
                 current_text = []
-            # 列表项本身作为一句（保留换行符）
-            sentences.append(line)
+
+            # 列表项本身作为一句，包含后面的空行
+            list_sentence = line
+            # 检查后面的行是否是空行，如果是，包含它们
+            j = i + 1
+            while j < len(lines):
+                next_line = lines[j]
+                # 如果下一行是空行（只包含空白字符），包含它
+                if not next_line.strip():
+                    list_sentence += next_line
+                    j += 1
+                else:
+                    # 遇到非空行，停止
+                    break
+            sentences.append(list_sentence)
+            i = j  # 跳过已处理的行
             continue
 
         # 普通文本：收集起来，稍后统一处理
         current_text.append(line)
+        i += 1
 
     # 处理剩余的普通文本
     if current_text:
@@ -383,8 +445,18 @@ def _find_sentence_positions(text: str, sentences: List[str]) -> List[Tuple[str,
                 # 如果还是找不到，跳过
                 continue
 
+        # 计算行号：使用句子中第一个非空白字符的位置
+        # 因为句子开头可能包含前导换行符，这些换行符属于前一行
+        # 我们需要找到句子中第一个非空白字符来确定句子真正开始的行号
+        sentence_start_pos = pos
+        for i, char in enumerate(sentence):
+            if not char.isspace():  # 找到第一个非空白字符
+                sentence_start_pos = pos + i
+                break
+        # 如果句子只包含空白字符，sentence_start_pos 保持为 pos（句子开头的位置）
+
         # 计算行号
-        start_line = _get_line_number(pos, line_starts)
+        start_line = _get_line_number(sentence_start_pos, line_starts)
         end_pos = pos + len(sentence) - 1
         end_line = _get_line_number(end_pos, line_starts)
 

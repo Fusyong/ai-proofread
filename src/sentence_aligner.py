@@ -63,15 +63,18 @@ def jaccard_similarity(text_a: str, text_b: str, n: int = 2) -> float:
 
 def normalize_sentence(sentence: str) -> str:
     """
-    标准化句子（用于相似度计算）
+    标准化句子（仅用于相似度计算，不修改原始数据）
+
+    注意：此函数只用于临时清理文本以进行相似度比较，不会修改原始句子数据。
+    原始句子数据应该始终保留，包括所有空白字符（换行符、空格等）。
 
     Args:
-        sentence: 原始句子
+        sentence: 原始句子（保留所有空白字符）
 
     Returns:
-        标准化后的句子
+        标准化后的句子（仅用于比较，不保存）
     """
-    # 去除首尾空白
+    # 去除首尾空白（仅用于比较）
     s = sentence.strip()
     # 统一全角空格为半角空格
     s = s.replace('　', ' ')
@@ -1366,14 +1369,16 @@ def align_texts_anchor(
     Returns:
         对齐结果列表
     """
-    # 切分句子
+    # 切分句子（保留原始数据，不清理空白字符）
+    # 注意：只过滤完全为空的句子，但保留只包含空白字符的句子
+    # 空白字符的清理只在normalize_sentence中进行，用于相似度计算
     sentences_a = [
-        s.strip() for s in split_chinese_sentences(text_a)
-        if s.strip()
+        s for s in split_chinese_sentences(text_a)
+        if s  # 只过滤None或空字符串，保留只包含空白字符的句子
     ]
     sentences_b = [
-        s.strip() for s in split_chinese_sentences(text_b)
-        if s.strip()
+        s for s in split_chinese_sentences(text_b)
+        if s  # 只过滤None或空字符串，保留只包含空白字符的句子
     ]
 
     # 对齐句子

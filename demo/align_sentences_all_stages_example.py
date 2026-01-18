@@ -254,9 +254,11 @@ def main():
     sentences_a_with_lines = split_chinese_sentences_with_line_numbers(text_a)
     sentences_b_with_lines = split_chinese_sentences_with_line_numbers(text_b)
 
-    # 提取句子列表
-    sentences_a = [s.strip() for s, _, _ in sentences_a_with_lines if s.strip()]
-    sentences_b = [s.strip() for s, _, _ in sentences_b_with_lines if s.strip()]
+    # 提取句子列表（保留原始数据，不清理空白字符）
+    # 原则：始终保留原始数据，只在需要比较时临时清理（通过normalize_sentence）
+    # 只过滤完全为空的句子（None或空字符串），但保留只包含空白字符的句子
+    sentences_a = [s for s, _, _ in sentences_a_with_lines if s]  # 保留原始数据
+    sentences_b = [s for s, _, _ in sentences_b_with_lines if s]  # 保留原始数据
 
     # 创建行号映射（使用start_line作为行号）
     line_numbers_a = [start_line for _, start_line, _ in sentences_a_with_lines]
