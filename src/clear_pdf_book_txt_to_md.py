@@ -65,8 +65,14 @@ def mark_style(text, code_replace_pattern_map, default_replace_pattern=None):
 def clean_title(title:str):
     """
     清理标题，以便比较是否一致
+    
+    移除：
+    - 空格、点号、省略号、中文数字序号（①②③④⑤⑥⑦⑧⑨⑩）
+    - Markdown 脚注引用格式（如 [^a], [^1] 等）
     """
-    return re.sub(r'[\s\da-zA-Z\[\]\{\}\.\^]', '', title.strip())
+    # 移除空格、点号、省略号、中文数字序号
+    # 移除 Markdown 脚注引用格式 [^xxx]
+    return re.sub(r'(\[\s*\^[\da-zA-Z]+\s*\])|([\s\.…\d①②③④⑤⑥⑦⑧⑨⑩])|(\d+\s*$)', '', title.strip())
 
 def parse_toc(content, indent_level=4, base_level=1):
     """
