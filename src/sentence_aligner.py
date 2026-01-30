@@ -61,25 +61,15 @@ def jaccard_similarity(text_a: str, text_b: str, n: int = 2) -> float:
     return intersection / union
 
 
-def normalize_sentence(sentence: str) -> str:
+def normalize_sentence(sentence: str, remove_inner_whitespace: bool = True) -> str:
     """
-    标准化句子（仅用于相似度计算，不修改原始数据）
+    标准化句子（仅用于相似度计算，不修改原始数据）：删除前后空白；可选删除句中空白。
 
     注意：此函数只用于临时清理文本以进行相似度比较，不会修改原始句子数据。
-    原始句子数据应该始终保留，包括所有空白字符（换行符、空格等）。
-
-    Args:
-        sentence: 原始句子（保留所有空白字符）
-
-    Returns:
-        标准化后的句子（仅用于比较，不保存）
     """
-    # 去除首尾空白（仅用于比较）
     s = sentence.strip()
-    # 统一全角空格为半角空格
-    s = s.replace('　', ' ')
-    # 合并多个连续空格为一个
-    s = re.sub(r' +', ' ', s)
+    if remove_inner_whitespace:
+        s = re.sub(r'\s', '', s)
     return s
 
 
@@ -91,7 +81,8 @@ def align_sentences_anchor(
     ngram_size: int = 2,
     offset: int = 1,
     max_window_expansion: int = 3,
-    consecutive_fail_threshold: int = 3
+    consecutive_fail_threshold: int = 3,
+    remove_inner_whitespace: bool = True
 ) -> List[Dict]:
     """
     使用锚点机制对齐句子（改进的贪心算法，支持动态窗口扩展和全局搜索）
@@ -113,6 +104,7 @@ def align_sentences_anchor(
         offset: 下一个句子的锚点偏移量（默认1，即下一个位置）
         max_window_expansion: 最大窗口扩展倍数（默认3，即最多扩大到3倍）
         consecutive_fail_threshold: 连续失败阈值，超过此值触发窗口扩展（默认3）
+        remove_inner_whitespace: 相似度计算时是否删除句中空白字符（默认是）
 
     Returns:
         对齐结果列表，每个元素包含：
@@ -141,7 +133,7 @@ def align_sentences_anchor(
 
     # 按照A文件的顺序处理
     while a_idx < n:
-        sent_a = normalize_sentence(sentences_a[a_idx])
+        sent_a = normalize_sentence(sentences_a[a_idx], remove_inner_whitespace)
 
         # 动态调整搜索窗口：如果连续失败，逐步扩大窗口
         if consecutive_fails >= consecutive_fail_threshold:
@@ -169,7 +161,7 @@ def align_sentences_anchor(
             if b_idx in b_used:
                 continue
 
-            sent_b = normalize_sentence(sentences_b[b_idx])
+            sent_b = normalize_sentence(sentences_b[b_idx], remove_inner_whitespace)
             similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
             if similarity > best_similarity:
@@ -196,7 +188,7 @@ def align_sentences_anchor(
                 if b_idx in b_used:
                     continue
 
-                sent_b = normalize_sentence(sentences_b[b_idx])
+                sent_b = normalize_sentence(sentences_b[b_idx], remove_inner_whitespace)
                 similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                 if similarity > best_similarity:
@@ -315,7 +307,8 @@ def align_sentences_anchor(
     result = rematch_adjacent_delete_insert(
         result,
         similarity_threshold,
-        ngram_size
+        ngram_size,
+        remove_inner_whitespace=remove_inner_whitespace
     )
 
     # 后处理：在一定的序号上下范围内处理不相邻的DELETE和INSERT
@@ -323,13 +316,15 @@ def align_sentences_anchor(
         result,
         similarity_threshold,
         ngram_size,
-        index_range=window_size  # 使用窗口大小作为索引范围
+        index_range=window_size,  # 使用窗口大小作为索引范围
+        remove_inner_whitespace=remove_inner_whitespace
     )
 
     # 后处理：将单独的DELETE项合并到相邻的MATCH组中
     result = merge_delete_into_match(
         result,
-        ngram_size
+        ngram_size,
+        remove_inner_whitespace=remove_inner_whitespace
     )
 
     # 后处理：检测和处理句子移动，创建movein和moveout条目
@@ -346,7 +341,8 @@ def align_sentences_anchor_initial(
     ngram_size: int = 2,
     offset: int = 1,
     max_window_expansion: int = 3,
-    consecutive_fail_threshold: int = 3
+    consecutive_fail_threshold: int = 3,
+    remove_inner_whitespace: bool = True
 ) -> List[Dict]:
     """
     使用锚点机制对齐句子（初始对齐，不包含后处理）
@@ -363,6 +359,7 @@ def align_sentences_anchor_initial(
         offset: 下一个句子的锚点偏移量（默认1，即下一个位置）
         max_window_expansion: 最大窗口扩展倍数（默认3，即最多扩大到3倍）
         consecutive_fail_threshold: 连续失败阈值，超过此值触发窗口扩展（默认3）
+        remove_inner_whitespace: 相似度计算时是否删除句中空白字符（默认是）
 
     Returns:
         初始对齐结果列表（不包含后处理），每个元素包含：
@@ -391,7 +388,7 @@ def align_sentences_anchor_initial(
 
     # 按照A文件的顺序处理
     while a_idx < n:
-        sent_a = normalize_sentence(sentences_a[a_idx])
+        sent_a = normalize_sentence(sentences_a[a_idx], remove_inner_whitespace)
 
         # 动态调整搜索窗口：如果连续失败，逐步扩大窗口
         if consecutive_fails >= consecutive_fail_threshold:
@@ -419,7 +416,7 @@ def align_sentences_anchor_initial(
             if b_idx in b_used:
                 continue
 
-            sent_b = normalize_sentence(sentences_b[b_idx])
+            sent_b = normalize_sentence(sentences_b[b_idx], remove_inner_whitespace)
             similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
             if similarity > best_similarity:
@@ -446,7 +443,7 @@ def align_sentences_anchor_initial(
                 if b_idx in b_used:
                     continue
 
-                sent_b = normalize_sentence(sentences_b[b_idx])
+                sent_b = normalize_sentence(sentences_b[b_idx], remove_inner_whitespace)
                 similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                 if similarity > best_similarity:
@@ -645,6 +642,7 @@ def rematch_adjacent_delete_insert(
     alignment: List[Dict],
     similarity_threshold: float = 0.6,
     ngram_size: int = 2,
+    remove_inner_whitespace: bool = True,
     html_output_path: Optional[str] = None,
     title_a: str = "原文",
     title_b: str = "校对后"
@@ -737,8 +735,8 @@ def rematch_adjacent_delete_insert(
                             continue
 
                         if d_candidate['text'] and ins_candidate['text']:
-                            sent_a = normalize_sentence(d_candidate['text'])
-                            sent_b = normalize_sentence(ins_candidate['text'])
+                            sent_a = normalize_sentence(d_candidate['text'], remove_inner_whitespace)
+                            sent_b = normalize_sentence(ins_candidate['text'], remove_inner_whitespace)
                             similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                             if similarity > best_similarity and similarity >= similarity_threshold:
@@ -903,6 +901,7 @@ def rematch_non_adjacent_delete_insert(
     similarity_threshold: float = 0.6,
     ngram_size: int = 2,
     index_range: int = 10,
+    remove_inner_whitespace: bool = True,
     html_output_path: Optional[str] = None,
     title_a: str = "原文",
     title_b: str = "校对后"
@@ -998,8 +997,8 @@ def rematch_non_adjacent_delete_insert(
             if index_diff <= index_range or position_diff <= index_range:
                 # 计算相似度
                 if d_item.get('a') and ins_item.get('b'):
-                    sent_a = normalize_sentence(d_item['a'])
-                    sent_b = normalize_sentence(ins_item['b'])
+                    sent_a = normalize_sentence(d_item['a'], remove_inner_whitespace)
+                    sent_b = normalize_sentence(ins_item['b'], remove_inner_whitespace)
                     similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                     if similarity > best_similarity and similarity >= similarity_threshold:
@@ -1445,7 +1444,8 @@ def detect_and_handle_movements(
 
 def merge_delete_into_match(
     alignment: List[Dict],
-    ngram_size: int = 2
+    ngram_size: int = 2,
+    remove_inner_whitespace: bool = True
 ) -> List[Dict]:
     """
     后处理：将单独的DELETE项合并到相邻的MATCH组中
@@ -1491,8 +1491,8 @@ def merge_delete_into_match(
                 prev_a = prev_item.get('a', '')
                 prev_b = prev_item.get('b', '')
                 merged_a = prev_a + current_item['a']
-                sent_a = normalize_sentence(merged_a)
-                sent_b = normalize_sentence(prev_b)
+                sent_a = normalize_sentence(merged_a, remove_inner_whitespace)
+                sent_b = normalize_sentence(prev_b, remove_inner_whitespace)
                 new_similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                 # 如果新相似度高于原相似度，则合并
@@ -1509,8 +1509,8 @@ def merge_delete_into_match(
                 next_item.get('a') and
                 next_item.get('b')):
                 merged_a = current_item['a'] + next_item['a']
-                sent_a = normalize_sentence(merged_a)
-                sent_b = normalize_sentence(next_item['b'])
+                sent_a = normalize_sentence(merged_a, remove_inner_whitespace)
+                sent_b = normalize_sentence(next_item['b'], remove_inner_whitespace)
                 new_similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                 # 如果新相似度高于原相似度，则合并
