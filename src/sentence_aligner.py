@@ -63,7 +63,7 @@ def jaccard_similarity(text_a: str, text_b: str, n: int = 2) -> float:
 
 def normalize_sentence(sentence: str, remove_inner_whitespace: bool = True) -> str:
     """
-    标准化句子（仅用于相似度计算，不修改原始数据）：删除前后空白；可选删除句中空白。
+    标准化句子（仅用于相似度计算，不修改原始数据）：忽略前后空白；可选忽略句中空白。
 
     注意：此函数只用于临时清理文本以进行相似度比较，不会修改原始句子数据。
     """
@@ -104,7 +104,7 @@ def align_sentences_anchor(
         offset: 下一个句子的锚点偏移量（默认1，即下一个位置）
         max_window_expansion: 最大窗口扩展倍数（默认3，即最多扩大到3倍）
         consecutive_fail_threshold: 连续失败阈值，超过此值触发窗口扩展（默认3）
-        remove_inner_whitespace: 相似度计算时是否删除句中空白字符（默认是）
+        remove_inner_whitespace: 相似度计算时是否忽略句中空白字符（默认是）
 
     Returns:
         对齐结果列表，每个元素包含：
@@ -359,7 +359,7 @@ def align_sentences_anchor_initial(
         offset: 下一个句子的锚点偏移量（默认1，即下一个位置）
         max_window_expansion: 最大窗口扩展倍数（默认3，即最多扩大到3倍）
         consecutive_fail_threshold: 连续失败阈值，超过此值触发窗口扩展（默认3）
-        remove_inner_whitespace: 相似度计算时是否删除句中空白字符（默认是）
+        remove_inner_whitespace: 相似度计算时是否忽略句中空白字符（默认是）
 
     Returns:
         初始对齐结果列表（不包含后处理），每个元素包含：
