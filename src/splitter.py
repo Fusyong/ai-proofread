@@ -213,14 +213,16 @@ def split_chinese_sentences_simple(text: str) -> List[str]:
     for match in re.finditer(pattern, text):
         end_pos = match.end()
 
-        # 检查是否是小数点或缩写
+        # 检查是否是小数点、列表序号或缩写
         if match.group(2):  # 英文标点
-            # 检查前后是否是数字
             if end_pos < len(text) and text[end_pos - 1] == '.':
                 prev_pos = match.start() - 1
                 if prev_pos >= 0 and text[prev_pos].isdigit():
+                    # 前一个是数字：可能是小数点，也可能是列表序号 1. 2.
                     if end_pos < len(text) and text[end_pos].isdigit():
-                        continue  # 是小数点，跳过
+                        continue  # 后也是数字，是小数点，跳过
+                    # 后不是数字（空格、换行、汉字等），视为列表序号，不在句号处切分
+                    continue
 
         # 如果是句末标点（不是连续换行），需要包含后面的换行符和空行
         # 直到遇到下一个非空行

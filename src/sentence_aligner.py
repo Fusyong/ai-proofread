@@ -327,6 +327,13 @@ def align_sentences_anchor(
         remove_inner_whitespace=remove_inner_whitespace
     )
 
+    # 后处理：将单独的INSERT项合并到相邻的MATCH组中（与 delete 合并对称，处理 b 侧）
+    result = merge_insert_into_match(
+        result,
+        ngram_size,
+        remove_inner_whitespace=remove_inner_whitespace
+    )
+
     # 后处理：检测和处理句子移动，创建movein和moveout条目
     result = detect_and_handle_movements(result)
 
@@ -1558,6 +1565,156 @@ def merge_delete_into_match(
                             next_item['a_indices'] = []
                         next_item['a_indices'] = [current_item['a_index']] + next_item.get('a_indices', [])
                     # 跳过当前DELETE
+                    i += 1
+                    continue
+
+        # 其他情况，直接添加
+        result.append(current_item)
+        i += 1
+
+    return result
+
+
+def merge_insert_into_match(
+    alignment: List[Dict],
+    ngram_size: int = 2,
+    remove_inner_whitespace: bool = True
+) -> List[Dict]:
+    """
+    后处理：将单独的INSERT项合并到相邻的MATCH组中（与 merge_delete_into_match 对称，处理 b 侧）
+
+    算法：
+    1. 扫描对齐结果，找到单独的INSERT项
+    2. 检查相邻的MATCH项（前一个或后一个）
+    3. 尝试将INSERT项的内容合并到MATCH项的B部分
+    4. 重新计算与A部分的相似度，或若归一化后 insert.b 是 match.a 的前缀/后缀则允许合并
+
+    Args:
+        alignment: 对齐结果
+        ngram_size: n-gram大小
+        remove_inner_whitespace: 相似度计算时是否忽略句中空白
+
+    Returns:
+        优化后的对齐结果
+    """
+    if not alignment:
+        return alignment
+
+    result = []
+    i = 0
+
+    while i < len(alignment):
+        current_item = alignment[i]
+
+        # 如果是单独的INSERT项，尝试合并到相邻的MATCH
+        if current_item.get('type') == 'insert' and current_item.get('b'):
+            prev_item = alignment[i - 1] if i > 0 else None
+            next_item = alignment[i + 1] if i < len(alignment) - 1 else None
+
+            best_match = None
+            best_similarity = 0.0
+            merge_direction = None  # 'prev' 或 'next'
+
+            # 尝试合并到前一个MATCH（INSERT 的 b 追加到前一个 MATCH 的 b 后）
+            if (prev_item is not None and
+                prev_item.get('type') == 'match' and
+                prev_item.get('a') and
+                prev_item.get('b')):
+                prev_a = prev_item.get('a', '')
+                prev_b = prev_item.get('b', '')
+                merged_b = prev_b + current_item['b']
+                sent_a = normalize_sentence(prev_a, remove_inner_whitespace)
+                sent_b = normalize_sentence(merged_b, remove_inner_whitespace)
+                new_similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
+
+                prev_sim = prev_item.get('similarity', 0.0)
+                # 结构条件：若归一化后 insert.b 是 prevMatch.a 的后缀，也允许合并
+                norm_insert_b_prev = normalize_sentence(current_item['b'], remove_inner_whitespace)
+                insert_is_suffix_of_prev_a = (len(norm_insert_b_prev) > 0 and
+                                              sent_a.endswith(norm_insert_b_prev))
+
+                if new_similarity > prev_sim or insert_is_suffix_of_prev_a:
+                    sim_to_use = new_similarity if new_similarity > prev_sim else max(new_similarity, prev_sim)
+                    if insert_is_suffix_of_prev_a or sim_to_use > best_similarity:
+                        best_similarity = sim_to_use
+                        best_match = prev_item
+                        merge_direction = 'prev'
+
+            # 尝试合并到后一个MATCH（INSERT 的 b 拼到后一个 MATCH 的 b 前）
+            if (next_item is not None and
+                next_item.get('type') == 'match' and
+                next_item.get('a') and
+                next_item.get('b')):
+                merged_b = current_item['b'] + next_item['b']
+                sent_a = normalize_sentence(next_item['a'], remove_inner_whitespace)
+                sent_b = normalize_sentence(merged_b, remove_inner_whitespace)
+                new_similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
+
+                next_sim = next_item.get('similarity', 0.0)
+                # 与 DELETE 合并对称：若归一化后 insert.b 是 nextMatch.a 的前缀，则允许合并
+                norm_insert_b = normalize_sentence(current_item['b'], remove_inner_whitespace)
+                insert_is_prefix_of_next_a = (len(norm_insert_b) > 0 and sent_a.startswith(norm_insert_b))
+
+                if new_similarity > next_sim or insert_is_prefix_of_next_a:
+                    sim_to_use = new_similarity if new_similarity > next_sim else max(new_similarity, next_sim)
+                    if insert_is_prefix_of_next_a or sim_to_use > best_similarity:
+                        best_similarity = sim_to_use
+                        best_match = next_item
+                        merge_direction = 'next'
+
+            # 如果找到可以合并的MATCH，进行合并
+            if best_match is not None:
+                if merge_direction == 'prev':
+                    if result and result[-1].get('type') == 'match':
+                        result[-1]['b'] = result[-1]['b'] + current_item['b']
+                        result[-1]['similarity'] = best_similarity
+                        insert_b_indices = current_item.get('b_indices', [])
+                        if insert_b_indices:
+                            if 'b_indices' not in result[-1]:
+                                result[-1]['b_indices'] = []
+                            result[-1]['b_indices'].extend(insert_b_indices)
+                        elif current_item.get('b_index') is not None:
+                            if 'b_indices' not in result[-1]:
+                                result[-1]['b_indices'] = []
+                            result[-1]['b_indices'].append(current_item['b_index'])
+                        # 合并 b 侧行号
+                        if current_item.get('b_line_numbers'):
+                            if 'b_line_numbers' not in result[-1]:
+                                result[-1]['b_line_numbers'] = (result[-1].get('b_line_number') is not None
+                                                                 and [result[-1]['b_line_number']] or [])
+                            result[-1]['b_line_numbers'].extend(current_item['b_line_numbers'])
+                        elif current_item.get('b_line_number') is not None:
+                            if 'b_line_numbers' not in result[-1]:
+                                result[-1]['b_line_numbers'] = (result[-1].get('b_line_number') is not None
+                                                                 and [result[-1]['b_line_number']] or [])
+                            result[-1]['b_line_numbers'].append(current_item['b_line_number'])
+                    i += 1
+                    continue
+                else:  # merge_direction == 'next'
+                    next_item['b'] = current_item['b'] + next_item['b']
+                    next_item['similarity'] = best_similarity
+                    insert_b_indices = current_item.get('b_indices', [])
+                    if insert_b_indices:
+                        if 'b_indices' not in next_item:
+                            next_item['b_indices'] = []
+                        next_item['b_indices'] = insert_b_indices + next_item.get('b_indices', [])
+                    elif current_item.get('b_index') is not None:
+                        if 'b_indices' not in next_item:
+                            next_item['b_indices'] = []
+                        next_item['b_indices'] = [current_item['b_index']] + next_item.get('b_indices', [])
+                    # 合并 b 侧行号（prepend）
+                    if current_item.get('b_line_numbers'):
+                        if 'b_line_numbers' not in next_item:
+                            next_item['b_line_numbers'] = (next_item.get('b_line_number') is not None
+                                                           and [next_item['b_line_number']] or [])
+                        next_item['b_line_numbers'] = (current_item['b_line_numbers'] +
+                                                       next_item.get('b_line_numbers', []))
+                    elif current_item.get('b_line_number') is not None:
+                        if 'b_line_numbers' not in next_item:
+                            next_item['b_line_numbers'] = (next_item.get('b_line_number') is not None
+                                                           and [next_item['b_line_number']] or [])
+                        next_item['b_line_numbers'] = ([current_item['b_line_number']] +
+                                                       next_item.get('b_line_numbers', []))
                     i += 1
                     continue
 
