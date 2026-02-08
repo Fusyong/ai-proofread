@@ -92,7 +92,7 @@ Also includes some experimental tools related to proofreading.
 - **错误重试**: 自动重试失败的API调用
 
 ### 专项检查器 (src/special_checker/)
-- **汉字检查**: `cscc.py` - 通用规范汉字表查询，提示表外字和附录中的繁体字、异体字
+- **汉字检查**: `tgscc.py` - 通用规范汉字表查询，提示表外字和附录中的繁体字、异体字
 - **智能检查**: `checker.py` - 基于N-gram模型和机器学习的文本错误检测（未完成）
 - **中文处理**: `chinese.py` - 中文文本处理常用工具
 - **相似文本匹配**: `match_similar_text.py` - 基于rapidfuzz的相似文本匹配

@@ -5,8 +5,7 @@ import os
 import zlib
 import sqlite3
 import time
-from mdict_utils.reader import unpack_to_db
-from mdict_utils import MDX
+from mdict_utils.reader import unpack_to_db, MDX
 
 
 class MdictDatabase:
@@ -14,19 +13,19 @@ class MdictDatabase:
     def __init__(self, mdx_path: str, encoding: str = 'utf-8'):
         if not mdx_path:
             raise ValueError("mdx_path 参数是必需的")
-        
+
         self.mdx_path = mdx_path
         self.encoding = encoding
         self.mdx = MDX(mdx_path, encoding=encoding)
         self.db_dir = os.path.dirname(mdx_path)
         self.db_name = os.path.basename(mdx_path).replace('.mdx', '.db')
         self.db_path = os.path.join(self.db_dir, self.db_name)
-    
+
     def info(self):
         """获取词典信息（从数据库）"""
         if not self._ensure_database_exists():
             return {}
-        
+
         try:
             with sqlite3.connect(self.db_path) as conn:
                 # 获取词典信息表
@@ -45,7 +44,7 @@ class MdictDatabase:
                         info = {}
                         for key, value in self.mdx.header.items():
                             info[key.decode('utf-8')] = value.decode('utf-8')
-                        
+
                         # 创建信息表并保存
                         conn.execute('CREATE TABLE IF NOT EXISTS mdx_info (key TEXT, value TEXT)')
                         for key, value in info.items():
@@ -56,12 +55,12 @@ class MdictDatabase:
         except Exception as e:
             print(f"获取词典信息失败: {e}")
             return {}
-    
+
     def count(self):
         """获取词条总数（从数据库）"""
         if not self._ensure_database_exists():
             return 0
-        
+
         try:
             with sqlite3.connect(self.db_path) as conn:
                 c = conn.execute('SELECT COUNT(*) FROM mdx')
@@ -70,19 +69,19 @@ class MdictDatabase:
         except Exception as e:
             print(f"获取词条总数失败: {e}")
             return 0
-    
+
     def entries(self, limit: int = None):
         """获取词条列表（从数据库）"""
         if not self._ensure_database_exists():
             return []
-        
+
         try:
             with sqlite3.connect(self.db_path) as conn:
                 if limit:
                     c = conn.execute('SELECT entry FROM mdx LIMIT ?', (limit,))
                 else:
                     c = conn.execute('SELECT entry FROM mdx')
-                
+
                 entries = []
                 for row in c.fetchall():
                     entries.append(str(row[0]))
@@ -90,7 +89,7 @@ class MdictDatabase:
         except Exception as e:
             print(f"获取词条列表失败: {e}")
             return []
-    
+
     def _ensure_database_exists(self):
         """确保数据库存在，如果不存在则创建"""
         if not os.path.exists(self.db_path):
@@ -106,12 +105,12 @@ class MdictDatabase:
                 print(f"解包失败: {e}")
                 return False
         return True
-    
+
     def query(self, word: str):
         """从数据库查询词条"""
         if not self._ensure_database_exists():
             return None
-        
+
         try:
             with sqlite3.connect(self.db_path) as conn:
                 c = conn.execute('SELECT paraphrase FROM mdx WHERE entry = ?', (word,))
@@ -128,7 +127,7 @@ class MdictPathManager:
     """词典路径管理类"""
     def __init__(self, mdictlist_path: str = 'src/resource/.mdictlist'):
         self.mdictlist_path = mdictlist_path
-    
+
     def get_mdict_path_list(self):
         """读取 mdictlist 文件"""
         try:
@@ -138,7 +137,7 @@ class MdictPathManager:
         except FileNotFoundError:
             print(f"未找到词典列表文件: {self.mdictlist_path}")
             return []
-    
+
     def get_mdict_path_by_name(self, name: str):
         """根据名称获取词典路径"""
         # 名称必须以.mdx结尾
@@ -153,7 +152,7 @@ class MdictManager:
     def __init__(self, mdictlist_path: str = 'src/resource/.mdictlist'):
         self.path_manager = MdictPathManager(mdictlist_path)
         self._mdicts = {}  # 缓存已加载的词典
-    
+
     def load_mdict(self, name: str, encoding: str = 'utf-8'):
         """加载指定词典"""
         if name not in self._mdicts:
@@ -164,27 +163,27 @@ class MdictManager:
             else:
                 raise ValueError(f"未找到词典: {name}")
         return self._mdicts[name]
-    
+
     def info(self, name: str):
         """获取词典信息"""
         mdict = self.load_mdict(name)
         return mdict.info()
-    
+
     def count(self, name: str):
         """获取指定名称词典的词条总数"""
         mdict = self.load_mdict(name)
         return mdict.count()
-    
+
     def entries(self, name: str, limit: int = None):
         """获取指定名称词典的词条列表"""
         mdict = self.load_mdict(name)
         return mdict.entries(limit)
-    
+
     def query(self, name: str, word: str):
         """查询指定名称词典中的词条"""
         mdict = self.load_mdict(name)
         return mdict.query(word)
-    
+
     def is_word_in(self, name: str, word: str) -> bool:
         """检查词语是否在指定词典中"""
         result = self.query(name, word)
@@ -210,12 +209,12 @@ def info(mdx: MDX):
 if __name__ == "__main__":
     # 使用新的类结构
     manager = MdictManager()
-    
+
     # mdx = manager.load_mdict("现汉7.mdx")
-    
+
     # # 词典信息
     # print(manager.info("现汉7.mdx"))
-    
+
     # # 条目
     # print(f"\n现汉7.mdx 词条总数：{manager.count('现汉7.mdx')}")
     # print(f"\n现汉规范2.mdx 词条总数：{manager.count('现汉规范2.mdx')}")
@@ -226,23 +225,23 @@ if __name__ == "__main__":
     # print(f"\n辭源3文字版2021.mdx 词条总数：{manager.count('辭源3文字版2021.mdx')}")
     # print(f"\n大辞海.mdx 词条总数：{manager.count('大辞海.mdx')}")
     # print(f"\n漢語大詞典(合)2020.5.1.mdx 词条总数：{manager.count('漢語大詞典(合)2020.5.1.mdx')}")
-    
+
     # # 获取所有词条
     # print("\n词条列表：")
     # entries = manager.entries("现汉7.mdx", 100)
     # for i, entry in enumerate(entries):
     #     print(f"{i} {entry}")
-    
+
     # # 检查是否在现代汉语词典中
     # print(f"\n'多少'是否在现代汉语词典中: {manager.is_word_in('现汉7.mdx', '多少')}")
-    
+
     # # 从mdx查询特定词条
     # content = manager.query("现汉7.mdx", '多少')
     # print(f"\n从MDX查询'多少': {content}")
-    
+
     # # 从db查询特定词条
     # content = manager.query("现汉7.mdx", '多少')
     # print(f"\n从数据库查询'多少': {content}")
-        
+
     print(manager.query("中華語文大辭典.mdx", '薄'))
 
