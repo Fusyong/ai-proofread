@@ -4,7 +4,8 @@
 
 提取的表：
 - variant_to_standard
-- variant_to_preferred
+- variant_to_preferred_single
+- variant_to_preferred_multi
 - raw_notes
 - usage_notes
 - single_char_traditional_to_standard
@@ -41,7 +42,8 @@ from pathlib import Path
 # 需要提取的键（与 xh7.json 中的字段名一致）
 TABLE_KEYS = [
     "variant_to_standard",
-    "variant_to_preferred",
+    "variant_to_preferred_single",
+    "variant_to_preferred_multi",
     "raw_notes",
     "usage_notes",
     "single_char_traditional_to_standard",

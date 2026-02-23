@@ -7,7 +7,8 @@
 1) 规范词形-不规范词形：如 枝丫（枝桠）→ 枝丫=规范词形，枝桠=不规范词形。
    → standard_to_variants（规范→不规范列表）、variant_to_standard（不规范→规范）。
 2) 推荐词形-不推荐词形：也作（推荐→不推荐，如 㺀𤝽 也作忽律）与 同"X"（不推荐→推荐，如 忽律 同"㺀𤝽"）合并为一类、一个表。
-   → preferred_to_variants（推荐→不推荐列表）、variant_to_preferred（不推荐→推荐）。
+   → preferred_to_variants（推荐→不推荐列表）、variant_to_preferred（不推荐→推荐）；
+   输出时拆分为单字表与多字表：preferred_to_variants_single/multi、variant_to_preferred_single/multi。
 3) 字（单音节）词条：繁体字、异体字加括号附列；⁎ 为《通用规范汉字表》附列异体字，⁑ 为该表以外异体字。
    → single_char_traditional、single_char_yitihuabiao、single_char_yiti_other；有符号标记时并入 raw_notes。
 """
@@ -545,6 +546,8 @@ class VariantFormsExtractor:
         """
         从词典中提取多字异形与单字繁体/异体并保存到 reliable-proofreading-data 目录。
         规范词形-不规范词形 与 推荐词形-不推荐词形 为两类关系，分别保存。
+        推荐词形-不推荐词形 同时拆分为单字表与多字表（共四表）：
+        preferred_to_variants_single/multi、variant_to_preferred_single/multi。
         返回保存的 JSON 文件路径。
         """
         (
@@ -571,6 +574,11 @@ class VariantFormsExtractor:
         if not filename:
             filename = f"异形词-{safe_name}.json"
         filepath = os.path.join(out_dir, filename)
+        # 推荐词形-不推荐词形：拆分为单字表与多字表
+        preferred_to_variants_single = {k: v for k, v in preferred_to_variants.items() if len(k) == 1}
+        preferred_to_variants_multi = {k: v for k, v in preferred_to_variants.items() if len(k) > 1}
+        variant_to_preferred_single = {k: v for k, v in variant_to_preferred.items() if len(k) == 1}
+        variant_to_preferred_multi = {k: v for k, v in variant_to_preferred.items() if len(k) > 1}
         data = {
             "source": dict_name,
             "stats": stats,
@@ -578,6 +586,10 @@ class VariantFormsExtractor:
             "variant_to_standard": variant_to_standard,
             "preferred_to_variants": preferred_to_variants,
             "variant_to_preferred": variant_to_preferred,
+            "preferred_to_variants_single": preferred_to_variants_single,
+            "preferred_to_variants_multi": preferred_to_variants_multi,
+            "variant_to_preferred_single": variant_to_preferred_single,
+            "variant_to_preferred_multi": variant_to_preferred_multi,
         }
         # 所有 raw 字典合成单层字典 raw_notes：键=词形，值=原始匹配列表（多来源累积，值不同时多条）
         raw_notes_flat: Dict[str, List[str]] = {}
@@ -611,6 +623,7 @@ class VariantFormsExtractor:
         print(
             f"异形词已写入：{filepath}，规范词形-不规范词形 {len(standard_to_variants)} 条（{n_guifan_bukuifan}），"
             f"推荐词形-不推荐词形 {len(preferred_to_variants)} 条（也作 {n_yezuo}，同 {n_tong}）；"
+            f"推荐-不推荐 单字 {len(preferred_to_variants_single)}/{len(variant_to_preferred_single)}，多字 {len(preferred_to_variants_multi)}/{len(variant_to_preferred_multi)}；"
             f"字 繁体 {n_fanti}、规范异体 {n_guifan}、其他异体 {n_other}。"
         )
         return filepath

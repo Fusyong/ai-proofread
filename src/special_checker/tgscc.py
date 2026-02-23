@@ -11,13 +11,13 @@ class TGSCCChecker:
     """Chechker to the List of Commonly-Used Standardized Chinese Characters
     """
     def __init__(self):
-        self.gsk_list_path = (
+        self.tgscc_list_path = (
             "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表（维基百科）.csv"
         )
-        self.gsk_to_traditional_kanji_list_path = (
+        self.tgscc_to_traditional_kanji_list_path = (
             "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表繁简对照表-增强（2025-03-04）.csv"
         )
-        self.gsk_to_traditional_kanji_list_notes_path = (
+        self.tgscc_to_traditional_kanji_list_notes_path = (
             "D:/语文出版社/语文社工具书/通用规范汉字表/通用规范汉字表规范字与繁体字、异体字对照表注释.md"
         )
         self.tgscc_data_path = "src/resource/tgscc_data.json"
@@ -28,7 +28,7 @@ class TGSCCChecker:
         self.ignore_pattern = re.compile(r"""[0-9a-zA-Z，。！？；：“”‘’（）《》,.!?;:"'~\s\(\)\[\]]+""")
 
         # 初始化数据
-        self.gsk_list = []
+        self.tgscc_list = []
         self.simplified_to_traditional = {}  # 简繁映射
         self.simplified_to_variants = {}    # 简异映射
         self.traditional_to_simplified = {} # 繁简映射
@@ -49,19 +49,19 @@ class TGSCCChecker:
         notes_by_num = {}   # 字 -> 注释编号（处理过程中暂存）
 
         # 读取规范字表
-        with open(self.gsk_list_path, 'r', encoding='utf-8') as f:
+        with open(self.tgscc_list_path, 'r', encoding='utf-8') as f:
             next(f)
             for line in f:
                 parts = line.strip().split(',')
-                self.gsk_list.append(parts[1])
+                self.tgscc_list.append(parts[1])
 
         # 读取注释表
-        with open(self.gsk_to_traditional_kanji_list_notes_path, 'r', encoding='utf-8') as f:
+        with open(self.tgscc_to_traditional_kanji_list_notes_path, 'r', encoding='utf-8') as f:
             for line in f:
                 notes_content.append(line)
 
         # 读取并解析繁简异对照表
-        with open(self.gsk_to_traditional_kanji_list_path, 'r', encoding='utf-8') as f:
+        with open(self.tgscc_to_traditional_kanji_list_path, 'r', encoding='utf-8') as f:
             next(f)
             for line in f:
                 last_simplified = self._process_line(line, last_simplified, notes_by_num) or last_simplified
@@ -75,9 +75,10 @@ class TGSCCChecker:
 
     def _process_line(self, line, last_simplified, notes_by_num):
         parts = line.strip().split(',')
-        simplified = parts[2].strip() or last_simplified
-        if simplified is None:
-            return None
+        # 本行简体为空时使用上一行的简体，避免记作 null
+        simplified = (parts[2].strip() or last_simplified) if len(parts) > 2 else last_simplified
+        if not simplified:
+            return last_simplified
         traditional = parts[3].strip()
 
         if not traditional or traditional == '~':
@@ -124,7 +125,7 @@ class TGSCCChecker:
                 'traditional_to_simplified': self.traditional_to_simplified,
                 'simplified_to_variants': self.simplified_to_variants,
                 'variant_to_simplified': self.variant_to_simplified,
-                'gsk_list': self.gsk_list,
+                'tgscc_list': self.tgscc_list,
                 'notes': self.notes,
             }, f, ensure_ascii=False)
 
@@ -135,7 +136,7 @@ class TGSCCChecker:
             self.traditional_to_simplified = data['traditional_to_simplified']
             self.simplified_to_variants = data['simplified_to_variants']
             self.variant_to_simplified = data['variant_to_simplified']
-            self.gsk_list = data['gsk_list']
+            self.tgscc_list = data['tgscc_list']
             # notes: 字 -> 注释正文；兼容旧格式（notes 为编号 + notes_content 表）时合并
             if 'notes_content' in data:
                 notes_content = data['notes_content']
@@ -163,10 +164,10 @@ class TGSCCChecker:
             if self.ignore_pattern.match(char) or char in ignore_list:
                 continue
 
-            is_in_gsk_appendix = False
+            is_in_tgscc_appendix = False
 
             if char in self.traditional_to_simplified and self.traditional_to_simplified[char] != [char]:
-                is_in_gsk_appendix = True
+                is_in_tgscc_appendix = True
                 suggestion = ''.join(s for s in self.traditional_to_simplified[char] if s)
                 note_text = self.notes.get(char, '')
                 results.append(CheckResult(
@@ -178,7 +179,7 @@ class TGSCCChecker:
                 ))
 
             if char in self.variant_to_simplified and self.variant_to_simplified[char] != [char]:
-                is_in_gsk_appendix = True
+                is_in_tgscc_appendix = True
                 suggestion = ''.join(s for s in self.variant_to_simplified[char] if s)
                 note_text = self.notes.get(char, '')
                 results.append(CheckResult(
@@ -189,7 +190,7 @@ class TGSCCChecker:
                     confidence=1
                 ))
 
-            if not is_in_gsk_appendix and char not in self.gsk_list:
+            if not is_in_tgscc_appendix and char not in self.tgscc_list:
                 results.append(CheckResult(
                     error_type='not_general_standard_kanji',
                     location=(i, i + 1),
@@ -204,7 +205,7 @@ def check_to_tgscc(
         text: str,
         ignore_list: List[str] | str = ""
         ) -> List[CheckResult]:
-    """通用规范汉字(GSK)表检查
+    """通用规范汉字(tgscc)表检查
 
     Args:
         text: 要检查的文本
