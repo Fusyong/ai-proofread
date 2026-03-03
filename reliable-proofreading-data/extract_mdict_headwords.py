@@ -14,6 +14,19 @@ import os
 import sys
 
 
+def _should_include_headword(hw: str) -> bool:
+    """返回 False 表示应忽略该词条。忽略：含数字（含上标如¹）、含拉丁字母、仅一个字符。"""
+    s = hw.strip()
+    if len(s) < 2:
+        return False
+    for c in s:
+        if c.isdigit():  # 含 0-9 及上标数字 ¹²³ 等
+            return False
+        if "a" <= c <= "z" or "A" <= c <= "Z":
+            return False
+    return True
+
+
 def _project_root() -> str:
     """返回项目根目录（包含 src 或 pyproject.toml 的目录）。"""
     start = os.path.dirname(os.path.abspath(__file__))
@@ -84,7 +97,8 @@ def main() -> None:
             db = MdictDatabase(mdx_path, encoding=args.encoding)
             entries = db.entries()
             for hw in entries:
-                headword_dicts.setdefault(hw, set()).add(dict_name)
+                if _should_include_headword(hw):
+                    headword_dicts.setdefault(hw, set()).add(dict_name)
             print(f"  共 {len(entries)} 条词头", flush=True)
         except Exception as e:
             print(f"  错误: {e}", file=sys.stderr)
