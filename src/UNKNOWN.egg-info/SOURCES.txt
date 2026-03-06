@@ -19,7 +19,7 @@ src/rapiddoc_enhanced/pipeline_middle_json_mkcontent.py
 src/special_checker/__init__.py
 src/special_checker/checker.py
 src/special_checker/chinese.py
-src/special_checker/cscc.py
+src/special_checker/tgscc.py
 src/special_checker/match_similar_text.py
 src/special_checker/mdict.py
 src/special_checker/mdict_mmap.py

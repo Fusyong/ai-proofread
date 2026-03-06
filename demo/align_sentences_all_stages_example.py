@@ -24,6 +24,7 @@ from src.sentence_aligner import (
     rematch_adjacent_delete_insert,
     rematch_non_adjacent_delete_insert,
     merge_delete_into_match,
+    merge_insert_into_match,
     detect_and_handle_movements,
     get_alignment_statistics,
     normalize_sentence,
@@ -209,13 +210,17 @@ def main():
     print(f"统计: 总计={stats_stage2['total']}, 匹配={stats_stage2['match']}, "
           f"删除={stats_stage2['delete']}, 新增={stats_stage2['insert']}")
 
-    # 阶段3: 合并DELETE到MATCH
+    # 阶段3: 合并DELETE到MATCH，再合并INSERT到MATCH
     print("\n" + "="*60)
-    print("阶段3: 合并DELETE到相邻MATCH")
+    print("阶段3: 合并DELETE到相邻MATCH、合并INSERT到相邻MATCH")
     print("="*60)
 
     alignment_stage3 = merge_delete_into_match(
         alignment_stage2,
+        ngram_size=args.ngram
+    )
+    alignment_stage3 = merge_insert_into_match(
+        alignment_stage3,
         ngram_size=args.ngram
     )
 

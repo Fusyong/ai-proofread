@@ -61,25 +61,15 @@ def jaccard_similarity(text_a: str, text_b: str, n: int = 2) -> float:
     return intersection / union
 
 
-def normalize_sentence(sentence: str) -> str:
+def normalize_sentence(sentence: str, remove_inner_whitespace: bool = True) -> str:
     """
-    标准化句子（仅用于相似度计算，不修改原始数据）
+    标准化句子（仅用于相似度计算，不修改原始数据）：忽略前后空白；可选忽略句中空白。
 
     注意：此函数只用于临时清理文本以进行相似度比较，不会修改原始句子数据。
-    原始句子数据应该始终保留，包括所有空白字符（换行符、空格等）。
-
-    Args:
-        sentence: 原始句子（保留所有空白字符）
-
-    Returns:
-        标准化后的句子（仅用于比较，不保存）
     """
-    # 去除首尾空白（仅用于比较）
     s = sentence.strip()
-    # 统一全角空格为半角空格
-    s = s.replace('　', ' ')
-    # 合并多个连续空格为一个
-    s = re.sub(r' +', ' ', s)
+    if remove_inner_whitespace:
+        s = re.sub(r'\s', '', s)
     return s
 
 
@@ -91,7 +81,8 @@ def align_sentences_anchor(
     ngram_size: int = 2,
     offset: int = 1,
     max_window_expansion: int = 3,
-    consecutive_fail_threshold: int = 3
+    consecutive_fail_threshold: int = 3,
+    remove_inner_whitespace: bool = True
 ) -> List[Dict]:
     """
     使用锚点机制对齐句子（改进的贪心算法，支持动态窗口扩展和全局搜索）
@@ -113,6 +104,7 @@ def align_sentences_anchor(
         offset: 下一个句子的锚点偏移量（默认1，即下一个位置）
         max_window_expansion: 最大窗口扩展倍数（默认3，即最多扩大到3倍）
         consecutive_fail_threshold: 连续失败阈值，超过此值触发窗口扩展（默认3）
+        remove_inner_whitespace: 相似度计算时是否忽略句中空白字符（默认是）
 
     Returns:
         对齐结果列表，每个元素包含：
@@ -141,7 +133,7 @@ def align_sentences_anchor(
 
     # 按照A文件的顺序处理
     while a_idx < n:
-        sent_a = normalize_sentence(sentences_a[a_idx])
+        sent_a = normalize_sentence(sentences_a[a_idx], remove_inner_whitespace)
 
         # 动态调整搜索窗口：如果连续失败，逐步扩大窗口
         if consecutive_fails >= consecutive_fail_threshold:
@@ -169,7 +161,7 @@ def align_sentences_anchor(
             if b_idx in b_used:
                 continue
 
-            sent_b = normalize_sentence(sentences_b[b_idx])
+            sent_b = normalize_sentence(sentences_b[b_idx], remove_inner_whitespace)
             similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
             if similarity > best_similarity:
@@ -196,7 +188,7 @@ def align_sentences_anchor(
                 if b_idx in b_used:
                     continue
 
-                sent_b = normalize_sentence(sentences_b[b_idx])
+                sent_b = normalize_sentence(sentences_b[b_idx], remove_inner_whitespace)
                 similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                 if similarity > best_similarity:
@@ -315,7 +307,8 @@ def align_sentences_anchor(
     result = rematch_adjacent_delete_insert(
         result,
         similarity_threshold,
-        ngram_size
+        ngram_size,
+        remove_inner_whitespace=remove_inner_whitespace
     )
 
     # 后处理：在一定的序号上下范围内处理不相邻的DELETE和INSERT
@@ -323,13 +316,22 @@ def align_sentences_anchor(
         result,
         similarity_threshold,
         ngram_size,
-        index_range=window_size  # 使用窗口大小作为索引范围
+        index_range=window_size,  # 使用窗口大小作为索引范围
+        remove_inner_whitespace=remove_inner_whitespace
     )
 
     # 后处理：将单独的DELETE项合并到相邻的MATCH组中
     result = merge_delete_into_match(
         result,
-        ngram_size
+        ngram_size,
+        remove_inner_whitespace=remove_inner_whitespace
+    )
+
+    # 后处理：将单独的INSERT项合并到相邻的MATCH组中（与 delete 合并对称，处理 b 侧）
+    result = merge_insert_into_match(
+        result,
+        ngram_size,
+        remove_inner_whitespace=remove_inner_whitespace
     )
 
     # 后处理：检测和处理句子移动，创建movein和moveout条目
@@ -346,7 +348,8 @@ def align_sentences_anchor_initial(
     ngram_size: int = 2,
     offset: int = 1,
     max_window_expansion: int = 3,
-    consecutive_fail_threshold: int = 3
+    consecutive_fail_threshold: int = 3,
+    remove_inner_whitespace: bool = True
 ) -> List[Dict]:
     """
     使用锚点机制对齐句子（初始对齐，不包含后处理）
@@ -363,6 +366,7 @@ def align_sentences_anchor_initial(
         offset: 下一个句子的锚点偏移量（默认1，即下一个位置）
         max_window_expansion: 最大窗口扩展倍数（默认3，即最多扩大到3倍）
         consecutive_fail_threshold: 连续失败阈值，超过此值触发窗口扩展（默认3）
+        remove_inner_whitespace: 相似度计算时是否忽略句中空白字符（默认是）
 
     Returns:
         初始对齐结果列表（不包含后处理），每个元素包含：
@@ -391,7 +395,7 @@ def align_sentences_anchor_initial(
 
     # 按照A文件的顺序处理
     while a_idx < n:
-        sent_a = normalize_sentence(sentences_a[a_idx])
+        sent_a = normalize_sentence(sentences_a[a_idx], remove_inner_whitespace)
 
         # 动态调整搜索窗口：如果连续失败，逐步扩大窗口
         if consecutive_fails >= consecutive_fail_threshold:
@@ -419,7 +423,7 @@ def align_sentences_anchor_initial(
             if b_idx in b_used:
                 continue
 
-            sent_b = normalize_sentence(sentences_b[b_idx])
+            sent_b = normalize_sentence(sentences_b[b_idx], remove_inner_whitespace)
             similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
             if similarity > best_similarity:
@@ -446,7 +450,7 @@ def align_sentences_anchor_initial(
                 if b_idx in b_used:
                     continue
 
-                sent_b = normalize_sentence(sentences_b[b_idx])
+                sent_b = normalize_sentence(sentences_b[b_idx], remove_inner_whitespace)
                 similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                 if similarity > best_similarity:
@@ -645,6 +649,7 @@ def rematch_adjacent_delete_insert(
     alignment: List[Dict],
     similarity_threshold: float = 0.6,
     ngram_size: int = 2,
+    remove_inner_whitespace: bool = True,
     html_output_path: Optional[str] = None,
     title_a: str = "原文",
     title_b: str = "校对后"
@@ -737,8 +742,8 @@ def rematch_adjacent_delete_insert(
                             continue
 
                         if d_candidate['text'] and ins_candidate['text']:
-                            sent_a = normalize_sentence(d_candidate['text'])
-                            sent_b = normalize_sentence(ins_candidate['text'])
+                            sent_a = normalize_sentence(d_candidate['text'], remove_inner_whitespace)
+                            sent_b = normalize_sentence(ins_candidate['text'], remove_inner_whitespace)
                             similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                             if similarity > best_similarity and similarity >= similarity_threshold:
@@ -903,6 +908,7 @@ def rematch_non_adjacent_delete_insert(
     similarity_threshold: float = 0.6,
     ngram_size: int = 2,
     index_range: int = 10,
+    remove_inner_whitespace: bool = True,
     html_output_path: Optional[str] = None,
     title_a: str = "原文",
     title_b: str = "校对后"
@@ -998,8 +1004,8 @@ def rematch_non_adjacent_delete_insert(
             if index_diff <= index_range or position_diff <= index_range:
                 # 计算相似度
                 if d_item.get('a') and ins_item.get('b'):
-                    sent_a = normalize_sentence(d_item['a'])
-                    sent_b = normalize_sentence(ins_item['b'])
+                    sent_a = normalize_sentence(d_item['a'], remove_inner_whitespace)
+                    sent_b = normalize_sentence(ins_item['b'], remove_inner_whitespace)
                     similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                     if similarity > best_similarity and similarity >= similarity_threshold:
@@ -1445,7 +1451,8 @@ def detect_and_handle_movements(
 
 def merge_delete_into_match(
     alignment: List[Dict],
-    ngram_size: int = 2
+    ngram_size: int = 2,
+    remove_inner_whitespace: bool = True
 ) -> List[Dict]:
     """
     后处理：将单独的DELETE项合并到相邻的MATCH组中
@@ -1491,8 +1498,8 @@ def merge_delete_into_match(
                 prev_a = prev_item.get('a', '')
                 prev_b = prev_item.get('b', '')
                 merged_a = prev_a + current_item['a']
-                sent_a = normalize_sentence(merged_a)
-                sent_b = normalize_sentence(prev_b)
+                sent_a = normalize_sentence(merged_a, remove_inner_whitespace)
+                sent_b = normalize_sentence(prev_b, remove_inner_whitespace)
                 new_similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                 # 如果新相似度高于原相似度，则合并
@@ -1509,8 +1516,8 @@ def merge_delete_into_match(
                 next_item.get('a') and
                 next_item.get('b')):
                 merged_a = current_item['a'] + next_item['a']
-                sent_a = normalize_sentence(merged_a)
-                sent_b = normalize_sentence(next_item['b'])
+                sent_a = normalize_sentence(merged_a, remove_inner_whitespace)
+                sent_b = normalize_sentence(next_item['b'], remove_inner_whitespace)
                 new_similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
 
                 # 如果新相似度高于原相似度，则合并
@@ -1558,6 +1565,156 @@ def merge_delete_into_match(
                             next_item['a_indices'] = []
                         next_item['a_indices'] = [current_item['a_index']] + next_item.get('a_indices', [])
                     # 跳过当前DELETE
+                    i += 1
+                    continue
+
+        # 其他情况，直接添加
+        result.append(current_item)
+        i += 1
+
+    return result
+
+
+def merge_insert_into_match(
+    alignment: List[Dict],
+    ngram_size: int = 2,
+    remove_inner_whitespace: bool = True
+) -> List[Dict]:
+    """
+    后处理：将单独的INSERT项合并到相邻的MATCH组中（与 merge_delete_into_match 对称，处理 b 侧）
+
+    算法：
+    1. 扫描对齐结果，找到单独的INSERT项
+    2. 检查相邻的MATCH项（前一个或后一个）
+    3. 尝试将INSERT项的内容合并到MATCH项的B部分
+    4. 重新计算与A部分的相似度，或若归一化后 insert.b 是 match.a 的前缀/后缀则允许合并
+
+    Args:
+        alignment: 对齐结果
+        ngram_size: n-gram大小
+        remove_inner_whitespace: 相似度计算时是否忽略句中空白
+
+    Returns:
+        优化后的对齐结果
+    """
+    if not alignment:
+        return alignment
+
+    result = []
+    i = 0
+
+    while i < len(alignment):
+        current_item = alignment[i]
+
+        # 如果是单独的INSERT项，尝试合并到相邻的MATCH
+        if current_item.get('type') == 'insert' and current_item.get('b'):
+            prev_item = alignment[i - 1] if i > 0 else None
+            next_item = alignment[i + 1] if i < len(alignment) - 1 else None
+
+            best_match = None
+            best_similarity = 0.0
+            merge_direction = None  # 'prev' 或 'next'
+
+            # 尝试合并到前一个MATCH（INSERT 的 b 追加到前一个 MATCH 的 b 后）
+            if (prev_item is not None and
+                prev_item.get('type') == 'match' and
+                prev_item.get('a') and
+                prev_item.get('b')):
+                prev_a = prev_item.get('a', '')
+                prev_b = prev_item.get('b', '')
+                merged_b = prev_b + current_item['b']
+                sent_a = normalize_sentence(prev_a, remove_inner_whitespace)
+                sent_b = normalize_sentence(merged_b, remove_inner_whitespace)
+                new_similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
+
+                prev_sim = prev_item.get('similarity', 0.0)
+                # 结构条件：若归一化后 insert.b 是 prevMatch.a 的后缀，也允许合并
+                norm_insert_b_prev = normalize_sentence(current_item['b'], remove_inner_whitespace)
+                insert_is_suffix_of_prev_a = (len(norm_insert_b_prev) > 0 and
+                                              sent_a.endswith(norm_insert_b_prev))
+
+                if new_similarity > prev_sim or insert_is_suffix_of_prev_a:
+                    sim_to_use = new_similarity if new_similarity > prev_sim else max(new_similarity, prev_sim)
+                    if insert_is_suffix_of_prev_a or sim_to_use > best_similarity:
+                        best_similarity = sim_to_use
+                        best_match = prev_item
+                        merge_direction = 'prev'
+
+            # 尝试合并到后一个MATCH（INSERT 的 b 拼到后一个 MATCH 的 b 前）
+            if (next_item is not None and
+                next_item.get('type') == 'match' and
+                next_item.get('a') and
+                next_item.get('b')):
+                merged_b = current_item['b'] + next_item['b']
+                sent_a = normalize_sentence(next_item['a'], remove_inner_whitespace)
+                sent_b = normalize_sentence(merged_b, remove_inner_whitespace)
+                new_similarity = jaccard_similarity(sent_a, sent_b, ngram_size)
+
+                next_sim = next_item.get('similarity', 0.0)
+                # 与 DELETE 合并对称：若归一化后 insert.b 是 nextMatch.a 的前缀，则允许合并
+                norm_insert_b = normalize_sentence(current_item['b'], remove_inner_whitespace)
+                insert_is_prefix_of_next_a = (len(norm_insert_b) > 0 and sent_a.startswith(norm_insert_b))
+
+                if new_similarity > next_sim or insert_is_prefix_of_next_a:
+                    sim_to_use = new_similarity if new_similarity > next_sim else max(new_similarity, next_sim)
+                    if insert_is_prefix_of_next_a or sim_to_use > best_similarity:
+                        best_similarity = sim_to_use
+                        best_match = next_item
+                        merge_direction = 'next'
+
+            # 如果找到可以合并的MATCH，进行合并
+            if best_match is not None:
+                if merge_direction == 'prev':
+                    if result and result[-1].get('type') == 'match':
+                        result[-1]['b'] = result[-1]['b'] + current_item['b']
+                        result[-1]['similarity'] = best_similarity
+                        insert_b_indices = current_item.get('b_indices', [])
+                        if insert_b_indices:
+                            if 'b_indices' not in result[-1]:
+                                result[-1]['b_indices'] = []
+                            result[-1]['b_indices'].extend(insert_b_indices)
+                        elif current_item.get('b_index') is not None:
+                            if 'b_indices' not in result[-1]:
+                                result[-1]['b_indices'] = []
+                            result[-1]['b_indices'].append(current_item['b_index'])
+                        # 合并 b 侧行号
+                        if current_item.get('b_line_numbers'):
+                            if 'b_line_numbers' not in result[-1]:
+                                result[-1]['b_line_numbers'] = (result[-1].get('b_line_number') is not None
+                                                                 and [result[-1]['b_line_number']] or [])
+                            result[-1]['b_line_numbers'].extend(current_item['b_line_numbers'])
+                        elif current_item.get('b_line_number') is not None:
+                            if 'b_line_numbers' not in result[-1]:
+                                result[-1]['b_line_numbers'] = (result[-1].get('b_line_number') is not None
+                                                                 and [result[-1]['b_line_number']] or [])
+                            result[-1]['b_line_numbers'].append(current_item['b_line_number'])
+                    i += 1
+                    continue
+                else:  # merge_direction == 'next'
+                    next_item['b'] = current_item['b'] + next_item['b']
+                    next_item['similarity'] = best_similarity
+                    insert_b_indices = current_item.get('b_indices', [])
+                    if insert_b_indices:
+                        if 'b_indices' not in next_item:
+                            next_item['b_indices'] = []
+                        next_item['b_indices'] = insert_b_indices + next_item.get('b_indices', [])
+                    elif current_item.get('b_index') is not None:
+                        if 'b_indices' not in next_item:
+                            next_item['b_indices'] = []
+                        next_item['b_indices'] = [current_item['b_index']] + next_item.get('b_indices', [])
+                    # 合并 b 侧行号（prepend）
+                    if current_item.get('b_line_numbers'):
+                        if 'b_line_numbers' not in next_item:
+                            next_item['b_line_numbers'] = (next_item.get('b_line_number') is not None
+                                                           and [next_item['b_line_number']] or [])
+                        next_item['b_line_numbers'] = (current_item['b_line_numbers'] +
+                                                       next_item.get('b_line_numbers', []))
+                    elif current_item.get('b_line_number') is not None:
+                        if 'b_line_numbers' not in next_item:
+                            next_item['b_line_numbers'] = (next_item.get('b_line_number') is not None
+                                                           and [next_item['b_line_number']] or [])
+                        next_item['b_line_numbers'] = ([current_item['b_line_number']] +
+                                                       next_item.get('b_line_numbers', []))
                     i += 1
                     continue
 

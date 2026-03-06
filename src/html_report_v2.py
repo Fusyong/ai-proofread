@@ -76,9 +76,11 @@ def save_html_report_stage1(
             padding: 15px;
             border-radius: 5px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
         }}
         .alignment-table {{
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             margin-top: 10px;
         }}
@@ -88,6 +90,7 @@ def save_html_report_stage1(
             padding: 10px;
             text-align: left;
             border: 1px solid #2980b9;
+            vertical-align: middle;
         }}
         .alignment-table td {{
             padding: 10px;
@@ -149,11 +152,37 @@ def save_html_report_stage1(
             width: 5%;
             text-align: center;
         }}
-        .col-sentence-a {{
-            width: 42.5%;
+        .col-remark {{
+            width: 18%;
+            min-width: 150px;
+            padding: 4px;
         }}
+        .alignment-table tbody td.col-remark {{
+            vertical-align: top;
+        }}
+        .remark-input {{
+            display: block;
+            width: 100%;
+            min-width: 80px;
+            min-height: 2em;
+            margin: 0;
+            padding: 4px 6px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: inherit;
+            box-sizing: border-box;
+            resize: none;
+            overflow: hidden;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }}
+        .col-sentence-a,
         .col-sentence-b {{
             width: 42.5%;
+            word-break: break-all;
+            overflow-wrap: anywhere;
+            min-width: 0;
         }}
         .index {{
             font-size: 12px;
@@ -256,6 +285,19 @@ def save_html_report_stage1(
         .alignment-table th.hidden,
         .alignment-table td.hidden {{
             display: none;
+        }}
+        @media print {{
+            body.print-no-repeat-header .alignment-table thead {{
+                display: table-row-group;
+            }}
+        }}
+        .print-option {{
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }}
+        .print-option input[type="checkbox"] {{
+            cursor: pointer;
         }}
         .stats-summary {{
             background-color: #ecf0f1;
@@ -368,6 +410,7 @@ def save_html_report_stage1(
                     <div class="filter-buttons">
                         <button class="filter-btn active" data-col="type" onclick="toggleColumn('type')">类型</button>
                         <button class="filter-btn active" data-col="similarity" onclick="toggleColumn('similarity')">相似度</button>
+                        <button class="filter-btn" data-col="remark" onclick="toggleColumn('remark')">备注</button>
                     </div>
                 </div>
                 <div class="filter-group">
@@ -377,6 +420,12 @@ def save_html_report_stage1(
                         <span>至</span>
                         <input type="number" class="filter-input" id="maxSimilarity" placeholder="最大" min="0" max="1" step="0.01" oninput="applyFilters()" style="width: 40px;">
                     </div>
+                </div>
+                <div class="filter-group print-option">
+                    <label class="print-option" title="打印或导出为 PDF 时，表头是否在每一页重复显示">
+                        <input type="checkbox" id="printRepeatHeader" checked onchange="togglePrintRepeatHeader()">
+                        <span>分页加表头</span>
+                    </label>
                 </div>
             </div>
             <div class="filter-row">
@@ -402,6 +451,7 @@ def save_html_report_stage1(
                     <th class="col-similarity">相似度</th>
                     <th class="col-sentence-a">[句ID, 行ID] {title_a}</th>
                     <th class="col-sentence-b">[句ID, 行ID] {title_b}</th>
+                    <th class="col-remark hidden">备注</th>
                 </tr>
             </thead>
             <tbody>""")
@@ -487,6 +537,7 @@ def save_html_report_stage1(
                 <td class="col-similarity"><span class="similarity">{similarity_text}</span></td>
                 <td class="col-sentence-a">{sentence_a_text}</td>
                 <td class="col-sentence-b">{sentence_b_text}</td>
+                <td class="col-remark hidden"><textarea class="remark-input" placeholder="备注" data-row-idx="{idx}" title="备注内容无法保存" rows="1"></textarea></td>
             </tr>""")
 
     html_lines.append("""
@@ -505,10 +556,11 @@ def save_html_report_stage1(
             'moveout': true
         };
 
-        // 列显示状态
+        // 列显示状态（备注列默认关闭）
         const columnVisibility = {
             'type': true,
-            'similarity': true
+            'similarity': true,
+            'remark': false
         };
 
         // 类型筛选函数
@@ -540,6 +592,47 @@ def save_html_report_stage1(
             applyFilters();
         }
 
+        // 备注列：文本框随内容增高（整行行高自适应），无滚动条
+        function resizeRemarkInput(ta) {
+            ta.style.height = '0px';
+            var oneLine = 26;
+            var h = ta.scrollHeight > 0 ? ta.scrollHeight : oneLine;
+            ta.style.height = Math.max(h, oneLine) + 'px';
+        }
+        // 备注列：从 Excel 等多格粘贴时，按行依次填入连续备注格
+        document.addEventListener('DOMContentLoaded', function() {
+            var cb = document.getElementById('printRepeatHeader');
+            if (cb) document.body.classList.toggle('print-no-repeat-header', !cb.checked);
+            var remarkInputs = document.querySelectorAll('.alignment-table .remark-input');
+            remarkInputs.forEach(function(ta) {
+                ta.addEventListener('input', function() { resizeRemarkInput(ta); });
+            });
+            document.addEventListener('paste', function(e) {
+                const el = e.target;
+                if (!el || !el.classList || !el.classList.contains('remark-input')) return;
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                if (!text) return;
+                var lines = text.split(/\\r?\\n/).map(function(s) { return s.trim(); });
+                if (lines.length <= 1) return;
+                e.preventDefault();
+                var rowIdx = parseInt(el.getAttribute('data-row-idx'), 10);
+                var allInputs = Array.prototype.slice.call(document.querySelectorAll('.alignment-table tbody td.col-remark .remark-input'));
+                var visibleInputs = allInputs.filter(function(inp) { return !inp.closest('tr').classList.contains('hidden'); });
+                visibleInputs.sort(function(a, b) { return parseInt(a.getAttribute('data-row-idx'), 10) - parseInt(b.getAttribute('data-row-idx'), 10); });
+                var start = visibleInputs.findIndex(function(inp) { return parseInt(inp.getAttribute('data-row-idx'), 10) === rowIdx; });
+                if (start < 0) return;
+                for (var i = 0; i < lines.length && start + i < visibleInputs.length; i++) {
+                    visibleInputs[start + i].value = lines[i];
+                    resizeRemarkInput(visibleInputs[start + i]);
+                }
+            });
+        });
+
+        // 打印时是否每页重复表头（取消勾选则不重复）
+        function togglePrintRepeatHeader() {
+            var cb = document.getElementById('printRepeatHeader');
+            document.body.classList.toggle('print-no-repeat-header', !cb.checked);
+        }
         // 切换列显示/隐藏
         function toggleColumn(columnName) {
             const btn = document.querySelector(`[data-col="${columnName}"]`);
@@ -707,7 +800,7 @@ def save_html_report_stage1(
             typeFilters['movein'] = true;
             typeFilters['moveout'] = true;
 
-            document.querySelectorAll('.filter-btn').forEach(btn => {
+            document.querySelectorAll('.filter-btn[data-type]').forEach(btn => {
                 btn.classList.add('active');
             });
 
@@ -716,14 +809,18 @@ def save_html_report_stage1(
             document.getElementById('searchText').value = '';
             document.getElementById('indexFilter').value = '';
 
-            // 重置列显示状态
+            // 重置列显示状态（类型、相似度显示，备注列默认关闭）
             columnVisibility['type'] = true;
             columnVisibility['similarity'] = true;
+            columnVisibility['remark'] = false;
             document.querySelectorAll('.filter-btn[data-col]').forEach(btn => {
-                btn.classList.add('active');
+                btn.classList.toggle('active', columnVisibility[btn.dataset.col]);
             });
-            document.querySelectorAll('.alignment-table th.hidden, .alignment-table td.hidden').forEach(cell => {
+            document.querySelectorAll('.alignment-table th.col-type, .alignment-table td.col-type, .alignment-table th.col-similarity, .alignment-table td.col-similarity').forEach(cell => {
                 cell.classList.remove('hidden');
+            });
+            document.querySelectorAll('.alignment-table th.col-remark, .alignment-table td.col-remark').forEach(cell => {
+                cell.classList.add('hidden');
             });
 
             applyFilters();
@@ -1019,7 +1116,7 @@ def save_html_report_stage1(
             // 创建提示元素
             const warningDiv = document.createElement('div');
             warningDiv.style.cssText = 'background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; padding: 10px; margin-bottom: 15px; color: #856404; font-size: 13px;';
-            warningDiv.innerHTML = '<strong>提示：</strong>筛选条件（类型、序号、文本搜索）无法保存，刷新页面后会重置。如需保存筛选结果，请使用浏览器的打印功能或截图。';
+            warningDiv.innerHTML = '<strong>提示：</strong>筛选条件与备注无法保存，刷新、重新打开后会重置！建议：（1）另行存储你的筛选条件如条目列表，用列表或表格存储备注；（2）把条目列表和备注等粘贴到本表中；（3）复制筛选结果到Word文档中进一步处理，或通过浏览器打印为PDF。';
 
             // 添加关闭按钮
             const closeBtn = document.createElement('button');
