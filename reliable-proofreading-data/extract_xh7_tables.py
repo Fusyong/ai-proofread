@@ -12,24 +12,6 @@
 - single_char_yitihuabiao_to_standard
 - single_char_yiti_other_to_standard
 
-应用集成示例（Python）：
-    import gzip, json
-    path = "xh7_tables.json.gz"  # 或 xh7_tables.json
-    open_fn = gzip.open if path.endswith(".gz") else open
-    with open_fn(path, "rt", encoding="utf-8") as f:
-        tables = json.load(f)
-
-VS Code 扩展集成（推荐单文件 .json，简单无依赖）：
-    const path = require("path");
-    const fs = require("fs");
-    const dataPath = path.join(context.extensionPath, "data", "xh7_tables.json");
-    const tables = JSON.parse(fs.readFileSync(dataPath, "utf-8"));
-    // tables.variant_to_standard["一槌定音"] === "一锤定音"
-
-    若使用 .json.gz 以减小扩展体积（约 50KB），用 Node 内置 zlib：
-    const zlib = require("zlib");
-    const raw = fs.readFileSync(path.join(context.extensionPath, "data", "xh7_tables.json.gz"));
-    const tables = JSON.parse(zlib.gunzipSync(raw).toString("utf-8"));
 """
 
 import argparse
@@ -49,17 +31,15 @@ TABLE_KEYS = [
     "single_char_traditional_to_standard",
     "single_char_yitihuabiao_to_standard",
     "single_char_yiti_other_to_standard",
+    "non_erhua_to_erhua",
 ]
 
 
 def load_source(path: Path) -> dict:
-    """加载源 JSON（支持 .json 或 .json.gz）。"""
+    """加载源 JSON。"""
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"源文件不存在: {path}")
-    if path.suffix == ".gz" or path.name.endswith(".json.gz"):
-        with gzip.open(path, "rt", encoding="utf-8") as f:
-            return json.load(f)
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -79,7 +59,7 @@ def extract_tables(data: dict) -> dict:
     return out
 
 
-def write_compact_json(obj: dict, path: Path, gz: bool = False) -> None:
+def write_compact_json(obj: dict, path: Path) -> None:
     """写入紧凑 JSON（无多余空白，中文不转义）。"""
     payload = json.dumps(
         obj,
@@ -88,13 +68,8 @@ def write_compact_json(obj: dict, path: Path, gz: bool = False) -> None:
         allow_nan=False,
     )
     path = Path(path)
-    if gz:
-        path = path.with_suffix(path.suffix + ".gz")
-        with gzip.open(path, "wt", encoding="utf-8") as f:
-            f.write(payload)
-    else:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(payload)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(payload)
 
 
 def main() -> int:
@@ -110,18 +85,8 @@ def main() -> int:
     parser.add_argument(
         "-o",
         "--output",
-        default="xh7_tables.json",
-        help="输出 JSON 路径（默认 xh7_tables.json）",
-    )
-    parser.add_argument(
-        "--gz",
-        action="store_true",
-        help="同时输出 gzip 压缩文件（.json.gz）",
-    )
-    parser.add_argument(
-        "--split",
-        action="store_true",
-        help="按表名分别输出多个文件（xh7_<表名>.json）",
+        default="dict7.json",
+        help="输出 JSON 路径（默认 dict7.json）",
     )
     args = parser.parse_args()
 
@@ -146,23 +111,8 @@ def main() -> int:
         n = len(tables[key])
         print(f"  {key}: {n} 条", file=sys.stderr)
 
-    if args.split:
-        # 按表分文件
-        for key in TABLE_KEYS:
-            stem = output_path.stem
-            single_path = output_path.parent / f"{stem}_{key}.json"
-            write_compact_json({key: tables[key]}, single_path)
-            print(f"已写: {single_path}", file=sys.stderr)
-            if args.gz:
-                write_compact_json({key: tables[key]}, single_path, gz=True)
-                print(f"已写: {single_path}.gz", file=sys.stderr)
-    else:
-        # 单文件包含全部表
-        write_compact_json(tables, output_path)
-        print(f"已写: {output_path}", file=sys.stderr)
-        if args.gz:
-            write_compact_json(tables, output_path, gz=True)
-            print(f"已写: {output_path}.gz", file=sys.stderr)
+    write_compact_json(tables, output_path)
+    print(f"已写: {output_path}", file=sys.stderr)
 
     return 0
 

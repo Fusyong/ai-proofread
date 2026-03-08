@@ -1,5 +1,5 @@
 """
-从 mdict 词典中提取校对可用的数据，存放到 reliable-proofreading-data 下。
+从 xh7 mdict 词典中提取校对可用的数据，存放到 reliable-proofreading-data 下。
 
 当前实现：从现代汉语词典（现汉7）中提取多字词条异形与单字繁体/异体。
 
@@ -9,7 +9,8 @@
 2) 推荐词形-不推荐词形：也作（推荐→不推荐，如 㺀𤝽 也作忽律）与 同"X"（不推荐→推荐，如 忽律 同"㺀𤝽"）合并为一类、一个表。
    → preferred_to_variants（推荐→不推荐列表）、variant_to_preferred（不推荐→推荐）；
    输出时拆分为单字表与多字表：preferred_to_variants_single/multi、variant_to_preferred_single/multi。
-3) 字（单音节）词条：繁体字、异体字加括号附列；⁎ 为《通用规范汉字表》附列异体字，⁑ 为该表以外异体字。
+3) 儿化词条：词头（hw）中必须包含小写形式的「儿」即 <small>儿</small>（非普通「儿」字），可有多个；一个查询可有多个词头。输出为 non_erhua_to_erhua：{"非儿化形":"儿化形", ...}，如 {"个顶个":"个儿顶个儿"}。
+4) 字（单音节）词条：繁体字、异体字加括号附列；⁎ 为《通用规范汉字表》附列异体字，⁑ 为该表以外异体字。
    → single_char_traditional、single_char_yitihuabiao、single_char_yiti_other；有符号标记时并入 raw_notes。
 """
 
@@ -66,6 +67,13 @@ def _headword_key(hw: str) -> str:
         return hw
     m = re.match(r"^([^（(]+)", hw)
     return m.group(1).strip() if m else hw
+
+
+def _strip_empty_parens(s: str) -> str:
+    """去掉字符串中无内容的括号对（兼容全角（（）与半角()），如 嘎嘎（）→ 嘎嘎。"""
+    if not s:
+        return s
+    return re.sub(r"[（(]\s*[）)]", "", s).strip()
 
 
 def _strip_trailing_circle_digits(s: str) -> str:
@@ -146,6 +154,8 @@ class VariantFormsExtractor:
         self._xianhan7_headword = re.compile(
             r"<hw>([^<]*(?:<[^>]+>[^<]*)*)</hw>"
         )
+        # 儿化：词头内小写「儿」即 <small>儿</small>（可能有多个）
+        self._xianhan7_small_er = re.compile(r"<small>\s*儿\s*</small>")
         # 用法提示：<column><note>注意</note>...</column>
         self._xianhan7_column_note = re.compile(
             r"<column><note>注意</note>(.*?)</column>",
@@ -158,6 +168,30 @@ class VariantFormsExtractor:
         """从一条释义内容中解析出词头（去标签）。"""
         m = self._xianhan7_headword.search(content)
         return _strip_hw_tags(m.group(1)) if m else ""
+
+    def _extract_erhua_pairs_from_block(self, block: str) -> List[Tuple[str, str]]:
+        """
+        从单个 <entry> 块中提取儿化对：仅当词头（hw）内包含 <small>儿</small> 时收录。
+        遍历块内所有 <hw>...</hw>，返回 [(非儿化形, 儿化形), ...]，如 [("个顶个", "个儿顶个儿")]。
+        儿化形：只去掉 <small>/</small> 标签保留「儿」；非儿化形：去掉整段 <small>儿</small> 后再去其余标签。
+        """
+        pairs: List[Tuple[str, str]] = []
+        for m in self._xianhan7_headword.finditer(block):
+            raw_hw = m.group(1)
+            if not self._xianhan7_small_er.search(raw_hw):
+                continue
+            # 儿化形：仅去掉 <small>、</small> 标签，保留「儿」（_strip_hw_tags 会删掉整段 <small>儿</small> 导致儿丢失）
+            erhua_form = re.sub(r"</?small\s*>", "", raw_hw)
+            erhua_form = _strip_hw_tags(erhua_form).strip() or erhua_form.strip()
+            # 非儿化形：去掉整段 <small>儿</small> 后再去其余标签
+            raw_without_small_er = self._xianhan7_small_er.sub("", raw_hw)
+            non_erhua_form = _strip_hw_tags(raw_without_small_er)
+            # 去掉末尾括注异形词（如 自个（自各）→ 自个），兼容全角（（））与半角(())
+            non_erhua_form = _headword_key(non_erhua_form)
+            erhua_form = _headword_key(erhua_form)
+            if non_erhua_form and erhua_form and non_erhua_form != erhua_form:
+                pairs.append((non_erhua_form, erhua_form))
+        return pairs
 
     def _split_into_entry_blocks(self, content: str) -> List[str]:
         """将查询结果按 <entry>...</entry> 分块。多音节（如乌拉两词条）、单音节（如 㖊、吗 多音多义多条）均先切分再逐条处理。"""
@@ -349,6 +383,7 @@ class VariantFormsExtractor:
         Dict[str, List[str]], Dict[str, List[str]], Dict[str, List[str]], Dict[str, List[str]],
         Dict[str, str], Dict[str, str], Dict[str, str],
         Dict[str, List[str]],  # usage_notes
+        Dict[str, str],  # non_erhua_to_erhua
     ]:
         """
         从指定词典中按顺序逐一查询词条，解析多字异形与单字繁体/异体。
@@ -367,6 +402,7 @@ class VariantFormsExtractor:
                 empty, empty, empty, empty,
                 empty_str, empty_str, empty_str,
                 empty,
+                {},
             )
         entries = self.mdict_manager.entries(dict_name, limit)
         total = len(entries)
@@ -399,11 +435,22 @@ class VariantFormsExtractor:
 
         # 用法提示：<column><note>注意</note>...</column>，按 entry 切分后提取，键=词头
         usage_notes: Dict[str, List[str]] = {}
+        # 儿化词条：仅词头内含 <small>儿</small> 的条目，non_erhua -> erhua
+        non_erhua_to_erhua: Dict[str, str] = {}
 
         for i, entry in enumerate(entries):
             if progress_interval and i > 0 and i % progress_interval == 0:
                 print(f"已处理 {i}/{total} 条…")
             content = self.mdict_manager.query(dict_name, entry)
+            # 儿化词条：按 entry 切分，逐块内所有 <hw>，仅含 <small>儿</small> 的收录为 non_erhua -> erhua
+            for block in self._split_into_entry_blocks(content):
+                for non_erhua, erhua in self._extract_erhua_pairs_from_block(block):
+                    if non_erhua in non_erhua_to_erhua and non_erhua_to_erhua[non_erhua] != erhua:
+                        merged = non_erhua_to_erhua[non_erhua] + "；" + erhua
+                        non_erhua_to_erhua[non_erhua] = merged
+                        print(f"[儿化] non_erhua_to_erhua 冲突已合并：'{non_erhua}' -> '{merged}'")
+                    else:
+                        non_erhua_to_erhua[non_erhua] = erhua
             # 用法提示：先按 entry 切分再逐块提取
             notes_batch = self._extract_usage_notes_from_content(content)
             for k, v in notes_batch.items():
@@ -447,7 +494,9 @@ class VariantFormsExtractor:
                             single_char_raw[preferred].append(raw)
                     continue
                 if source == SOURCE_GUIFAN_BUKUIFAN:
-                    # 情形1/2：规范词形-不规范词形
+                    # 情形1/2：规范词形-不规范词形（键、值去掉无内容括号对）
+                    preferred = _strip_empty_parens(preferred)
+                    variant = _strip_empty_parens(variant)
                     if preferred not in standard_to_variants:
                         standard_to_variants[preferred] = []
                     if variant not in standard_to_variants[preferred]:
@@ -466,7 +515,9 @@ class VariantFormsExtractor:
                             standard_to_variants_raw[preferred].append(raw)
                     continue
                 if source == SOURCE_TUIJIAN_YEZUO:
-                    # 情形3：也作 → 推荐词形-不推荐词形（推荐→不推荐）
+                    # 情形3：也作 → 推荐词形-不推荐词形（推荐→不推荐）；键、值去掉无内容括号对
+                    preferred = _strip_empty_parens(preferred)
+                    variant = _strip_empty_parens(variant)
                     if preferred not in preferred_to_variants:
                         preferred_to_variants[preferred] = []
                     if variant not in preferred_to_variants[preferred]:
@@ -485,7 +536,9 @@ class VariantFormsExtractor:
                             preferred_to_variants_raw[preferred].append(raw)
                     continue
                 if source == SOURCE_BUTUIJIAN_TONG:
-                    # 情形4：同"X" → 不推荐词形-推荐词形（仅不推荐→推荐，推荐→不推荐列表由也作填入）
+                    # 情形4：同"X" → 不推荐词形-推荐词形；键、值去掉无内容括号对
+                    preferred = _strip_empty_parens(preferred)
+                    variant = _strip_empty_parens(variant)
                     if variant in variant_to_preferred:
                         if variant_to_preferred[variant] != preferred:
                             merged = variant_to_preferred[variant] + "；" + preferred
@@ -535,6 +588,7 @@ class VariantFormsExtractor:
             single_char_yitihuabiao_to_standard,
             single_char_yiti_other_to_standard,
             usage_notes,
+            non_erhua_to_erhua,
         )
 
     def save_variant_forms(
@@ -567,12 +621,13 @@ class VariantFormsExtractor:
             single_char_yitihuabiao_to_standard,
             single_char_yiti_other_to_standard,
             usage_notes,
+            non_erhua_to_erhua,
         ) = self.extract_all_from_dict(dict_name, limit=limit)
         out_dir = get_output_dir()
         base = dict_name.replace(".mdx", "").strip()
         safe_name = re.sub(r"[^\w\u4e00-\u9fff]", "_", base)
         if not filename:
-            filename = f"异形词-{safe_name}.json"
+            filename = f"extraction_data_{safe_name}.json"
         filepath = os.path.join(out_dir, filename)
         # 推荐词形-不推荐词形：拆分为单字表与多字表
         preferred_to_variants_single = {k: v for k, v in preferred_to_variants.items() if len(k) == 1}
@@ -612,6 +667,8 @@ class VariantFormsExtractor:
             data["single_char_yitihuabiao_to_standard"] = single_char_yitihuabiao_to_standard
         if single_char_yiti_other_to_standard:
             data["single_char_yiti_other_to_standard"] = single_char_yiti_other_to_standard
+        if non_erhua_to_erhua:
+            data["non_erhua_to_erhua"] = non_erhua_to_erhua
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         n_guifan_bukuifan = stats.get(SOURCE_GUIFAN_BUKUIFAN, 0)
@@ -624,12 +681,15 @@ class VariantFormsExtractor:
             f"异形词已写入：{filepath}，规范词形-不规范词形 {len(standard_to_variants)} 条（{n_guifan_bukuifan}），"
             f"推荐词形-不推荐词形 {len(preferred_to_variants)} 条（也作 {n_yezuo}，同 {n_tong}）；"
             f"推荐-不推荐 单字 {len(preferred_to_variants_single)}/{len(variant_to_preferred_single)}，多字 {len(preferred_to_variants_multi)}/{len(variant_to_preferred_multi)}；"
-            f"字 繁体 {n_fanti}、规范异体 {n_guifan}、其他异体 {n_other}。"
+            f"字 繁体 {n_fanti}、规范异体 {n_guifan}、其他异体 {n_other}；儿化 non_erhua_to_erhua {len(non_erhua_to_erhua)} 条。"
         )
         return filepath
 
 
 if __name__ == "__main__":
+    # 输出 JSON 文件名，为 None 时根据词典名自动生成（如 异形词-现汉7.json）
+    output_json_filename: Optional[str] = "xh7.json"
+
     extractor = VariantFormsExtractor()
     if extractor.mdict_manager:
         # 乌拉
@@ -637,9 +697,19 @@ if __name__ == "__main__":
         # 枝丫
         # 阀阅
         # 保姆
-        # content = extractor.mdict_manager.query("现汉7.mdx", "为")
+        # content = extractor.mdict_manager.query("现汉7.mdx", "个儿顶个儿")
         # if content:
-        #     print("原始数据片段:", content)
-        extractor.save_variant_forms("现汉7.mdx", limit=None)
+        #     # 儿化提取测试：用「个儿顶个儿」实际内容
+        #     for block in extractor._split_into_entry_blocks(content):
+        #         pairs = extractor._extract_erhua_pairs_from_block(block)
+        #         if pairs:
+        #             print("儿化提取结果(个儿顶个儿):", pairs)
+        #         else:
+        #             print("未提取到儿化对，块内 <hw> 数:", len(extractor._xianhan7_headword.findall(block)))
+        extractor.save_variant_forms(
+            "现汉7.mdx",
+            limit=None,
+            filename=output_json_filename,
+        )
     else:
         print("未配置 MdictManager，仅运行了枝丫解析测试。")
