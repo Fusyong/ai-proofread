@@ -10,12 +10,13 @@ from pathlib import Path
 # # 或指定 GPU 编号，例如使用第二块 GPU（cuda:1）
 # os.environ['MINERU_DEVICE_MODE'] = "cuda:1"
 # # 模型文件存储目录
-# os.environ['MINERU_MODELS_DIR'] = r'D:\CodeProjects\doc\RapidAI\models' #模型文件存储目录，如果不设置会默认下载到rapid_doc项目里面
+# os.environ['RAPID_MODELS_DIR'] = r'D:\CodeProjects\doc\RapidAI\models' #模型文件存储目录，如果不设置会默认下载到rapid_doc项目里面
 from loguru import logger
 
 from rapid_doc.cli.common import convert_pdf_bytes_to_bytes_by_pypdfium2, prepare_env, read_fn
 from rapid_doc.data.data_reader_writer import FileBasedDataWriter
 from rapid_doc.utils.draw_bbox import draw_layout_bbox, draw_span_bbox
+from rapid_doc.utils.layered_pdf_pypdf import create_layered_searchable_pdf
 from rapid_doc.utils.enum_class import MakeMode
 from rapid_doc.backend.pipeline.pipeline_analyze import doc_analyze as pipeline_doc_analyze
 from rapid_doc.backend.pipeline.pipeline_middle_json_mkcontent import union_make as pipeline_union_make
@@ -36,11 +37,14 @@ def do_parse(
     p_table_enable=True,  # Enable table parsing
     f_draw_layout_bbox=True,  # Whether to draw layout bounding boxes
     f_draw_span_bbox=True,  # Whether to draw span bounding boxes
+    f_create_layered_pdf=True,  # Whether to create layered PDF
     f_dump_md=True,  # Whether to dump markdown files
     f_dump_middle_json=True,  # Whether to dump middle JSON files
     f_dump_model_output=True,  # Whether to dump model output files
     f_dump_orig_pdf=True,  # Whether to dump original PDF files
     f_dump_content_list=True,  # Whether to dump content list files
+    f_dump_md_html=False,  # Whether to convert markdown to HTML
+    f_dump_md_docx=False,  # Whether to convert markdown to docx (via Pandoc)
     f_make_md_mode=MakeMode.MM_MD,  # The mode for making markdown content, default is MM_MD
     start_page_id=0,  # Start page ID for parsing, default is 0
     end_page_id=None,  # End page ID for parsing, default is None (parse all pages until the end of the document)
@@ -48,11 +52,15 @@ def do_parse(
     f_include_page_numbers=True,  # Whether to include page number markers in markdown output, default is True
 ):
     layout_config = {
-        # "model_type": LayoutModelType.PP_DOCLAYOUT_PLUS_L,
+        # "model_type": LayoutModelType.PP_DOCLAYOUTV2,
         # "conf_thresh": 0.4,
         # "batch_num": 1,
-        # "model_dir_or_path": "C:\ocr\models\ppmodel\layout\PP-DocLayout-L\pp_doclayout_l.onnx",
-        # "model_dir_or_path": r"C:\ocr\models\ppmodel\layout\PP-DocLayout_plus-L\pp_doclayout_plus_l.onnx",
+        # "model_dir_or_path": r"C:\ocr\models\ppmodel\layout\PP-DocLayoutV2\pp_doclayoutv2.onnx",
+        # "markdown_ignore_labels": ["number", "footnote", "header", "header_image", "footer", "footer_image", "aside_text",]
+        # 双层 PDF 文本层：不写入以下 block 类型的文字（与 markdown_ignore_labels 类似）
+        # "layered_pdf_ignore_block_types": ["image_footnote", "table_footnote", "image_caption", "table_caption"],
+        # 图版 PDF 建议配置 CJK 字体路径，否则中文可能显示为错误字符
+        "layered_pdf_cjk_font_path": r"C:\Windows\Fonts\msyh.ttc",
     }
 
     ocr_config = {
@@ -79,25 +87,31 @@ def do_parse(
         # "formula_level": 1, # 公式识别等级，默认为0，全识别。1:仅识别行间公式，行内公式不识别
         # "batch_num": 1,
         # "model_dir_or_path": r"C:\ocr\models\ppmodel\formula\PP-FormulaNet_plus-S\pp_formulanet_plus_s.onnx",
+        # "dict_keys_path": "D:\CodeProjects\doc\RapidAI\model\pp_formulanet_plus_m_inference.yml", #yml字典路径（torch使用）
     }
 
     # os.environ['MINERU_MODEL_SOURCE'] = 'local'
 
     table_config = {
         # "force_ocr": False, # 表格文字，是否强制使用ocr，默认 False 根据 parse_method 来判断是否需要ocr还是从pdf中直接提取文本
-        # 注：文字版pdf可以使用pypdfium2提取到表格内图片，扫描版或图片需要使用PP_DOCLAYOUT_PLUS_L版面识别模型，才能识别到表格内的图片
+        # 注：文字版pdf可以使用pypdfium2提取到表格内图片，扫描版或图片需要使用PP_DOCLAYOUT_PLUS_L/PP_DOCLAYOUTV2版面识别模型，才能识别到表格内的图片
         # "skip_text_in_image": True, # 是否跳过表格里图片中的文字（如表格单元格中嵌入的图片、图标、扫描底图等）
         # "use_img2table": False, # 是否优先使用img2table库提取表格，需要手动安装（pip install img2table），基于opencv识别准确度不如使用模型，但是速度很快，默认关闭
 
+        # "model_type": TableModelType.SLANETPLUS,
         # "model_type": TableModelType.UNET_SLANET_PLUS,  # （默认） 有线表格使用unet，无线表格使用slanet_plus
         # "model_type": TableModelType.UNET_UNITABLE, # 有线表格使用unet，无线表格使用unitable
         # "model_type": TableModelType.UNITABLE,
         # "model_dir_or_path": "", #单个模型使用。如SLANET_PLUS、UNITABLE
 
+        # "use_word_box": True, # 使用单字坐标匹配单元格，默认 True
+        # "use_compare_table": False,  # 启用表格结果比较（同时跑有线/无线并比对），默认 False
+        # "table_formula_enable": False, # 表格内公式识别
+        # "table_image_enable": False, # 表格内图片识别
+        # "extract_original_image": False # 是否提取表格内原始图片，默认 False
+        # "cls.model_type": TableModelType.PADDLE_CLS, # 表格分类模型
         # "cls.model_dir_or_path": "", # 表格分类模型地址
-
         # "unet.model_dir_or_path": "", # UNET表格模型地址
-
         # "unitable.model_dir_or_path": "", # UNITABLE表格模型地址
         # "slanet_plus.model_dir_or_path": "", # SLANET_PLUS表格模型地址
 
@@ -105,7 +119,7 @@ def do_parse(
     }
 
     checkbox_config = {
-        # "checkbox_enable": False, # 是否识别复选框，默认不识别，基于opencv，有可能会误检
+        # "checkbox_enable": True, # 是否识别复选框，默认不识别，基于opencv，有可能会误检
     }
 
     # 版面识别元素为图片的配置
@@ -146,6 +160,16 @@ def do_parse(
         if f_draw_span_bbox:
             draw_span_bbox(pdf_info, pdf_bytes, local_md_dir, f"{pdf_file_name}_span.pdf")
 
+        if f_create_layered_pdf:
+            create_layered_searchable_pdf(
+                pdf_info,
+                pdf_bytes,
+                local_md_dir,
+                f"{pdf_file_name}_layered.pdf",
+                layered_pdf_ignore_block_types=layout_config.get("layered_pdf_ignore_block_types"),
+                layered_pdf_cjk_font_path=layout_config.get("layered_pdf_cjk_font_path"),
+            )
+
         if f_dump_orig_pdf:
             md_writer.write(
                 f"{pdf_file_name}_origin.pdf",
@@ -155,8 +179,8 @@ def do_parse(
         if f_dump_md:
             image_dir = str(os.path.basename(local_image_dir))
             md_content_str = pipeline_union_make(
-                pdf_info, 
-                f_make_md_mode, 
+                pdf_info,
+                f_make_md_mode,
                 image_dir,
                 include_footnotes=f_include_footnotes,
                 include_page_numbers=f_include_page_numbers
@@ -166,6 +190,38 @@ def do_parse(
                     f"{pdf_file_name}.md",
                     md_content_str if isinstance(md_content_str, str) else str(md_content_str),
                 )
+
+            # ===================== Markdown 转 HTML =====================
+            if f_dump_md_html and md_content_str:
+                try:
+                    from rapid_doc.utils.markdown_to_html import markdown_to_html
+                    html_path = os.path.join(local_md_dir, f"{pdf_file_name}.html")
+                    markdown_to_html(
+                        md_content_str,
+                        output_path=html_path,
+                        title=pdf_file_name,
+                        image_base_path=local_md_dir,  # 图片相对于md目录
+                        embed_images=False,  # 不嵌入图片，保持引用
+                    )
+                except ImportError as e:
+                    logger.warning(f"Markdown转HTML失败: {e}")
+                except Exception as e:
+                    logger.error(f"Markdown转HTML失败: {e}")
+
+            # ===================== Markdown 转 docx (via Pandoc) =====================
+            if f_dump_md_docx and md_content_str:
+                try:
+                    from rapid_doc.utils.markdown_to_word import markdown_to_docx
+                    md_docx_path = os.path.join(local_md_dir, f"{pdf_file_name}_md.docx")
+                    markdown_to_docx(
+                        md_content_str,
+                        output_path=md_docx_path,
+                        image_base_path=local_md_dir,  # 图片相对于md目录
+                    )
+                except ImportError as e:
+                    logger.warning(f"Markdown转docx失败: {e}")
+                except Exception as e:
+                    logger.error(f"Markdown转docx失败: {e}")
 
         if f_dump_content_list:
             image_dir = str(os.path.basename(local_image_dir))
@@ -235,9 +291,12 @@ if __name__ == '__main__':
     output_dir = os.path.join(__dir__, "output")
 
     doc_path_list = [
-        "E:/语文出版社/2025/走出课本学语文/汉魏六朝诗歌（下册）/11.20汉魏六朝诗歌（下册）.pdf",
+"C:/Users/DELL/Desktop/1.pdf",
+"C:/Users/DELL/Desktop/2.pdf",
+        # "C:/Users/DELL/Desktop/四川八语同步学与练/参考答案分切.pdf",
+        # "C:/Users/DELL/Desktop/四川八语同步学与练/学用正文.pdf",
     ]
     for doc_path in doc_path_list:
         start_time = time.time()
-        parse_doc([Path(doc_path)], output_dir, method="txt")
+        parse_doc([Path(doc_path)], output_dir, method="auto") # 运行方式：auto/txt/ocr
         print(f"总运行时间: {time.time() - start_time}秒")
