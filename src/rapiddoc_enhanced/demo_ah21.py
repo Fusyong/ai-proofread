@@ -16,10 +16,12 @@ from loguru import logger
 from rapid_doc.cli.common import convert_pdf_bytes_to_bytes_by_pypdfium2, prepare_env, read_fn
 from rapid_doc.data.data_reader_writer import FileBasedDataWriter
 from rapid_doc.utils.draw_bbox import draw_layout_bbox, draw_span_bbox
-from rapid_doc.utils.layered_pdf_pypdf import create_layered_searchable_pdf
+# ah21版本
+from rapid_doc.utils.layered_pdf_pypdf_ah21 import create_layered_searchable_pdf
 from rapid_doc.utils.enum_class import MakeMode
 from rapid_doc.backend.pipeline.pipeline_analyze import doc_analyze as pipeline_doc_analyze
-from rapid_doc.backend.pipeline.pipeline_middle_json_mkcontent import union_make as pipeline_union_make
+# ah21版本
+from rapid_doc.backend.pipeline.pipeline_middle_json_mkcontent_ah21 import union_make as pipeline_union_make
 from rapid_doc.backend.pipeline.model_json_to_middle_json import result_to_middle_json as pipeline_result_to_middle_json
 
 from rapidocr import EngineType as OCREngineType, OCRVersion, ModelType as OCRModelType
@@ -291,10 +293,30 @@ if __name__ == '__main__':
     output_dir = os.path.join(__dir__, "output")
 
     doc_path_list = [
-"C:/Users/DELL/Desktop/1.pdf",
-"C:/Users/DELL/Desktop/2.pdf",
-        # "C:/Users/DELL/Desktop/四川八语同步学与练/参考答案分切.pdf",
-        # "C:/Users/DELL/Desktop/四川八语同步学与练/学用正文.pdf",
+# "C:/Users/DELL/Desktop/1.pdf",
+# "C:/Users/DELL/Desktop/2.pdf",
+"E:/通用资料/古诗/先秦汉魏晋南北朝诗/先秦汉魏晋南北朝诗（第三册）附作者篇目索引 (逯钦立辑校).pdf",
+"E:/通用资料/古诗/先秦汉魏晋南北朝诗/先秦汉魏晋南北朝诗(第二册)附作者篇目索引 (逯钦立辑校).pdf",
+"E:/通用资料/古诗/先秦汉魏晋南北朝诗/先秦汉魏晋南北朝诗（第一册）附作者篇目索引.逯钦立辑校.pdf",
+"E:/通用资料/古诗/先秦汉魏晋南北朝诗/先秦汉魏晋南北朝诗（第四册）附作者篇目索引.逯钦立辑校.pdf",
+"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第二册.pdf",
+"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第一册.pdf",
+"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第四册.pdf",
+"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第三册.pdf",
+"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第五册.pdf",
+"E:/通用资料/古诗/汉魏六朝百三家集.pdf",
+"E:/通用资料/古诗/汉魏六朝百三家集题辞注.张溥著；殷孟伦注.pdf",
+"E:/通用资料/古诗/历代题画诗类编 上.李德埙.pdf",
+"E:/通用资料/古诗/历代题画诗类编 下.李德埙.pdf",
+"E:/通用资料/古诗/历代题画诗选注.洪丕谟.pdf",
+"E:/通用资料/古诗/诗情画意：题画诗集锦 上.pdf",
+"E:/通用资料/古诗/诗情画意：题画诗集锦 下.刘云.pdf",
+"E:/通用资料/古诗/题画诗选释 第1卷.pdf",
+"E:/通用资料/古诗/题画诗选释 第2卷.pdf",
+"E:/通用资料/古诗/题画诗选释 第3卷.pdf",
+"E:/通用资料/古诗/题画诗选释 第4卷.pdf",
+"E:/通用资料/古诗/题画诗一百首.洪丕谟.pdf",
+"E:/通用资料/古诗/中国历代题画诗选.周积寅，史金城.pdf",
     ]
     for doc_path in doc_path_list:
         start_time = time.time()
