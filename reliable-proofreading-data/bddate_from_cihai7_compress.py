@@ -8,9 +8,9 @@
 不使用 gzip。
 
 用法：
+  python bddate_from_cihai7_compress.py --extension hai7_extension.csv
   python bddate_from_cihai7_compress.py
   python bddate_from_cihai7_compress.py --input hai7.json --output hai7.dist.json
-  python bddate_from_cihai7_compress.py --extension hai7_extension.csv
   python bddate_from_cihai7_compress.py --no-extension
   python bddate_from_cihai7_compress.py --scalar-single-raw
   python bddate_from_cihai7_compress.py --short-keys --output hai7.compact.json
