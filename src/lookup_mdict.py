@@ -78,7 +78,7 @@ def lookup_dictionary(term: str, term_type: str) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: 包含词典解释的字典
     """
-    mdx_path = 'D:/通用资料/工具书/通用电子词典/1古汉语/辞海第七版/离线版/辞海第七版.mdx'
+    mdx_path = 'D:/通用资料/工具书/通用电子词典/1古汉语/cihai7/离线版/cihai7.mdx'
     content = query(mdx_path, term)
 
     # 提取纯文本内容

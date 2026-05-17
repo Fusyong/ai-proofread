@@ -36,9 +36,9 @@ class PinyinExtractor:
         
         # 为不同词典定义拼音提取规则
         self.extraction_rules = {
-            "现汉7.mdx": self._extract_pinyin_xianhan7,
-            "现汉规范2.mdx": self._extract_pinyin_xianhanguifan2,
-            "中華語文大辭典.mdx": self._extract_pinyin_zhonghuayuwendaciandian,
+            "xh7.mdx": self._extract_pinyin_xianhan7,
+            "xhgf2.mdx": self._extract_pinyin_xianhanguifan2,
+            "zhywdcd.mdx": self._extract_pinyin_zhonghuayuwendaciandian,
             # 可以在这里添加其他词典的规则
             # "其他词典.mdx": self._extract_pinyin_other_dict,
         }
@@ -129,7 +129,7 @@ class PinyinExtractor:
     
     def _extract_pinyin_zhonghuayuwendaciandian(self, content: str) -> List[str]:
         """
-        中華語文大辭典.mdx的拼音提取规则（优化版本）
+        zhywdcd.mdx的拼音提取规则（优化版本）
         
         Args:
             content: 词典返回的HTML/XML内容
@@ -153,7 +153,7 @@ class PinyinExtractor:
         # 使用列表推导式优化
         return pinyin
     
-    def extract_pinyin_from_content(self, content: str, dict_name: str = "现汉7.mdx") -> List[str]:
+    def extract_pinyin_from_content(self, content: str, dict_name: str = "xh7.mdx") -> List[str]:
         """
         根据词典名称使用相应的拼音提取规则（优化版本）
         
@@ -177,7 +177,7 @@ class PinyinExtractor:
         # 使用列表推导式优化
         return [pinyin.strip() for pinyin in pinyin_matches if pinyin.strip()]
     
-    def get_word_pinyin(self, word: str, dict_name: str = "现汉7.mdx") -> List[str]:
+    def get_word_pinyin(self, word: str, dict_name: str = "xh7.mdx") -> List[str]:
         """
         获取指定词语在指定词典中的拼音（优化版本）
         
@@ -211,7 +211,7 @@ class PinyinExtractor:
             print(f"查询词典 {dict_name} 中的词语 '{word}' 时出错: {e}")
             return []
     
-    def batch_extract_pinyin(self, words: List[str], dict_name: str = "现汉7.mdx") -> Dict[str, List[str]]:
+    def batch_extract_pinyin(self, words: List[str], dict_name: str = "xh7.mdx") -> Dict[str, List[str]]:
         """
         批量提取多个词语的拼音（优化版本）
         
@@ -225,7 +225,7 @@ class PinyinExtractor:
         # 使用字典推导式优化
         return {word: self.get_word_pinyin(word, dict_name) for word in words}
     
-    def batch_extract_pinyin_parallel(self, words: List[str], dict_name: str = "现汉7.mdx") -> Dict[str, List[str]]:
+    def batch_extract_pinyin_parallel(self, words: List[str], dict_name: str = "xh7.mdx") -> Dict[str, List[str]]:
         """
         并行批量提取多个词语的拼音（高性能版本）
         
@@ -258,7 +258,7 @@ class PinyinExtractor:
         
         return results
     
-    def get_all_pinyin_from_dict(self, dict_name: str = "现汉7.mdx", limit: int = None) -> Dict[str, List[str]]:
+    def get_all_pinyin_from_dict(self, dict_name: str = "xh7.mdx", limit: int = None) -> Dict[str, List[str]]:
         """
         从指定词典中提取所有词条的拼音（优化版本）
         
@@ -295,7 +295,7 @@ class PinyinExtractor:
             print(f"批量提取拼音时出错: {e}")
             return {}
     
-    def get_all_pinyin_from_dict_parallel(self, dict_name: str = "现汉7.mdx", limit: int = None, batch_size: int = 100) -> Dict[str, List[str]]:
+    def get_all_pinyin_from_dict_parallel(self, dict_name: str = "xh7.mdx", limit: int = None, batch_size: int = 100) -> Dict[str, List[str]]:
         """
         并行从指定词典中提取所有词条的拼音（高性能版本）
         
@@ -356,7 +356,7 @@ def test_xianhan7_extraction():
     """
     
     extractor = PinyinExtractor()
-    pinyins = extractor.extract_pinyin_from_content(test_content, "现汉7.mdx")
+    pinyins = extractor.extract_pinyin_from_content(test_content, "xh7.mdx")
     
     print(f"测试内容: {test_content[:100]}...")
     print(f"提取的拼音: {pinyins}")
@@ -367,7 +367,7 @@ def test_xianhan7_extraction():
 
 
 def test_xianhanguifan2_extraction():
-    """测试现汉规范2.mdx的拼音提取规则"""
+    """测试xhgf2.mdx的拼音提取规则"""
     
     # 使用终端中显示的实际数据
     test_content = """<link rel="stylesheet" type="text/css" href="HYGF2.css">
@@ -376,7 +376,7 @@ def test_xianhanguifan2_extraction():
     
     extractor = PinyinExtractor()
     # 直接测试提取规则，不依赖词典查询
-    pinyins = extractor.extract_pinyin_from_content(test_content, "现汉规范2.mdx")
+    pinyins = extractor.extract_pinyin_from_content(test_content, "xhgf2.mdx")
     
     print(f"测试内容: {test_content[:100]}...")
     print(f"提取的拼音: {pinyins}")
@@ -387,7 +387,7 @@ def test_xianhanguifan2_extraction():
 
 
 def test_zhonghuayuwendaciandian_extraction():
-    """测试中華語文大辭典.mdx的拼音提取规则"""
+    """测试zhywdcd.mdx的拼音提取规则"""
     
     # 使用终端中显示的实际数据
     test_content = """
@@ -399,7 +399,7 @@ def test_zhonghuayuwendaciandian_extraction():
     
     extractor = PinyinExtractor()
     # 直接测试提取规则，不依赖词典查询
-    pinyins = extractor.extract_pinyin_from_content(test_content, "中華語文大辭典.mdx")
+    pinyins = extractor.extract_pinyin_from_content(test_content, "zhywdcd.mdx")
     
     # print(f"测试内容: {test_content[:100]}...")
     print(f"提取的拼音: {pinyins}")
@@ -429,7 +429,7 @@ if __name__ == "__main__":
     # test_xianhan7_extraction()    
     # 测试现汉规范2拼音提取规则
     # test_xianhanguifan2_extraction()
-    # 测试中華語文大辭典.mdx拼音提取规则
+    # 测试zhywdcd.mdx拼音提取规则
     # test_zhonghuayuwendaciandian_extraction()
     
     # 注意：由于MdictManager无法正常工作，以下功能暂时不可用
@@ -451,23 +451,23 @@ if __name__ == "__main__":
     #     print(f"'{word}': {pinyins}")
     
     
-    # 从现汉7.mdx中提取所有词条的拼音，保存到当前目录的json文件
-    # all_pinyin = extractor.get_all_pinyin_from_dict("现汉7.mdx", limit=None)
+    # 从xh7.mdx中提取所有词条的拼音，保存到当前目录的json文件
+    # all_pinyin = extractor.get_all_pinyin_from_dict("xh7.mdx", limit=None)
     # import json
-    # with open('src/resource/现汉7.mdx.json', 'w', encoding='utf-8') as f:
+    # with open('src/resource/xh7.mdx.json', 'w', encoding='utf-8') as f:
     #     json.dump(all_pinyin, f, ensure_ascii=False, indent=2)
-    # print(f"拼音提取完成，共提取了 {len(all_pinyin)} 个词条的拼音，已保存到 现汉7.mdx.json")
+    # print(f"拼音提取完成，共提取了 {len(all_pinyin)} 个词条的拼音，已保存到 xh7.mdx.json")
 
-    # all_pinyin = extractor.get_all_pinyin_from_dict("现汉规范2.mdx", limit=None)
+    # all_pinyin = extractor.get_all_pinyin_from_dict("xhgf2.mdx", limit=None)
     # import json
-    # with open('src/resource/现汉规范2.mdx.json', 'w', encoding='utf-8') as f:
+    # with open('src/resource/xhgf2.mdx.json', 'w', encoding='utf-8') as f:
     #     json.dump(all_pinyin, f, ensure_ascii=False, indent=2)
-    # print(f"拼音提取完成，共提取了 {len(all_pinyin)} 个词条的拼音，已保存到 现汉规范2.mdx.json")
+    # print(f"拼音提取完成，共提取了 {len(all_pinyin)} 个词条的拼音，已保存到 xhgf2.mdx.json")
         
 
-    all_pinyin = extractor.get_all_pinyin_from_dict("中華語文大辭典.mdx", limit=None)
-    with open('src/resource/中華語文大辭典.mdx.json', 'w', encoding='utf-8') as f:
+    all_pinyin = extractor.get_all_pinyin_from_dict("zhywdcd.mdx", limit=None)
+    with open('src/resource/zhywdcd.mdx.json', 'w', encoding='utf-8') as f:
         json.dump(all_pinyin, f, ensure_ascii=False, indent=2)
-    print(f"拼音提取完成，共提取了 {len(all_pinyin)} 个词条的拼音，已保存到 中華語文大辭典.mdx.json")
+    print(f"拼音提取完成，共提取了 {len(all_pinyin)} 个词条的拼音，已保存到 zhywdcd.mdx.json")
         
 

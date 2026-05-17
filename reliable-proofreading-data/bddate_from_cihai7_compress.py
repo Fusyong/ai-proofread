@@ -165,7 +165,7 @@ def merge_extension_into_era(
     base_era: Optional[Dict[str, List[Any]]],
     ext_era: Dict[str, List[Dict[str, str]]],
 ) -> Tuple[Dict[str, List[Any]], Dict[str, List[Any]]]:
-    """person 仅辞海拷贝；era 浅拷贝词头列表后追加扩展，按 (raw, label) 去重。"""
+    """person 仅cihai拷贝；era 浅拷贝词头列表后追加扩展，按 (raw, label) 去重。"""
     person: Dict[str, List[Any]] = {
         k: list(v) for k, v in (base_person or {}).items() if isinstance(v, list)
     }

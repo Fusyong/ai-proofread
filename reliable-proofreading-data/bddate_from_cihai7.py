@@ -1,5 +1,5 @@
 """
-从辞海第七版.mdx 中提取人物生卒年，存放到 reliable-proofreading-data 下。
+从cihai7.mdx 中提取人物生卒年，存放到 reliable-proofreading-data 下。
 
 提取格式：
 1) 无标签、正文中直接出现：人名（生卒年），如
@@ -13,28 +13,28 @@
 
 用法概览：
   python bddate_from_cihai7.py
-      使用 .mdictlist 中找到的“辞海第七版.mdx”，从头开始完整提取。
+      使用 .mdictlist 中找到的“cihai7.mdx”，从头开始完整提取。
 
-  python bddate_from_cihai7.py --mdx "D:/通用资料/工具书/通用电子词典/1古汉语/辞海第七版/离线版/辞海第七版.mdx"
+  python bddate_from_cihai7.py --mdx "D:/通用资料/工具书/通用电子词典/1古汉语/cihai7/离线版/cihai7.mdx"
       直接指定 mdx 路径（推荐），从头开始完整提取。
 
   python bddate_from_cihai7.py --debug
-  python bddate_from_cihai7.py --mdx "D:/通用资料/工具书/通用电子词典/1古汉语/辞海第七版/离线版/辞海第七版.mdx" --debug
+  python bddate_from_cihai7.py --mdx "D:/通用资料/工具书/通用电子词典/1古汉语/cihai7/离线版/cihai7.mdx" --debug
       调试模式：不做提取，只把若干词条原文写入 cihai7_bddate_debug.txt。
 
 增量/断点续跑：
   # 第一次：从头开始，只处理前 5000 条
-  python bddate_from_cihai7.py --mdx "D:/通用资料/工具书/通用电子词典/1古汉语/辞海第七版/离线版/辞海第七版.mdx" --start-index 0 --limit 5000
+  python bddate_from_cihai7.py --mdx "D:/通用资料/工具书/通用电子词典/1古汉语/cihai7/离线版/cihai7.mdx" --start-index 0 --limit 5000
 
   # 后续：不指定 --start-index，则自动从 hai7.json 中的 last_index 继续；
   # 仍然限制每次最多处理 5000 条
-  python bddate_from_cihai7.py --mdx "D:/通用资料/工具书/通用电子词典/1古汉语/辞海第七版/离线版/辞海第七版.mdx" --limit 5000
+  python bddate_from_cihai7.py --mdx "D:/通用资料/工具书/通用电子词典/1古汉语/cihai7/离线版/cihai7.mdx" --limit 5000
 
 说明（输出文件 hai7.json）：
   - 每处理完一个词条，都会立即重写 hai7.json；
   - 结构中包含：
       {
-        "source": "辞海第七版.mdx",
+        "source": "cihai7.mdx",
         "stats": {"bddate": ..., "inline": ...},
         "person_birth_death": { ... },
         "last_index": N
@@ -73,7 +73,7 @@ except ImportError:
                 return "\u4e00" <= char <= "\u9fff"
 
 RELIABLE_PROOFREADING_DATA_DIR = "reliable-proofreading-data"
-DICT_NAME_CIHAI7 = "辞海第七版.mdx"
+DICT_NAME_CIHAI7 = "cihai7.mdx"
 
 SOURCE_BDDATE = "bddate"
 SOURCE_INLINE = "inline"
@@ -160,7 +160,7 @@ class _RawMdictAdapter:
 
 
 class BirthDeathExtractor:
-    """从辞海第七版中提取人物生卒年的提取器。"""
+    """从cihai7中提取人物生卒年的提取器。"""
 
     def __init__(
         self,
@@ -349,7 +349,7 @@ class BirthDeathExtractor:
         total = len(entries)
         if total == 0:
             print(
-                "警告：未获取到任何词条。可尝试：1) 用 --mdx \"完整路径/辞海第七版.mdx\" 直接指定词典；"
+                "警告：未获取到任何词条。可尝试：1) 用 --mdx \"完整路径/cihai7.mdx\" 直接指定词典；"
                 "2) 若曾解包失败，删除同目录下的 .db 文件后重跑以强制重新解包；"
                 "3) 用 --debug 查看 cihai7_bddate_debug.txt。"
             )
@@ -432,7 +432,7 @@ class BirthDeathExtractor:
 def _debug_print_content(
     dict_name: str = DICT_NAME_CIHAI7, mdx_path: Optional[str] = None
 ) -> None:
-    """查询若干词条并将原始内容写入 debug 文件（UTF-8），用于确认辞海条目的实际格式。"""
+    """查询若干词条并将原始内容写入 debug 文件（UTF-8），用于确认cihai条目的实际格式。"""
     if mdx_path and MdictMDX is not None and mdict_query is not None:
         adapter = _RawMdictAdapter(mdx_path)
         lines: List[str] = ["使用原始 mdict_utils.reader + 路径: " + mdx_path]
@@ -518,4 +518,4 @@ if __name__ == "__main__":
             filename="hai7.json",
         )
     else:
-        print("未配置 MdictManager，无法读取辞海第七版.mdx。")
+        print("未配置 MdictManager，无法读取cihai7.mdx。")

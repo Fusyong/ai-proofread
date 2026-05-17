@@ -1,9 +1,9 @@
 """
-从现汉7.mdx 提取校对用 JSON 数据，写入 reliable-proofreading-data 目录。
+从xh7.mdx 提取校对用 JSON 数据，写入 reliable-proofreading-data 目录。
 
 依赖（二选一）：
-  - 推荐：--mdx 直接指定现汉7.mdx 的完整路径；
-  - 或：MdictManager + src/resource/.mdictlist 中登记「现汉7.mdx」路径。
+  - 推荐：--mdx 直接指定xh7.mdx 的完整路径；
+  - 或：MdictManager + src/resource/.mdictlist 中登记「xh7.mdx」路径。
 拼音/儿化解析见同目录 xh7_phonetic_utils.py。
 
 ----------------------------------------------------------------------
@@ -20,10 +20,10 @@
   python reliable-proofreading-data/xh7_extractor.py
 
   # 直接指定 MDX 路径（推荐）
-  python reliable-proofreading-data/xh7_extractor.py --mdx "D:/词典/现汉7.mdx"
+  python reliable-proofreading-data/xh7_extractor.py --mdx "D:/词典/xh7.mdx"
 
   # 指定输出文件名
-  python reliable-proofreading-data/xh7_extractor.py --mdx "D:/词典/现汉7.mdx" --output xh72026-05-17.json
+  python reliable-proofreading-data/xh7_extractor.py --mdx "D:/词典/xh7.mdx" --output xh72026-05-17.json
 
   # 调试：只处理前 5000 个索引词条
   python reliable-proofreading-data/xh7_extractor.py --limit 5000
@@ -40,7 +40,7 @@
 参数一览：
 
   --mdx PATH
-      现汉7.mdx 的完整路径。指定后不再依赖 .mdictlist 中的「现汉7」条目。
+      xh7.mdx 的完整路径。指定后不再依赖 .mdictlist 中的「现汉7」条目。
       Windows 下路径含空格时请加引号。
 
   --mdictlist PATH
@@ -135,7 +135,7 @@ except ImportError:
 
 # 校对数据存放目录（相对于项目根）
 RELIABLE_PROOFREADING_DATA_DIR = "reliable-proofreading-data"
-DICT_NAME_XIANHAN7 = "现汉7.mdx"
+DICT_NAME_XIANHAN7 = "xh7.mdx"
 
 
 def _project_root() -> str:
@@ -551,7 +551,7 @@ class VariantFormsExtractor:
         return result
 
     def extract_from_content(
-        self, content: str, dict_name: str = "现汉7.mdx"
+        self, content: str, dict_name: str = "xh7.mdx"
     ) -> List[Tuple[str, str, str, Optional[str]]]:
         """根据词典名从一条释义内容中提取（规范/推荐词形, 不规范/不推荐词形, 来源, 原始匹配文本）列表。"""
         if not content:
@@ -564,7 +564,7 @@ class VariantFormsExtractor:
         return []
 
     def get_entry_variants(
-        self, entry: str, dict_name: str = "现汉7.mdx"
+        self, entry: str, dict_name: str = "xh7.mdx"
     ) -> List[Tuple[str, str]]:
         """查询词典中某词条的释义，并提取该条下的附列词形。（规范/推荐词形, 不规范/不推荐词形）列表。"""
         if not self.mdict_manager:
@@ -574,7 +574,7 @@ class VariantFormsExtractor:
 
     def extract_all_from_dict(
         self,
-        dict_name: str = "现汉7.mdx",
+        dict_name: str = "xh7.mdx",
         limit: Optional[int] = None,
         progress_interval: int = 500,
     ) -> Tuple[
@@ -833,7 +833,7 @@ class VariantFormsExtractor:
 
     def save_variant_forms(
         self,
-        dict_name: str = "现汉7.mdx",
+        dict_name: str = "xh7.mdx",
         limit: Optional[int] = None,
         filename: Optional[str] = None,
         include_optional_light_tone: bool = False,
@@ -981,7 +981,7 @@ def _parse_args() -> argparse.Namespace:
         "--mdx",
         type=str,
         default=None,
-        help="现汉7.mdx 的完整路径（指定后优先于 .mdictlist）",
+        help="xh7.mdx 的完整路径（指定后优先于 .mdictlist）",
     )
     p.add_argument(
         "--mdictlist",

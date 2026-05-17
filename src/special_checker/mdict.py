@@ -210,38 +210,38 @@ if __name__ == "__main__":
     # 使用新的类结构
     manager = MdictManager()
 
-    # mdx = manager.load_mdict("现汉7.mdx")
+    # mdx = manager.load_mdict("xh7.mdx")
 
     # # 词典信息
-    # print(manager.info("现汉7.mdx"))
+    # print(manager.info("xh7.mdx"))
 
     # # 条目
-    # print(f"\n现汉7.mdx 词条总数：{manager.count('现汉7.mdx')}")
-    # print(f"\n现汉规范2.mdx 词条总数：{manager.count('现汉规范2.mdx')}")
-    # print(f"\n中華語文大辭典.mdx 词条总数：{manager.count('中華語文大辭典.mdx')}")
-    # print(f"\n中华语文大辞典.mdx 词条总数：{manager.count('中华语文大辞典.mdx')}")
-    # print(f"\n两岸词典.mdx 词条总数：{manager.count('两岸词典.mdx')}")
-    # print(f"\n汉语方言大词典.mdx 词条总数：{manager.count('汉语方言大词典.mdx')}")
-    # print(f"\n辭源3文字版2021.mdx 词条总数：{manager.count('辭源3文字版2021.mdx')}")
-    # print(f"\n大辞海.mdx 词条总数：{manager.count('大辞海.mdx')}")
-    # print(f"\n漢語大詞典(合)2020.5.1.mdx 词条总数：{manager.count('漢語大詞典(合)2020.5.1.mdx')}")
+    # print(f"\nxh7.mdx 词条总数：{manager.count('xh7.mdx')}")
+    # print(f"\nxhgf2.mdx 词条总数：{manager.count('xhgf2.mdx')}")
+    # print(f"\nzhywdcd.mdx 词条总数：{manager.count('zhywdcd.mdx')}")
+    # print(f"\nzhywdcd.mdx 词条总数：{manager.count('zhywdcd.mdx')}")
+    # print(f"\nlycd.mdx 词条总数：{manager.count('lycd.mdx')}")
+    # print(f"\nhyfydcd.mdx 词条总数：{manager.count('hyfydcd.mdx')}")
+    # print(f"\ncy3wzb2021.mdx 词条总数：{manager.count('cy3wzb2021.mdx')}")
+    # print(f"\ndacihai.mdx 词条总数：{manager.count('dacihai.mdx')}")
+    # print(f"\nhydcdh2020.5.1.mdx 词条总数：{manager.count('hydcdh2020.5.1.mdx')}")
 
     # # 获取所有词条
     # print("\n词条列表：")
-    # entries = manager.entries("现汉7.mdx", 100)
+    # entries = manager.entries("xh7.mdx", 100)
     # for i, entry in enumerate(entries):
     #     print(f"{i} {entry}")
 
     # # 检查是否在现代汉语词典中
-    # print(f"\n'多少'是否在现代汉语词典中: {manager.is_word_in('现汉7.mdx', '多少')}")
+    # print(f"\n'多少'是否在现代汉语词典中: {manager.is_word_in('xh7.mdx', '多少')}")
 
     # # 从mdx查询特定词条
-    # content = manager.query("现汉7.mdx", '多少')
+    # content = manager.query("xh7.mdx", '多少')
     # print(f"\n从MDX查询'多少': {content}")
 
     # # 从db查询特定词条
-    # content = manager.query("现汉7.mdx", '多少')
+    # content = manager.query("xh7.mdx", '多少')
     # print(f"\n从数据库查询'多少': {content}")
 
-    print(manager.query("中華語文大辭典.mdx", '薄'))
+    print(manager.query("zhywdcd.mdx", '薄'))
 
