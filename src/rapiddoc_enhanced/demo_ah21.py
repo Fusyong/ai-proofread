@@ -52,6 +52,7 @@ def do_parse(
     end_page_id=None,  # End page ID for parsing, default is None (parse all pages until the end of the document)
     f_include_footnotes=True,  # Whether to include footnotes in markdown output, default is True
     f_include_page_numbers=True,  # Whether to include page number markers in markdown output, default is True
+    lang: str | list[str] | None = None,  # 单文档 str / 多文档等长 list；None=管线默认 ch
 ):
     layout_config = {
         # "model_type": LayoutModelType.PP_DOCLAYOUTV2,
@@ -70,8 +71,8 @@ def do_parse(
         # "Rec.model_path": r"C:\ocr\models\ppmodel\ocr\v4\ch_PP-OCRv4_rec_infer\openvino\ch_PP-OCRv4_rec_infer.onnx",
         # "Rec.rec_batch_num": 1,
 
-        # "Det.ocr_version": OCRVersion.PPOCRV5,
-        # "Rec.ocr_version": OCRVersion.PPOCRV5,
+        "Det.ocr_version": OCRVersion.PPOCRV5,
+        "Rec.ocr_version": OCRVersion.PPOCRV5,
         # "Det.model_type": OCRModelType.SERVER,
         # "Rec.model_type": OCRModelType.SERVER,
 
@@ -136,8 +137,29 @@ def do_parse(
         pdf_bytes_list[idx] = new_pdf_bytes
     # 记录开始时间
     start_time = time.time()
-    infer_results, all_image_lists, all_page_dicts, lang_list, ocr_enabled_list = pipeline_doc_analyze(pdf_bytes_list, parse_method=parse_method, formula_enable=p_formula_enable,table_enable=p_table_enable,
-                                                                                                     layout_config=layout_config, ocr_config=ocr_config, formula_config=formula_config, table_config=table_config, checkbox_config=checkbox_config)
+    n_docs = len(pdf_bytes_list)
+    if lang is None:
+        lang_list_kw: dict = {}
+    elif isinstance(lang, str):
+        lang_list_kw = {"lang_list": [lang] * n_docs}
+    else:
+        if len(lang) != n_docs:
+            raise ValueError(
+                f"lang 为列表时须与文档数量一致：len(lang)={len(lang)}，文档数={n_docs}"
+            )
+        lang_list_kw = {"lang_list": list(lang)}
+    infer_results, all_image_lists, all_page_dicts, lang_list, ocr_enabled_list = pipeline_doc_analyze(
+        pdf_bytes_list,
+        parse_method=parse_method,
+        formula_enable=p_formula_enable,
+        table_enable=p_table_enable,
+        layout_config=layout_config,
+        ocr_config=ocr_config,
+        formula_config=formula_config,
+        table_config=table_config,
+        checkbox_config=checkbox_config,
+        **lang_list_kw,
+    )
 
     for idx, model_list in enumerate(infer_results):
 
@@ -255,6 +277,7 @@ def parse_doc(
         end_page_id=None,  # End page ID for parsing, default is None (parse all pages until the end of the document)
         f_include_footnotes=True,  # Whether to include footnotes in markdown output, default is True
         f_include_page_numbers=True,  # Whether to include page number markers in markdown output, default is True
+        lang: str | list[str] | None = None,
 ):
     """
         Parameter description:
@@ -265,6 +288,7 @@ def parse_doc(
             txt: Use text extraction method.
             ocr: Use OCR method for image-based PDFs.
             Without method specified, 'auto' will be used by default.
+        lang: OCR/版面管线语言代码（如 ch、en）；多文件时传入与 path_list 等长的列表；None 时使用管线默认（通常为 ch）。
     """
     try:
         file_name_list = []
@@ -282,7 +306,8 @@ def parse_doc(
             start_page_id=start_page_id,
             end_page_id=end_page_id,
             f_include_footnotes=f_include_footnotes,
-            f_include_page_numbers=f_include_page_numbers
+            f_include_page_numbers=f_include_page_numbers,
+            lang=lang,
         )
     except Exception as e:
         logger.exception(e)
@@ -293,32 +318,16 @@ if __name__ == '__main__':
     output_dir = os.path.join(__dir__, "output")
 
     doc_path_list = [
-# "C:/Users/DELL/Desktop/1.pdf",
-# "C:/Users/DELL/Desktop/2.pdf",
-"E:/通用资料/古诗/先秦汉魏晋南北朝诗/先秦汉魏晋南北朝诗（第三册）附作者篇目索引 (逯钦立辑校).pdf",
-"E:/通用资料/古诗/先秦汉魏晋南北朝诗/先秦汉魏晋南北朝诗(第二册)附作者篇目索引 (逯钦立辑校).pdf",
-"E:/通用资料/古诗/先秦汉魏晋南北朝诗/先秦汉魏晋南北朝诗（第一册）附作者篇目索引.逯钦立辑校.pdf",
-"E:/通用资料/古诗/先秦汉魏晋南北朝诗/先秦汉魏晋南北朝诗（第四册）附作者篇目索引.逯钦立辑校.pdf",
-"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第二册.pdf",
-"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第一册.pdf",
-"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第四册.pdf",
-"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第三册.pdf",
-"E:/通用资料/古诗/增订注释全唐诗/增订注释全唐诗 第五册.pdf",
-"E:/通用资料/古诗/汉魏六朝百三家集.pdf",
-"E:/通用资料/古诗/汉魏六朝百三家集题辞注.张溥著；殷孟伦注.pdf",
-"E:/通用资料/古诗/历代题画诗类编 上.李德埙.pdf",
-"E:/通用资料/古诗/历代题画诗类编 下.李德埙.pdf",
-"E:/通用资料/古诗/历代题画诗选注.洪丕谟.pdf",
-"E:/通用资料/古诗/诗情画意：题画诗集锦 上.pdf",
-"E:/通用资料/古诗/诗情画意：题画诗集锦 下.刘云.pdf",
-"E:/通用资料/古诗/题画诗选释 第1卷.pdf",
-"E:/通用资料/古诗/题画诗选释 第2卷.pdf",
-"E:/通用资料/古诗/题画诗选释 第3卷.pdf",
-"E:/通用资料/古诗/题画诗选释 第4卷.pdf",
-"E:/通用资料/古诗/题画诗一百首.洪丕谟.pdf",
-"E:/通用资料/古诗/中国历代题画诗选.周积寅，史金城.pdf",
+# "tests/1.pdf",
+# "tests/2.pdf",
+# "tests/3.pdf",
+"E:/ah21PC/通用资料/语言文字规标准范/现代常用字部件及部件名称规范（GF0014-2009）.pdf",
     ]
     for doc_path in doc_path_list:
         start_time = time.time()
-        parse_doc([Path(doc_path)], output_dir, method="auto") # 运行方式：auto/txt/ocr
+        # 运行方式：auto/txt/ocr
+        METHOD = "auto"
+        # 语言：ch chinese_cht en korean japan ta te ka
+        LANG = "ch"
+        parse_doc([Path(doc_path)], output_dir, method=METHOD, lang=LANG)
         print(f"总运行时间: {time.time() - start_time}秒")

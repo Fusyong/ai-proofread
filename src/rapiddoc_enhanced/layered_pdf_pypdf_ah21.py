@@ -1,4 +1,6 @@
+import html as html_stdlib
 import os
+import re
 from io import BytesIO
 
 from loguru import logger
@@ -8,6 +10,37 @@ from reportlab.lib.colors import transparent
 
 from .draw_bbox import cal_canvas_rect
 from .enum_class import BlockType, ContentType
+
+# 与 span_block_fix.py 保持一致：用高宽比启发式识别竖排 span
+_VERTICAL_SPAN_HEIGHT_TO_WIDTH_RATIO_THRESHOLD = 2.0
+
+def _html_to_plain_text_for_layer(html_str: str) -> str:
+    """从表格 HTML 提取可检索纯文本（与 Markdown 中表格语义一致，供透明文本层使用）。"""
+    if not html_str:
+        return ""
+    t = re.sub(r"<br\s*/?>", " ", html_str, flags=re.I)
+    t = re.sub(r"<[^>]+>", " ", t)
+    t = html_stdlib.unescape(t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _table_span_plain_text_for_layer(span: dict) -> str:
+    """TABLE 类型 span：content / latex / 去标签 html，与 mkcontent 输出同源。"""
+    c = span.get("content")
+    if c is not None:
+        s = c if isinstance(c, str) else str(c)
+        if s.strip():
+            return s.strip()
+    lx = span.get("latex")
+    if lx:
+        s = lx if isinstance(lx, str) else str(lx)
+        if s.strip():
+            return s.strip()
+    h = span.get("html")
+    if h:
+        return _html_to_plain_text_for_layer(h if isinstance(h, str) else str(h))
+    return ""
+
 
 # 常见 CJK 字体路径（用于图版 PDF 文字层正确显示中文）
 _DEFAULT_CJK_FONT_PATHS = [
@@ -103,26 +136,91 @@ def create_layered_pdf_pypdf(
                     return
                 for line in block.get("lines", []):
                     for span in line.get("spans", []):
-                        if span.get("type") != ContentType.TEXT:
+                        st = span.get("type")
+                        if st == ContentType.TEXT:
+                            text = span.get("content")
+                            if text is None or (isinstance(text, str) and not text.strip()):
+                                continue
+                            text = text if isinstance(text, str) else str(text)
+                        elif st == ContentType.TABLE:
+                            text = _table_span_plain_text_for_layer(span)
+                            if not text:
+                                continue
+                        else:
                             continue
                         bbox = span.get("bbox")
-                        text = span.get("content")
-                        if not bbox or text is None or (isinstance(text, str) and not text.strip()):
+                        original_label = span.get("original_label") or block.get("original_label")
+                        if not bbox:
                             continue
-                        text = text if isinstance(text, str) else str(text)
                         try:
                             rect = cal_canvas_rect(page_obj, bbox)
                         except Exception as e:  # pylint: disable=broad-except
                             logger.debug(f"cal_canvas_rect 跳过 span: {e}")
                             continue
-                        x0, y0, _, rect_h = rect[0], rect[1], rect[2], rect[3]
-                        font_size = max(1, rect_h)
+                        x0, y0, rect_w, rect_h = rect[0], rect[1], rect[2], rect[3]
                         canv.setFillColor(transparent)
-                        if cjk_font:
-                            canv.setFont(cjk_font, font_size)
+
+                        # 竖排文本：优先看 original_label，其次用 bbox 高宽比启发式兜底。
+                        # 按 bbox 宽度作为字号，逐字从上到下写入，避免横排写入导致选中框错位。
+                        # 整表 HTML 合并文本始终按横排整块写入（与 Markdown 表格语义一致）。
+                        if st == ContentType.TABLE:
+                            is_vertical = False
                         else:
-                            canv.setFont("Helvetica", font_size)
-                        canv.drawString(x0, y0, text)
+                            is_vertical = (
+                                original_label == "vertical_text"
+                                or (rect_w > 0 and (rect_h / rect_w) > _VERTICAL_SPAN_HEIGHT_TO_WIDTH_RATIO_THRESHOLD)
+                            )
+                        if is_vertical:
+                            font_size = max(1, rect_w)
+                            if cjk_font:
+                                canv.setFont(cjk_font, font_size)
+                            else:
+                                canv.setFont("Helvetica", font_size)
+
+                            chars = list(text.strip())
+                            if not chars:
+                                continue
+
+                            # 从 bbox 顶部开始逐字往下排；行距按 bbox 高度均分，避免“越往下越漂”的累计误差
+                            # 注：leading 不能过大，否则最后几字会溢出 bbox；这里用 rect_h / n 做基准并略微压缩
+                            n = len(chars)
+                            base_leading = rect_h / n if n > 0 else font_size
+                            leading = max(0.5, min(font_size * 1.0, base_leading) * 0.98)
+                            y = y0 + rect_h - font_size
+                            for ch in chars:
+                                if y < y0 - 0.5 * font_size:
+                                    break
+                                canv.drawString(x0, y, ch)
+                                y -= leading
+                            continue
+
+                        # 横排文本（默认）
+                        font_size = max(1, rect_h)
+                        font_name = cjk_font or "Helvetica"
+                        canv.setFont(font_name, font_size)
+
+                        # 关键：对横排文本做“水平缩放到 bbox 宽度”，否则搜索子串时会按字体度量累计偏移
+                        stripped = text.strip()
+                        if rect_w > 0 and len(stripped) > 0:
+                            try:
+                                from reportlab.pdfbase import pdfmetrics
+
+                                text_width = pdfmetrics.stringWidth(stripped, font_name, font_size)
+                                if text_width and text_width > 0:
+                                    horiz_scale = (rect_w / text_width) * 100.0
+                                    t = canv.beginText(x0, y0)
+                                    t.setFont(font_name, font_size)
+                                    t.setFillColor(transparent)
+                                    t.setHorizScale(horiz_scale)
+                                    t.textOut(stripped)
+                                    canv.drawText(t)
+                                else:
+                                    canv.drawString(x0, y0, stripped)
+                            except Exception as e:  # pylint: disable=broad-except
+                                logger.debug(f"写入横排文本层失败，回退 drawString: {e}")
+                                canv.drawString(x0, y0, stripped)
+                        else:
+                            canv.drawString(x0, y0, stripped)
 
             if "preproc_blocks" in page_info:
                 for block in page_info["preproc_blocks"]:
