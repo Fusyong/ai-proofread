@@ -5,7 +5,21 @@ import os
 import zlib
 import sqlite3
 import time
+from typing import List, Optional
+
 from mdict_utils.reader import unpack_to_db, MDX
+
+try:
+    from mdict_utils.reader import query as mdict_query
+except ImportError:
+    mdict_query = None  # type: ignore
+
+
+def companion_db_path(mdx_path: str) -> str:
+    """与 mdx 同目录、同主文件名的 .db 路径。"""
+    path = os.path.normpath(mdx_path)
+    db_name = os.path.basename(path).replace(".mdx", ".db")
+    return os.path.join(os.path.dirname(path), db_name)
 
 
 class MdictDatabase:
@@ -18,8 +32,7 @@ class MdictDatabase:
         self.encoding = encoding
         self.mdx = MDX(mdx_path, encoding=encoding)
         self.db_dir = os.path.dirname(mdx_path)
-        self.db_name = os.path.basename(mdx_path).replace('.mdx', '.db')
-        self.db_path = os.path.join(self.db_dir, self.db_name)
+        self.db_path = companion_db_path(mdx_path)
 
     def info(self):
         """获取词典信息（从数据库）"""
@@ -188,6 +201,101 @@ class MdictManager:
         """检查词语是否在指定词典中"""
         result = self.query(name, word)
         return result is not None
+
+
+class RawMdictBackend:
+    """直读 MDX，不经过 SQLite。"""
+
+    def __init__(self, mdx_path: str):
+        self._path = os.path.normpath(mdx_path)
+        self._mdx = MDX(self._path)
+        self._keys_cache: Optional[List[str]] = None
+
+    def _ensure_keys(self) -> List[str]:
+        if self._keys_cache is not None:
+            return self._keys_cache
+        out: List[str] = []
+        for k in self._mdx.keys():
+            out.append(k.decode("utf-8") if isinstance(k, bytes) else k)
+        self._keys_cache = out
+        return self._keys_cache
+
+    def entries(self, dict_name: str, limit: Optional[int] = None) -> List[str]:
+        keys = self._ensure_keys()
+        return keys[:limit] if limit else keys
+
+    def query(self, dict_name: str, word: str) -> Optional[str]:
+        if mdict_query is None:
+            return None
+        try:
+            return mdict_query(self._path, word)
+        except Exception:
+            return None
+
+    def count(self, dict_name: str) -> int:
+        return len(self._ensure_keys())
+
+
+class SingleMdictBackend:
+    """对单个 MdictDatabase 的适配，接口与 MdictManager 的 entries/query 一致。"""
+
+    def __init__(self, db: MdictDatabase):
+        self._db = db
+
+    def entries(self, dict_name: str, limit: Optional[int] = None) -> List[str]:
+        return self._db.entries(limit)
+
+    def query(self, dict_name: str, word: str) -> Optional[str]:
+        return self._db.query(word)
+
+    def count(self, dict_name: str) -> int:
+        return self._db.count()
+
+
+def create_mdict_backend(
+    mdx_path: str,
+    encoding: str = "utf-8",
+    *,
+    verbose: bool = True,
+) -> Optional[object]:
+    """
+    为单个 mdx 文件创建查询后端。
+    若同目录已有配套 .db 则优先 SQLite；否则 mdict_utils 直读；再否则 MdictDatabase 建库。
+    """
+    path = mdx_path.strip().strip('"').strip("'")
+    path = os.path.normpath(path)
+    if not os.path.isfile(path):
+        if verbose:
+            print(f"错误：MDX 文件不存在: {path}")
+        return None
+
+    db_path = companion_db_path(path)
+    if os.path.isfile(db_path):
+        if verbose:
+            print(f"使用 MdictDatabase（已有 .db）: {path}")
+        return SingleMdictBackend(MdictDatabase(path, encoding))
+
+    if mdict_query is not None:
+        if verbose:
+            print(f"使用 mdict_utils 直读: {path}")
+        return RawMdictBackend(path)
+
+    if verbose:
+        print(f"使用 MdictDatabase: {path}")
+    return SingleMdictBackend(MdictDatabase(path, encoding))
+
+
+def query_mdx(mdx_path: str, word: str, encoding: str = "utf-8") -> Optional[str]:
+    """查询单个词条：有 .db 则走 SQLite，否则直读 MDX 或建库后查。"""
+    path = os.path.normpath(mdx_path)
+    if os.path.isfile(companion_db_path(path)):
+        return MdictDatabase(path, encoding).query(word)
+    if mdict_query is not None:
+        try:
+            return mdict_query(path, word)
+        except Exception:
+            pass
+    return MdictDatabase(path, encoding).query(word)
 
 
 def info(mdx: MDX):

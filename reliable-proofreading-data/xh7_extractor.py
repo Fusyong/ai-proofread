@@ -41,6 +41,7 @@
 
   --mdx PATH
       xh7.mdx 的完整路径。指定后不再依赖 .mdictlist 中的「现汉7」条目。
+      若同目录已有同名 .db（如 xh7.db），优先从数据库读取；否则直读 MDX。
       Windows 下路径含空格时请加引号。
 
   --mdictlist PATH
@@ -116,22 +117,16 @@ SINGLE_CHAR_GUIFAN = "规范异体字"
 SINGLE_CHAR_OTHER = "其他异体字"
 
 try:
-    from mdict_utils.reader import query as mdict_query, MDX as MdictMDX
-except ImportError:
-    mdict_query = None  # type: ignore
-    MdictMDX = None  # type: ignore
-
-try:
-    from src.special_checker.mdict import MdictManager, MdictDatabase
+    from src.special_checker.mdict import MdictManager, create_mdict_backend
 except ImportError:
     try:
-        from special_checker.mdict import MdictManager, MdictDatabase
+        from special_checker.mdict import MdictManager, create_mdict_backend
     except ImportError:
         try:
-            from mdict import MdictManager, MdictDatabase
+            from mdict import MdictManager, create_mdict_backend
         except ImportError:
             MdictManager = None  # type: ignore
-            MdictDatabase = None  # type: ignore
+            create_mdict_backend = None  # type: ignore
 
 # 校对数据存放目录（相对于项目根）
 RELIABLE_PROOFREADING_DATA_DIR = "reliable-proofreading-data"
@@ -156,75 +151,20 @@ def _default_mdictlist_path() -> str:
     return os.path.join(_project_root(), "src", "resource", ".mdictlist")
 
 
-class _DirectMdictAdapter:
-    """对单个 MdictDatabase 的适配，接口与 MdictManager 的 entries/query 一致。"""
-
-    def __init__(self, db: "MdictDatabase", dict_name: str):
-        self._db = db
-        self._dict_name = dict_name
-
-    def entries(self, dict_name: str, limit: Optional[int] = None) -> List[str]:
-        return self._db.entries(limit)
-
-    def query(self, dict_name: str, word: str) -> Optional[str]:
-        return self._db.query(word)
-
-
-class _RawMdictAdapter:
-    """直接用 mdict_utils.reader 读 mdx，不经过 SQLite。"""
-
-    def __init__(self, mdx_path: str):
-        self._path = os.path.normpath(mdx_path)
-        self._mdx = MdictMDX(self._path) if MdictMDX else None
-        self._keys_cache: Optional[List[str]] = None
-
-    def _ensure_keys(self) -> List[str]:
-        if self._keys_cache is not None:
-            return self._keys_cache
-        if self._mdx is None or mdict_query is None:
-            self._keys_cache = []
-            return self._keys_cache
-        out: List[str] = []
-        for k in self._mdx.keys():
-            out.append(k.decode("utf-8") if isinstance(k, bytes) else k)
-        self._keys_cache = out
-        return self._keys_cache
-
-    def entries(self, dict_name: str, limit: Optional[int] = None) -> List[str]:
-        keys = self._ensure_keys()
-        return keys[:limit] if limit else keys
-
-    def query(self, dict_name: str, word: str) -> Optional[str]:
-        if mdict_query is None:
-            return None
-        try:
-            return mdict_query(self._path, word)
-        except Exception:
-            return None
-
-
 def create_mdict_manager(
     mdx_path: Optional[str] = None,
     mdictlist_path: Optional[str] = None,
 ) -> Optional[object]:
     """
-    创建词典访问后端：优先 --mdx 直读；否则 MdictManager + .mdictlist。
+    创建词典访问后端：--mdx 指定路径时，若同目录已有配套 .db 则优先走 SQLite；
+    否则 mdict_utils 直读 MDX；再否则 MdictDatabase（必要时从 MDX 解包建库）。
+    未指定 --mdx 时使用 MdictManager + .mdictlist（内部同样优先 .db）。
     """
     if mdx_path:
-        path = mdx_path.strip().strip('"').strip("'")
-        if not os.path.isfile(path):
-            print(f"错误：MDX 文件不存在: {path}")
+        if create_mdict_backend is None:
+            print("错误：无法导入 create_mdict_backend。")
             return None
-        if MdictMDX is not None and mdict_query is not None:
-            print(f"使用 mdict_utils 直读: {path}")
-            return _RawMdictAdapter(path)
-        if MdictDatabase is not None:
-            print(f"使用 MdictDatabase: {path}")
-            return _DirectMdictAdapter(
-                MdictDatabase(path), os.path.basename(path)
-            )
-        print("错误：未安装 mdict_utils，且无法导入 MdictDatabase。")
-        return None
+        return create_mdict_backend(mdx_path)
     if MdictManager is not None:
         list_path = mdictlist_path or _default_mdictlist_path()
         return MdictManager(mdictlist_path=list_path)

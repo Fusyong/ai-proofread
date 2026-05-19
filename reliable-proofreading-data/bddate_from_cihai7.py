@@ -50,25 +50,19 @@ import sys
 from typing import Dict, List, Tuple, Optional, Any
 
 try:
-    from mdict_utils.reader import query as mdict_query, MDX as MdictMDX
-except ImportError:
-    mdict_query = None  # type: ignore
-    MdictMDX = None  # type: ignore
-
-try:
-    from src.special_checker.mdict import MdictManager, MdictDatabase
+    from src.special_checker.mdict import MdictManager, create_mdict_backend
     from src.special_checker.chinese import is_chinese_character
 except ImportError:
     try:
-        from special_checker.mdict import MdictManager, MdictDatabase
+        from special_checker.mdict import MdictManager, create_mdict_backend
         from special_checker.chinese import is_chinese_character
     except ImportError:
         try:
-            from mdict import MdictManager, MdictDatabase
+            from mdict import MdictManager, create_mdict_backend
             from chinese import is_chinese_character
         except ImportError:
             MdictManager = None  # type: ignore
-            MdictDatabase = None  # type: ignore
+            create_mdict_backend = None  # type: ignore
             def is_chinese_character(char: str) -> bool:  # type: ignore
                 return "\u4e00" <= char <= "\u9fff"
 
@@ -105,60 +99,6 @@ def _default_mdictlist_path() -> str:
     return os.path.join(_project_root(), "src", "resource", ".mdictlist")
 
 
-class _DirectMdictAdapter:
-    """对单个 MdictDatabase 的适配，接口与 MdictManager 的 entries/query 用法一致。"""
-
-    def __init__(self, db: "MdictDatabase", dict_name: str):
-        self._db = db
-        self._dict_name = dict_name
-
-    def entries(self, dict_name: str, limit: Optional[int] = None) -> List[str]:
-        return self._db.entries(limit)
-
-    def query(self, dict_name: str, word: str) -> Optional[str]:
-        return self._db.query(word)
-
-    def count(self, dict_name: str) -> int:
-        return self._db.count()
-
-
-class _RawMdictAdapter:
-    """直接用 mdict_utils.reader 读 mdx 文件，不经过 SQLite。query(path, word) + MDX(path).keys()。"""
-
-    def __init__(self, mdx_path: str):
-        self._path = mdx_path
-        self._mdx = MdictMDX(mdx_path) if MdictMDX else None
-        self._keys_cache: Optional[List[str]] = None
-
-    def _ensure_keys(self) -> List[str]:
-        """首次调用时遍历 MDX.keys() 并缓存；之后直接返回缓存。"""
-        if self._keys_cache is not None:
-            return self._keys_cache
-        if self._mdx is None or mdict_query is None:
-            self._keys_cache = []
-            return self._keys_cache
-        out: List[str] = []
-        for k in self._mdx.keys():
-            out.append(k.decode("utf-8") if isinstance(k, bytes) else k)
-        self._keys_cache = out
-        return self._keys_cache
-
-    def entries(self, dict_name: str, limit: Optional[int] = None) -> List[str]:
-        keys = self._ensure_keys()
-        return keys[:limit] if limit else keys
-
-    def query(self, dict_name: str, word: str) -> Optional[str]:
-        if mdict_query is None:
-            return None
-        try:
-            return mdict_query(self._path, word)
-        except Exception:
-            return None
-
-    def count(self, dict_name: str) -> int:
-        return len(self._ensure_keys())
-
-
 class BirthDeathExtractor:
     """从cihai7中提取人物生卒年的提取器。"""
 
@@ -168,12 +108,8 @@ class BirthDeathExtractor:
         mdictlist_path: Optional[str] = None,
         mdx_path: Optional[str] = None,
     ):
-        if mdx_path and (MdictMDX is not None and mdict_query is not None):
-            self.mdict_manager = _RawMdictAdapter(mdx_path)
-        elif mdx_path and MdictDatabase is not None:
-            self.mdict_manager = _DirectMdictAdapter(
-                MdictDatabase(mdx_path), dict_name=DICT_NAME_CIHAI7
-            )
+        if mdx_path and create_mdict_backend is not None:
+            self.mdict_manager = create_mdict_backend(mdx_path)
         elif mdict_manager is None and MdictManager is not None:
             path = mdictlist_path or _default_mdictlist_path()
             self.mdict_manager = MdictManager(mdictlist_path=path)
@@ -433,17 +369,16 @@ def _debug_print_content(
     dict_name: str = DICT_NAME_CIHAI7, mdx_path: Optional[str] = None
 ) -> None:
     """查询若干词条并将原始内容写入 debug 文件（UTF-8），用于确认cihai条目的实际格式。"""
-    if mdx_path and MdictMDX is not None and mdict_query is not None:
-        adapter = _RawMdictAdapter(mdx_path)
-        lines: List[str] = ["使用原始 mdict_utils.reader + 路径: " + mdx_path]
-    elif mdx_path and MdictDatabase is not None:
-        adapter = _DirectMdictAdapter(MdictDatabase(mdx_path), dict_name)
-        lines = ["使用 MdictDatabase + 路径: " + mdx_path]
+    if mdx_path and create_mdict_backend is not None:
+        adapter = create_mdict_backend(mdx_path)
+        if adapter is None:
+            return
+        lines: List[str] = ["使用 mdx 路径: " + mdx_path]
     elif MdictManager is not None:
         adapter = MdictManager(mdictlist_path=_default_mdictlist_path())
         lines = []
     else:
-        print("未配置 MdictManager / MdictDatabase / mdict_utils.reader")
+        print("未配置 MdictManager / create_mdict_backend")
         return
     out_path = os.path.join(get_output_dir(), "cihai7_bddate_debug.txt")
     entries = adapter.entries(dict_name, limit=30)

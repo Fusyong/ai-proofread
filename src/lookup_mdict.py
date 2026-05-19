@@ -5,7 +5,7 @@
 import os
 import re
 from typing import Dict, Any, List, Union
-from mdict_utils import query
+from src.special_checker.mdict import query_mdx
 from openai import OpenAI
 from openai.types.chat import (
     ChatCompletionMessage,
@@ -79,7 +79,7 @@ def lookup_dictionary(term: str, term_type: str) -> Dict[str, Any]:
         Dict[str, Any]: 包含词典解释的字典
     """
     mdx_path = 'D:/通用资料/工具书/通用电子词典/1古汉语/cihai7/离线版/cihai7.mdx'
-    content = query(mdx_path, term)
+    content = query_mdx(mdx_path, term) or ""
 
     # 提取纯文本内容
     clean_content = extract_text_from_html(content)
