@@ -9,11 +9,6 @@ from typing import List, Optional
 
 from mdict_utils.reader import unpack_to_db, MDX
 
-try:
-    from mdict_utils.reader import query as mdict_query
-except ImportError:
-    mdict_query = None  # type: ignore
-
 
 def companion_db_path(mdx_path: str) -> str:
     """与 mdx 同目录、同主文件名的 .db 路径。"""
@@ -203,39 +198,6 @@ class MdictManager:
         return result is not None
 
 
-class RawMdictBackend:
-    """直读 MDX，不经过 SQLite。"""
-
-    def __init__(self, mdx_path: str):
-        self._path = os.path.normpath(mdx_path)
-        self._mdx = MDX(self._path)
-        self._keys_cache: Optional[List[str]] = None
-
-    def _ensure_keys(self) -> List[str]:
-        if self._keys_cache is not None:
-            return self._keys_cache
-        out: List[str] = []
-        for k in self._mdx.keys():
-            out.append(k.decode("utf-8") if isinstance(k, bytes) else k)
-        self._keys_cache = out
-        return self._keys_cache
-
-    def entries(self, dict_name: str, limit: Optional[int] = None) -> List[str]:
-        keys = self._ensure_keys()
-        return keys[:limit] if limit else keys
-
-    def query(self, dict_name: str, word: str) -> Optional[str]:
-        if mdict_query is None:
-            return None
-        try:
-            return mdict_query(self._path, word)
-        except Exception:
-            return None
-
-    def count(self, dict_name: str) -> int:
-        return len(self._ensure_keys())
-
-
 class SingleMdictBackend:
     """对单个 MdictDatabase 的适配，接口与 MdictManager 的 entries/query 一致。"""
 
@@ -259,8 +221,8 @@ def create_mdict_backend(
     verbose: bool = True,
 ) -> Optional[object]:
     """
-    为单个 mdx 文件创建查询后端。
-    若同目录已有配套 .db 则优先 SQLite；否则 mdict_utils 直读；再否则 MdictDatabase 建库。
+    为单个 mdx 文件创建查询后端，统一走 MdictDatabase（SQLite）。
+    若同目录尚无配套 .db，首次访问时会从 MDX 解包建库。
     """
     path = mdx_path.strip().strip('"').strip("'")
     path = os.path.normpath(path)
@@ -270,31 +232,17 @@ def create_mdict_backend(
         return None
 
     db_path = companion_db_path(path)
-    if os.path.isfile(db_path):
-        if verbose:
-            print(f"使用 MdictDatabase（已有 .db）: {path}")
-        return SingleMdictBackend(MdictDatabase(path, encoding))
-
-    if mdict_query is not None:
-        if verbose:
-            print(f"使用 mdict_utils 直读: {path}")
-        return RawMdictBackend(path)
-
     if verbose:
-        print(f"使用 MdictDatabase: {path}")
+        if os.path.isfile(db_path):
+            print(f"使用 MdictDatabase（已有 .db）: {path}")
+        else:
+            print(f"使用 MdictDatabase（将解包建库）: {path}")
     return SingleMdictBackend(MdictDatabase(path, encoding))
 
 
 def query_mdx(mdx_path: str, word: str, encoding: str = "utf-8") -> Optional[str]:
-    """查询单个词条：有 .db 则走 SQLite，否则直读 MDX 或建库后查。"""
+    """查询单个词条，统一走 MdictDatabase（无 .db 时先解包建库）。"""
     path = os.path.normpath(mdx_path)
-    if os.path.isfile(companion_db_path(path)):
-        return MdictDatabase(path, encoding).query(word)
-    if mdict_query is not None:
-        try:
-            return mdict_query(path, word)
-        except Exception:
-            pass
     return MdictDatabase(path, encoding).query(word)
 
 

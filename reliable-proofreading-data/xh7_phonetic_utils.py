@@ -16,9 +16,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 LIGHT_TONE_DOT = "\u00b7"
 _SMALL_ER = re.compile(r"<small>\s*儿\s*</small>")
+_HWG_START = re.compile(r"<hwg\b", re.IGNORECASE)
 _HWG = re.compile(
-    r"<hwg>\s*<hw>(.+?)</hw>\s*<pinyin>([^<]+)</pinyin>\s*</hwg>",
-    re.DOTALL,
+    r"<hwg[^>]*>\s*<hw>(.+?)</hw>\s*<pinyin>([^<]+)</pinyin>\s*</hwg>",
+    re.DOTALL | re.IGNORECASE,
 )
 # 含调号的韵母（用于判断轻声是否两可）
 _TONE_CHARS = "āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ"
@@ -220,8 +221,8 @@ def extract_erhua_positions(
     return positions
 
 
-def iter_hwg_in_content(content: str) -> List[Tuple[str, str, str]]:
-    """按 <entry> 切分，返回 [(raw_hw, headword, pinyin), ...]。"""
+def split_entry_blocks(content: str) -> List[str]:
+    """按 <entry>...</entry> 切分；无 entry 时整段作为一块（兼容裸 hwg）。"""
     blocks: List[str] = []
     pos = 0
     while True:
@@ -233,8 +234,40 @@ def iter_hwg_in_content(content: str) -> List[Tuple[str, str, str]]:
             break
         blocks.append(content[start : end + len("</entry>")])
         pos = end + len("</entry>")
+    if not blocks and content and content.strip():
+        return [content]
+    return blocks
+
+
+def split_hwg_blocks(block: str) -> List[str]:
+    """
+    将一块 HTML 按 <hwg> 起点切分为子块。
+    仅一个 hwg 时返回整块，以便也作/同等规则可匹配该 hwg 后的全文。
+    多个 hwg 时各子块含一个 hwg 及其后内容（至下一 hwg 前）。
+    """
+    starts = [m.start() for m in _HWG_START.finditer(block)]
+    if len(starts) <= 1:
+        return [block]
+    return [block[starts[i] : starts[i + 1]] for i in range(len(starts) - 1)] + [
+        block[starts[-1] :]
+    ]
+
+
+def iter_extraction_segments(content: str):
+    """按 entry、再按 hwg 产出各提取子块（异形/用法提示等共用）。"""
+    if not content:
+        return
+    for entry_block in split_entry_blocks(content):
+        for segment in split_hwg_blocks(entry_block):
+            yield segment
+
+
+def iter_hwg_in_content(content: str) -> List[Tuple[str, str, str]]:
+    """返回 [(raw_hw, headword, pinyin), ...]；同次查询中全部 <hwg> 均收录。"""
+    if not content:
+        return []
     out: List[Tuple[str, str, str]] = []
-    for block in blocks:
+    for block in split_entry_blocks(content):
         for m in _HWG.finditer(block):
             raw_hw = m.group(1)
             pinyin = m.group(2).strip()
@@ -276,6 +309,27 @@ def build_light_tone_info(
             }
         )
     return items, has_optional
+
+
+def is_required_light_tone_pinyin(pinyin: str) -> bool:
+    """
+    是否为现汉7「必须轻声」读音（相对「轻声与本调两可」）。
+    拼音含间隔号 ·，且 · 后轻声音节均无调号（如 kàn·buqǐ）；kàn·fǎ 为两可，返回 False。
+    """
+    py = pinyin.strip()
+    if LIGHT_TONE_DOT not in py:
+        return False
+    light_syllables, has_optional = build_light_tone_info("", py)
+    return bool(light_syllables) and not has_optional
+
+
+def merged_pinyin_has_required_light_tone(pinyin: str) -> bool:
+    """多条读音用；拼接时，任一条为必须轻声即返回 True。"""
+    for part in str(pinyin).split("；"):
+        part = part.strip()
+        if part and is_required_light_tone_pinyin(part):
+            return True
+    return False
 
 
 def build_erhua_record(raw_hw: str, headword: str, pinyin: str) -> Dict[str, Any]:

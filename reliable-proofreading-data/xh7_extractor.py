@@ -4,7 +4,7 @@
 依赖（二选一）：
   - 推荐：--mdx 直接指定xh7.mdx 的完整路径；
   - 或：MdictManager + src/resource/.mdictlist 中登记「xh7.mdx」路径。
-拼音/儿化解析见同目录 xh7_phonetic_utils.py。
+词头与 <hwg> 拼音解析见同目录 xh7_phonetic_utils.py。
 
 ----------------------------------------------------------------------
 命令行用法
@@ -28,10 +28,7 @@
   # 调试：只处理前 5000 个索引词条
   python reliable-proofreading-data/xh7_extractor.py --limit 5000
 
-  # 同时写入「轻声与本调两可」条目（light_tone_optional）
-  python reliable-proofreading-data/xh7_extractor.py --include-optional-light-tone
-
-  # 不访问词典，仅运行内置轻声/儿化样例自检
+  # 不访问词典，仅运行内置拼音提取样例自检
   python reliable-proofreading-data/xh7_extractor.py --test
 
   # 查看全部参数说明
@@ -41,7 +38,7 @@
 
   --mdx PATH
       xh7.mdx 的完整路径。指定后不再依赖 .mdictlist 中的「现汉7」条目。
-      若同目录已有同名 .db（如 xh7.db），优先从数据库读取；否则直读 MDX。
+      统一经 MdictDatabase 访问；若同目录尚无 xh7.db，首次运行会从 MDX 解包建库。
       Windows 下路径含空格时请加引号。
 
   --mdictlist PATH
@@ -52,10 +49,6 @@
 
   --limit N
       只处理词典索引中的前 N 条（用于试跑）。
-
-  --include-optional-light-tone
-      默认只输出必须轻声（light_tone_required）。
-      加上本开关后，另写入轻声两可条目（light_tone_optional，如 看法 kàn·fǎ）。
 
   --test
       运行内置样例测试后退出，不要求 MdictManager。
@@ -71,10 +64,8 @@
   preferred_*_single / preferred_*_multi         上列拆分为单字表、多字表
   single_char_traditional / single_char_yitihuabiao / single_char_yiti_other
   usage_notes                                    用法提示（注意栏）
-  erhua_entries                                  儿化词条（含 erhua_positions 位置）
   non_erhua_to_erhua                           儿化简表（非儿化形 → 儿化形）
-  light_tone_required                            必须轻声（含 light_syllables 位置）
-  light_tone_optional                            轻声两可（需 --include-optional-light-tone）
+  word_to_pinyin                                 词头 → 拼音（多音用；拼接，同形多 hwg 全收）
   raw_notes                                      含 HTML 注释的原始匹配（备查）
 
 ----------------------------------------------------------------------
@@ -83,9 +74,9 @@
 
 1) 规范词形-不规范词形：枝丫（枝桠）等括号附列。
 2) 推荐词形-不推荐词形：也作…、同"…"。
-3) 儿化：词头 <small>儿</small>；erhua_positions 标明附着/音节性儿化位置。
-4) 轻声：拼音 · 后第一音节为轻声；两可指 · 后音节仍标调号（如 fǎ）。
-   拼音切分：先 ·，再隔音符 '，再辅音起首（见 xh7_phonetic_utils.py）。
+3) 拼音/异形/用法提示等：一次查询含多个 <hwg> 时逐块提取（先 entry 再 hwg，见 xh7_phonetic_utils）；
+   同词头多音用「；」拼接。
+4) 儿化简表：词头含 <small>儿</small> 时，非儿化形 → 儿化形（不输出 erhua_entries）。
 5) 单字繁体/异体：括号附列；⁎ 规范异体，⁑ 其他异体。
 """
 
@@ -101,9 +92,8 @@ if _SCRIPT_DIR not in sys.path:
     sys.path.insert(0, _SCRIPT_DIR)
 
 from xh7_phonetic_utils import (
-    LIGHT_TONE_DOT,
     build_erhua_record,
-    build_light_tone_info,
+    iter_extraction_segments,
     iter_hwg_in_content,
 )
 
@@ -156,9 +146,8 @@ def create_mdict_manager(
     mdictlist_path: Optional[str] = None,
 ) -> Optional[object]:
     """
-    创建词典访问后端：--mdx 指定路径时，若同目录已有配套 .db 则优先走 SQLite；
-    否则 mdict_utils 直读 MDX；再否则 MdictDatabase（必要时从 MDX 解包建库）。
-    未指定 --mdx 时使用 MdictManager + .mdictlist（内部同样优先 .db）。
+    创建词典访问后端：--mdx 指定路径时走 MdictDatabase（有 .db 直接用，无则解包建库）。
+    未指定 --mdx 时使用 MdictManager + .mdictlist（同样走 MdictDatabase）。
     """
     if mdx_path:
         if create_mdict_backend is None:
@@ -201,6 +190,27 @@ def _strip_empty_parens(s: str) -> str:
 def _strip_trailing_circle_digits(s: str) -> str:
     """去掉末尾未加标签的带圈数字（如 嘛③ -> 嘛）。U+2460-2473 ①-⑳，U+2776-277F ❶-❿。"""
     return re.sub(r"[\u2460-\u2473\u2776-\u277F]+$", "", s).strip()
+
+
+def _clean_headword_for_pinyin(raw_hw: str) -> str:
+    """词头键：去儿化 <small>儿</small>、HTML 上标、括注繁体/异体、带圈数字等。"""
+    text = re.sub(r"<small>\s*儿\s*</small>", "", raw_hw)
+    text = _strip_hw_tags(text)
+    text = _headword_key(text)
+    return _strip_trailing_circle_digits(text)
+
+
+def _merge_pinyin_values(existing: str, new: str) -> str:
+    """合并同一词头的多条读音：相同保留一条，不同用；拼接。"""
+    if existing == new:
+        return existing
+    parts: List[str] = []
+    for val in (existing, new):
+        for part in str(val).split("；"):
+            part = part.strip()
+            if part and part not in parts:
+                parts.append(part)
+    return "；".join(parts)
 
 
 def _strip_usage_note_links(text: str) -> str:
@@ -282,7 +292,7 @@ class VariantFormsExtractor:
         self._xianhan7_headword = re.compile(
             r"<hw>(.+?)</hw>", re.DOTALL
         )
-        # 儿化：词头内小写「儿」即 <small>儿</small>（可能有多个）
+        # 儿化：词头内 <small>儿</small>
         self._xianhan7_small_er = re.compile(r"<small>\s*儿\s*</small>")
         # 用法提示：<column><note>注意</note>...</column>
         self._xianhan7_column_note = re.compile(
@@ -297,55 +307,40 @@ class VariantFormsExtractor:
         m = self._xianhan7_headword.search(content)
         return _strip_hw_tags(m.group(1)) if m else ""
 
-    def _extract_erhua_from_content(self, content: str) -> List[Dict[str, Any]]:
-        """从释义中提取含 <small>儿</small> 的 hwg 记录（含儿化位置）。"""
-        records: List[Dict[str, Any]] = []
+    def _extract_word_to_pinyin_from_content(
+        self, content: str
+    ) -> List[Tuple[str, str]]:
+        """从释义中按 <hwg> 提取 (词头, 拼音)；同条多 hwg 全部返回。"""
+        pairs: List[Tuple[str, str]] = []
+        for raw_hw, _headword, pinyin in iter_hwg_in_content(content):
+            hw = _clean_headword_for_pinyin(raw_hw)
+            py = pinyin.strip()
+            if hw and py:
+                pairs.append((hw, py))
+        return pairs
+
+    def _extract_non_erhua_to_erhua_from_content(
+        self, content: str
+    ) -> List[Tuple[str, str]]:
+        """从含 <small>儿</small> 的 hwg 提取 (非儿化形, 儿化形) 对。"""
+        pairs: List[Tuple[str, str]] = []
         for raw_hw, headword, pinyin in iter_hwg_in_content(content):
             if not self._xianhan7_small_er.search(raw_hw):
                 continue
             rec = build_erhua_record(raw_hw, headword, pinyin)
-            if rec.get("non_erhua") != rec.get("headword") or rec.get("erhua_positions"):
-                records.append(rec)
-        return records
-
-    def _extract_light_tone_from_content(
-        self, content: str
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """从释义提取轻声词条，分为必须轻声与两可。"""
-        required: List[Dict[str, Any]] = []
-        optional: List[Dict[str, Any]] = []
-        for raw_hw, headword, pinyin in iter_hwg_in_content(content):
-            if LIGHT_TONE_DOT not in pinyin:
+            if rec.get("non_erhua") == rec.get("headword") and not rec.get(
+                "erhua_positions"
+            ):
                 continue
-            light_syllables, has_optional = build_light_tone_info(headword, pinyin)
-            if not light_syllables:
-                continue
-            rec: Dict[str, Any] = {
-                "headword": headword,
-                "pinyin": pinyin,
-                "light_syllables": light_syllables,
-            }
-            if has_optional:
-                optional.append(rec)
-            else:
-                required.append(rec)
-        return required, optional
-
-    def _split_into_entry_blocks(self, content: str) -> List[str]:
-        """将查询结果按 <entry>...</entry> 分块。多音节（如乌拉两词条）、单音节（如 㖊、吗 多音多义多条）均先切分再逐条处理。"""
-        blocks: List[str] = []
-        pos = 0
-        while True:
-            start = content.find("<entry", pos)
-            if start == -1:
-                break
-            end = content.find("</entry>", start)
-            if end == -1:
-                break
-            end += len("</entry>")
-            blocks.append(content[start:end])
-            pos = end
-        return blocks
+            non_erhua = rec.get("non_erhua", "")
+            erhua_form = (
+                rec.get("erhua_form")
+                or rec.get("headword_with_er")
+                or rec.get("headword", "")
+            )
+            if non_erhua and erhua_form and non_erhua != erhua_form:
+                pairs.append((non_erhua, erhua_form))
+        return pairs
 
     def _extract_usage_notes_from_block(self, block: str) -> List[str]:
         """从单个 <entry> 块中提取 <column><note>注意</note>...</column> 的用法提示列表；清理其中的链接标签。"""
@@ -359,17 +354,14 @@ class VariantFormsExtractor:
         return notes
 
     def _extract_usage_notes_from_content(self, content: str) -> Dict[str, List[str]]:
-        """从整段释义中按 entry 切分后提取用法提示，返回 词头键 -> 用法提示列表。"""
+        """从整段释义中按 entry/hwg 切分后提取用法提示，返回 词头键 -> 用法提示列表。"""
         out: Dict[str, List[str]] = {}
-        blocks = self._split_into_entry_blocks(content)
-        if not blocks:
-            return out
-        for block in blocks:
-            headword = self._get_headword_from_content(block)
+        for segment in iter_extraction_segments(content):
+            headword = self._get_headword_from_content(segment)
             headword_key = _headword_key(headword)
             if not headword_key:
                 continue
-            notes = self._extract_usage_notes_from_block(block)
+            notes = self._extract_usage_notes_from_block(segment)
             if notes:
                 out.setdefault(headword_key, []).extend(notes)
         return out
@@ -481,13 +473,8 @@ class VariantFormsExtractor:
             return []
         result: List[Tuple[str, str, str, Optional[str]]] = []
         seen: set = set()
-        # 单音节（㖊、吗 等）与多音节（乌拉 等）均先按 <entry> 切分为多条，再逐条提取
-        blocks = self._split_into_entry_blocks(content)
-        if not blocks:
-            # 无 <entry> 时按整段处理（兼容）
-            blocks = [content]
-        for block in blocks:
-            result.extend(self._extract_from_one_entry(block, seen))
+        for segment in iter_extraction_segments(content):
+            result.extend(self._extract_from_one_entry(segment, seen))
         return result
 
     def extract_from_content(
@@ -523,10 +510,8 @@ class VariantFormsExtractor:
         Dict[str, List[str]], Dict[str, List[str]], Dict[str, List[str]], Dict[str, List[str]],
         Dict[str, str], Dict[str, str], Dict[str, str],
         Dict[str, List[str]],  # usage_notes
+        Dict[str, str],  # word_to_pinyin
         Dict[str, str],  # non_erhua_to_erhua
-        List[Dict[str, Any]],  # erhua_entries
-        List[Dict[str, Any]],  # light_tone_required
-        List[Dict[str, Any]],  # light_tone_optional
     ]:
         """
         从指定词典中按顺序逐一查询词条，解析多字异形与单字繁体/异体。
@@ -545,10 +530,8 @@ class VariantFormsExtractor:
                 empty, empty, empty, empty,
                 empty_str, empty_str, empty_str,
                 empty,
-                {},
-                [],
-                [],
-                [],
+                empty_str,
+                empty_str,
             )
         entries = self.mdict_manager.entries(dict_name, limit)
         total = len(entries)
@@ -581,53 +564,34 @@ class VariantFormsExtractor:
 
         # 用法提示：<column><note>注意</note>...</column>，按 entry 切分后提取，键=词头
         usage_notes: Dict[str, List[str]] = {}
-        # 儿化 / 轻声
+        word_to_pinyin: Dict[str, str] = {}
         non_erhua_to_erhua: Dict[str, str] = {}
-        erhua_entries: List[Dict[str, Any]] = []
-        light_tone_required: List[Dict[str, Any]] = []
-        light_tone_optional: List[Dict[str, Any]] = []
-        erhua_seen: set = set()
-        lt_req_seen: set = set()
-        lt_opt_seen: set = set()
 
         for i, entry in enumerate(entries):
             if progress_interval and i > 0 and i % progress_interval == 0:
                 print(f"已处理 {i}/{total} 条…")
             content = self.mdict_manager.query(dict_name, entry)
-            for erhua_rec in self._extract_erhua_from_content(content):
-                key = (erhua_rec["headword"], erhua_rec["pinyin"])
-                if key in erhua_seen:
-                    continue
-                erhua_seen.add(key)
-                erhua_rec = dict(erhua_rec)
-                erhua_rec["mdx_key"] = entry
-                erhua_entries.append(erhua_rec)
-                non_erhua = erhua_rec.get("non_erhua", "")
-                erhua_form = erhua_rec.get("erhua_form") or erhua_rec.get(
-                    "headword_with_er"
-                ) or erhua_rec["headword"]
-                if non_erhua and erhua_form and non_erhua != erhua_form:
-                    if non_erhua in non_erhua_to_erhua and non_erhua_to_erhua[non_erhua] != erhua_form:
-                        merged = non_erhua_to_erhua[non_erhua] + "；" + erhua_form
-                        non_erhua_to_erhua[non_erhua] = merged
-                        print(f"[儿化] non_erhua_to_erhua 冲突已合并：'{non_erhua}' -> '{merged}'")
-                    else:
-                        non_erhua_to_erhua[non_erhua] = erhua_form
-            lt_req, lt_opt = self._extract_light_tone_from_content(content)
-            for rec in lt_req:
-                key = (rec["headword"], rec["pinyin"])
-                if key not in lt_req_seen:
-                    lt_req_seen.add(key)
-                    r = dict(rec)
-                    r["mdx_key"] = entry
-                    light_tone_required.append(r)
-            for rec in lt_opt:
-                key = (rec["headword"], rec["pinyin"])
-                if key not in lt_opt_seen:
-                    lt_opt_seen.add(key)
-                    r = dict(rec)
-                    r["mdx_key"] = entry
-                    light_tone_optional.append(r)
+            for non_erhua, erhua_form in self._extract_non_erhua_to_erhua_from_content(
+                content
+            ):
+                if non_erhua in non_erhua_to_erhua and non_erhua_to_erhua[
+                    non_erhua
+                ] != erhua_form:
+                    merged = non_erhua_to_erhua[non_erhua] + "；" + erhua_form
+                    non_erhua_to_erhua[non_erhua] = merged
+                    print(
+                        f"[儿化] non_erhua_to_erhua 冲突已合并："
+                        f"'{non_erhua}' -> '{merged}'"
+                    )
+                elif non_erhua not in non_erhua_to_erhua:
+                    non_erhua_to_erhua[non_erhua] = erhua_form
+            for hw, py in self._extract_word_to_pinyin_from_content(content):
+                if hw in word_to_pinyin:
+                    merged = _merge_pinyin_values(word_to_pinyin[hw], py)
+                    if merged != word_to_pinyin[hw]:
+                        word_to_pinyin[hw] = merged
+                else:
+                    word_to_pinyin[hw] = py
             # 用法提示：先按 entry 切分再逐块提取
             notes_batch = self._extract_usage_notes_from_content(content)
             for k, v in notes_batch.items():
@@ -765,10 +729,8 @@ class VariantFormsExtractor:
             single_char_yitihuabiao_to_standard,
             single_char_yiti_other_to_standard,
             usage_notes,
+            word_to_pinyin,
             non_erhua_to_erhua,
-            erhua_entries,
-            light_tone_required,
-            light_tone_optional,
         )
 
     def save_variant_forms(
@@ -776,7 +738,6 @@ class VariantFormsExtractor:
         dict_name: str = "xh7.mdx",
         limit: Optional[int] = None,
         filename: Optional[str] = None,
-        include_optional_light_tone: bool = False,
     ) -> str:
         """
         从词典中提取多字异形与单字繁体/异体并保存到 reliable-proofreading-data 目录。
@@ -802,10 +763,8 @@ class VariantFormsExtractor:
             single_char_yitihuabiao_to_standard,
             single_char_yiti_other_to_standard,
             usage_notes,
+            word_to_pinyin,
             non_erhua_to_erhua,
-            erhua_entries,
-            light_tone_required,
-            light_tone_optional,
         ) = self.extract_all_from_dict(dict_name, limit=limit)
         out_dir = get_output_dir()
         base = dict_name.replace(".mdx", "").strip()
@@ -853,12 +812,8 @@ class VariantFormsExtractor:
             data["single_char_yiti_other_to_standard"] = single_char_yiti_other_to_standard
         if non_erhua_to_erhua:
             data["non_erhua_to_erhua"] = non_erhua_to_erhua
-        if erhua_entries:
-            data["erhua_entries"] = erhua_entries
-        if light_tone_required:
-            data["light_tone_required"] = light_tone_required
-        if include_optional_light_tone and light_tone_optional:
-            data["light_tone_optional"] = light_tone_optional
+        if word_to_pinyin:
+            data["word_to_pinyin"] = word_to_pinyin
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         n_guifan_bukuifan = stats.get(SOURCE_GUIFAN_BUKUIFAN, 0)
@@ -872,51 +827,54 @@ class VariantFormsExtractor:
             f"推荐词形-不推荐词形 {len(preferred_to_variants)} 条（也作 {n_yezuo}，同 {n_tong}）；"
             f"推荐-不推荐 单字 {len(preferred_to_variants_single)}/{len(variant_to_preferred_single)}，多字 {len(preferred_to_variants_multi)}/{len(variant_to_preferred_multi)}；"
             f"字 繁体 {n_fanti}、规范异体 {n_guifan}、其他异体 {n_other}；"
-            f"儿化 {len(erhua_entries)} 条（简表 {len(non_erhua_to_erhua)}）；"
-            f"轻声必须 {len(light_tone_required)} 条"
-            + (
-                f"、轻声两可 {len(light_tone_optional)} 条"
-                if include_optional_light_tone
-                else ""
-            )
-            + "。"
+            f"儿化简表 {len(non_erhua_to_erhua)} 条、拼音 {len(word_to_pinyin)} 条。"
         )
         return filepath
 
 
 def _run_phonetic_self_tests() -> None:
     sample = """
-<entry id="t1"><hwg><hw>叽里呱啦</hw><pinyin>jī·liguālā</pinyin></hwg></entry>
-<entry id="t2"><hwg><hw>看不起</hw><pinyin>kàn·buqǐ</pinyin></hwg></entry>
-<entry id="t3"><hwg><hw>看法</hw><pinyin>kàn·fǎ</pinyin></hwg></entry>
-<entry id="t4"><hwg><hw>街面<small>儿</small>上</hw><pinyin>jiēmiànr·shang</pinyin></hwg></entry>
-<entry id="t5"><hwg><hw>个<small>儿</small>顶<small>儿</small>个<small>儿</small></hw><pinyin>gè·rdǐnggèr</pinyin></hwg></entry>
+<entry id="t1"><hwg><hw>薄</hw><pinyin>báo</pinyin></hwg></entry>
+<entry id="t2"><hwg><hw>薄<sup>1</sup></hw><pinyin>bó</pinyin></hwg></entry>
+<entry id="t3"><hwg><hw>薄<sup>2</sup></hw><pinyin>bó</pinyin></hwg></entry>
+<entry id="t4"><hwg><hw>薄</hw><pinyin>bò</pinyin></hwg></entry>
+<entry id="t5"><hwg><hw>吗（嗎）</hw><pinyin>ma</pinyin></hwg></entry>
+<entry id="t6"><hwg><hw>街面<small>儿</small>上</hw><pinyin>jiēmiànr·shang</pinyin></hwg></entry>
+<entry id="t7"><hwg><hw>叽里呱啦</hw><pinyin>jī·liguālā</pinyin></hwg></entry>
+<entry id="t8"><hwg><hw>一会<small>儿</small></hw><pinyin>yīhuìr</pinyin></hwg></entry>
+<hwg><hw>裸</hw><pinyin>luǒ</pinyin></hwg><hwg><hw>落</hw><pinyin>luò</pinyin></hwg>
+<entry id="t9"><hwg><hw>一边</hw><pinyin>yībiān</pinyin></hwg><def>也作"一邊"。</def>
+<hwg><hw>一边</hw><pinyin>yìbiān</pinyin></hwg><def>旁边。</def></entry>
 """
     ex = VariantFormsExtractor(mdict_manager=None)
-    lt_req, lt_opt = ex._extract_light_tone_from_content(sample)
-    assert len(lt_req) >= 2 and len(lt_opt) >= 1
-    assert any(r["headword"] == "叽里呱啦" for r in lt_req)
-    assert any(r["headword"] == "看法" for r in lt_opt)
-    assert all(not s["optional"] for r in lt_req for s in r["light_syllables"])
-    assert all(s["optional"] for r in lt_opt for s in r["light_syllables"])
-    erhua = ex._extract_erhua_from_content(sample)
-    street = next(r for r in erhua if r["headword"] == "街面上")
-    assert street["erhua_positions"][0]["kind"] == "attached"
-    assert street["erhua_positions"][0]["char"] == "面"
-    from xh7_phonetic_utils import split_pinyin_syllables
-
-    assert split_pinyin_syllables("x\u012b'\u0101n") == ["x\u012b", "\u0101n"]
-    assert split_pinyin_syllables("j\u012b\u00b7li'gu\u0101l\u0101") == [
-        "j\u012b",
-        "li",
-        "gu\u0101",
-        "l\u0101",
-    ]
-    print("轻声/儿化自检通过。")
+    wtp: Dict[str, str] = {}
+    for hw, py in ex._extract_word_to_pinyin_from_content(sample):
+        wtp[hw] = _merge_pinyin_values(wtp[hw], py) if hw in wtp else py
+    assert wtp["薄"] == "báo；bó；bò"
+    assert wtp["吗"] == "ma"
+    assert wtp["街面上"] == "jiēmiànr·shang"
+    assert wtp["叽里呱啦"] == "jī·liguālā"
+    assert _clean_headword_for_pinyin("嘛<sup>3</sup>") == "嘛"
+    erhua_map = dict(ex._extract_non_erhua_to_erhua_from_content(sample))
+    assert erhua_map["一会"] == "一会儿"
+    bare = list(iter_hwg_in_content(
+        '<hwg><hw>甲</hw><pinyin>jiǎ</pinyin></hwg>'
+        '<hwg><hw>乙</hw><pinyin>yǐ</pinyin></hwg>'
+    ))
+    assert len(bare) == 2
+    assert {hw for _, hw, _ in bare} == {"甲", "乙"}
+    multi_hwg = ex.extract_from_content(
+        '<entry><hwg><hw>一边</hw><pinyin>yībiān</pinyin></hwg>'
+        '<def>也作"一邊"。</def>'
+        '<hwg><hw>一边</hw><pinyin>yìbiān</pinyin></hwg><def>旁边。</def></entry>'
+    )
+    yezuo = [t for t in multi_hwg if t[2] == SOURCE_TUIJIAN_YEZUO]
+    assert len(yezuo) == 1 and yezuo[0][0] == "一边" and "一邊" in yezuo[0][1]
+    print("拼音/儿化/多 hwg 提取自检通过。")
 
 
 def _parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="从现汉7 提取异形、轻声、儿化等校对数据")
+    p = argparse.ArgumentParser(description="从现汉7 提取异形、拼音等校对数据")
     p.add_argument(
         "--mdx",
         type=str,
@@ -931,11 +889,6 @@ def _parse_args() -> argparse.Namespace:
     )
     p.add_argument("--limit", type=int, default=None, help="仅处理前 N 个索引词条")
     p.add_argument("--output", type=str, default="xh7.json", help="输出 JSON 文件名")
-    p.add_argument(
-        "--include-optional-light-tone",
-        action="store_true",
-        help="同时写入轻声与本调两可的条目（light_tone_optional）",
-    )
     p.add_argument("--test", action="store_true", help="运行内置样例后退出")
     return p.parse_args()
 
@@ -955,7 +908,6 @@ if __name__ == "__main__":
             extractor.dict_name,
             limit=args.limit,
             filename=args.output,
-            include_optional_light_tone=args.include_optional_light_tone,
         )
     else:
         print("未配置词典（请使用 --mdx 或配置 .mdictlist），运行内置测试…")

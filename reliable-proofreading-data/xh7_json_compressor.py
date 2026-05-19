@@ -54,7 +54,8 @@
   single_char_traditional_to_standard / single_char_yitihuabiao_to_standard
   single_char_yiti_other_to_standard
   non_erhua_to_erhua
-  light_tone_headword   由 light_tone_required、light_tone_optional 派生，{词头: 拼音}
+  light_tone_headword   由 word_to_pinyin 筛出必须轻声（；拼接任一条含 · 且无调号即保留）
+                        旧版 xh7.json 可回退 light_tone_required
 
 输出为单行紧凑 JSON（无缩进，中文不转义）。
 """
@@ -65,6 +66,12 @@ import json
 import re
 import sys
 from pathlib import Path
+
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from xh7_phonetic_utils import merged_pinyin_has_required_light_tone
 
 # 词头/字头末尾义项序号（阿拉伯数字），如 拔火罐1 → 拔火罐
 _TRAILING_ARABIC_DIGITS = re.compile(r"\d+$")
@@ -172,26 +179,38 @@ def load_source(path: Path) -> dict:
 
 def build_light_tone_headword(data: dict) -> dict:
     """
-    从 light_tone_required、light_tone_optional 生成 {词头: 拼音} 反查表。
-    同一词头多条且拼音不同时，保留先出现的条目并在 stderr 提示。
+    生成 {词头: 拼音} 表（输出键名仍为 light_tone_headword，与既有应用兼容）。
+    优先从 word_to_pinyin 筛选必须轻声（见 xh7_phonetic_utils.is_required_light_tone_pinyin）；
+    若无 word_to_pinyin 则回退 light_tone_required（旧版 xh7.json）。
     """
+    wtp = data.get("word_to_pinyin")
+    if isinstance(wtp, dict) and wtp:
+        out: dict = {}
+        for hw, py in wtp.items():
+            if not hw or py is None:
+                continue
+            py_str = str(py).strip()
+            if not py_str or not merged_pinyin_has_required_light_tone(py_str):
+                continue
+            out[str(hw)] = py_str
+        return out
+
     out: dict = {}
-    for source_key in ("light_tone_required", "light_tone_optional"):
-        for rec in data.get(source_key) or []:
-            if not isinstance(rec, dict):
-                continue
-            hw = rec.get("headword")
-            py = rec.get("pinyin")
-            if not hw or not py:
-                continue
-            hw = strip_trailing_arabic_digits(str(hw))
-            py = strip_trailing_arabic_digits(str(py))
-            if not hw or not py:
-                continue
-            if hw in out:
-                out[hw] = merge_scalar_values(out[hw], py)
-            else:
-                out[hw] = py
+    for rec in data.get("light_tone_required") or []:
+        if not isinstance(rec, dict):
+            continue
+        hw = rec.get("headword")
+        py = rec.get("pinyin")
+        if not hw or not py:
+            continue
+        hw = strip_trailing_arabic_digits(str(hw))
+        py = strip_trailing_arabic_digits(str(py))
+        if not hw or not py:
+            continue
+        if hw in out:
+            out[hw] = merge_scalar_values(out[hw], py)
+        else:
+            out[hw] = py
     return out
 
 
