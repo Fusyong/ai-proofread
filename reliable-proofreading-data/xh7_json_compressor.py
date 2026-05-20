@@ -56,6 +56,7 @@
   non_erhua_to_erhua
   light_tone_headword   由 word_to_pinyin 筛出必须轻声（；拼接任一条含 · 且无调号即保留）
                         旧版 xh7.json 可回退 light_tone_required
+  word_to_multi_pinyin  由 word_to_pinyin 筛出多音词（拼音含；拼接标记）；键/值经后处理
 
 输出为单行紧凑 JSON（无缩进，中文不转义）。
 """
@@ -89,6 +90,7 @@ TABLE_KEYS = [
     "single_char_yiti_other_to_standard",
     "non_erhua_to_erhua",
     "light_tone_headword",
+    "word_to_multi_pinyin",
 ]
 
 # 值为字符串列表的表
@@ -214,12 +216,32 @@ def build_light_tone_headword(data: dict) -> dict:
     return out
 
 
+def build_word_to_multi_pinyin(data: dict) -> dict:
+    """
+    从 word_to_pinyin 筛出多音词：拼音含全角；拼接（与 xh7_extractor 多音合并约定一致）。
+    """
+    wtp = data.get("word_to_pinyin")
+    if not isinstance(wtp, dict) or not wtp:
+        return {}
+    out: dict = {}
+    for hw, py in wtp.items():
+        if not hw or py is None:
+            continue
+        py_str = str(py).strip()
+        if not py_str or "；" not in py_str:
+            continue
+        out[str(hw)] = py_str
+    return out
+
+
 def extract_tables(data: dict) -> dict:
     """从完整数据中提取指定表，缺失的键用空结构代替。"""
     out = {}
     for key in TABLE_KEYS:
         if key == "light_tone_headword":
             out[key] = build_light_tone_headword(data)
+        elif key == "word_to_multi_pinyin":
+            out[key] = build_word_to_multi_pinyin(data)
         elif key in data:
             out[key] = data[key]
         else:
